@@ -4,23 +4,48 @@
 
 set -euo pipefail
 
+# Ensure azq_env is active
+if [ -f "./azq_env/bin/activate" ]; then
+  source ./azq_env/bin/activate
+fi
+
 cmd="${1:-help}"
 
 case "$cmd" in
+
   ask)
     shift
     echo "[azq] Asking ChatGPT with input: $*" 
     echo "---" >> logs/chatlog.md
     echo "USER: $*" >> logs/chatlog.md
-    # TODO: later: actually call API
+    python - <<'PY'
+from azq.openai_client import client
+import sys, json
+
+question = " ".join(sys.argv[1:])
+resp = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": question}]
+)
+
+answer = resp.choices[0].message.content
+print(answer)
+
+# Append assistant reply to log
+with open("logs/chatlog.md", "a") as f:
+    f.write("ASSISTANT: " + answer.replace("\n", " ") + "\n")
+PY
     ;;
   exec)
     echo "[azq] Executing staged commands (not implemented yet)"
     ;;
   import)
     shift
-    url="$1"
-    echo "[azq] Importing conversation from $url (not implemented yet)"
+    convo_id="$1"
+    outdir="logs/imported/$convo_id"
+    mkdir -p "$outdir"
+    echo "[azq] Importing conversation $convo_id"
+    ./azq/import_convo.py "$convo_id" "$outdir"
     ;;
   help|--help|-h|"")
     echo "Usage: azq <command> [args]"
