@@ -1,0 +1,642 @@
+Help on module random
+
+NNAAMMEE
+    random - Random variable generators.
+
+MMOODDUULLEE  RREEFFEERREENNCCEE
+    https://docs.python.org/3.11/library/random.html
+    
+    The following documentation is automatically generated from the Python
+    source files.  It may be incomplete, incorrect or include features that
+    are considered implementation detail and may vary between Python
+    implementations.  When in doubt, consult the module reference at the
+    location listed above.
+
+DDEESSCCRRIIPPTTIIOONN
+        bytes
+        -----
+               uniform bytes (values between 0 and 255)
+    
+        integers
+        --------
+               uniform within range
+    
+        sequences
+        ---------
+               pick random element
+               pick random sample
+               pick weighted random sample
+               generate random permutation
+    
+        distributions on the real line:
+        ------------------------------
+               uniform
+               triangular
+               normal (Gaussian)
+               lognormal
+               negative exponential
+               gamma
+               beta
+               pareto
+               Weibull
+    
+        distributions on the circle (angles 0 to 2pi)
+        ---------------------------------------------
+               circular uniform
+               von Mises
+    
+    General notes on the underlying Mersenne Twister core generator:
+    
+    * The period is 2**19937-1.
+    * It is one of the most extensively tested generators in existence.
+    * The random() method is implemented in C, executes in a single Python step,
+      and is, therefore, threadsafe.
+
+CCLLAASSSSEESS
+    _random.Random(builtins.object)
+        Random
+            SystemRandom
+    
+    class RRaannddoomm(_random.Random)
+     |  Random(x=None)
+     |  
+     |  Random number generator base class used by bound module functions.
+     |  
+     |  Used to instantiate instances of Random to get generators that don't
+     |  share state.
+     |  
+     |  Class Random can also be subclassed if you want to use a different basic
+     |  generator of your own devising: in that case, override the following
+     |  methods:  random(), seed(), getstate(), and setstate().
+     |  Optionally, implement a getrandbits() method so that randrange()
+     |  can cover arbitrarily large ranges.
+     |  
+     |  Method resolution order:
+     |      Random
+     |      _random.Random
+     |      builtins.object
+     |  
+     |  Methods defined here:
+     |  
+     |  ____ggeettssttaattee____(self)
+     |      Helper for pickle.
+     |  
+     |  ____iinniitt____(self, x=None)
+     |      Initialize an instance.
+     |      
+     |      Optional argument x controls seeding, as for Random.seed().
+     |  
+     |  ____rreedduuccee____(self)
+     |      Helper for pickle.
+     |  
+     |  ____sseettssttaattee____(self, state)
+     |  
+     |  bbeettaavvaarriiaattee(self, alpha, beta)
+     |      Beta distribution.
+     |      
+     |      Conditions on the parameters are alpha > 0 and beta > 0.
+     |      Returned values range between 0 and 1.
+     |  
+     |  cchhooiiccee(self, seq)
+     |      Choose a random element from a non-empty sequence.
+     |  
+     |  cchhooiicceess(self, population, weights=None, *, cum_weights=None, k=1)
+     |      Return a k sized list of population elements chosen with replacement.
+     |      
+     |      If the relative weights or cumulative weights are not specified,
+     |      the selections are made with equal probability.
+     |  
+     |  eexxppoovvaarriiaattee(self, lambd)
+     |      Exponential distribution.
+     |      
+     |      lambd is 1.0 divided by the desired mean.  It should be
+     |      nonzero.  (The parameter would be called "lambda", but that is
+     |      a reserved word in Python.)  Returned values range from 0 to
+     |      positive infinity if lambd is positive, and from negative
+     |      infinity to 0 if lambd is negative.
+     |  
+     |  ggaammmmaavvaarriiaattee(self, alpha, beta)
+     |      Gamma distribution.  Not the gamma function!
+     |      
+     |      Conditions on the parameters are alpha > 0 and beta > 0.
+     |      
+     |      The probability distribution function is:
+     |      
+     |                  x ** (alpha - 1) * math.exp(-x / beta)
+     |        pdf(x) =  --------------------------------------
+     |                    math.gamma(alpha) * beta ** alpha
+     |  
+     |  ggaauussss(self, mu=0.0, sigma=1.0)
+     |      Gaussian distribution.
+     |      
+     |      mu is the mean, and sigma is the standard deviation.  This is
+     |      slightly faster than the normalvariate() function.
+     |      
+     |      Not thread-safe without a lock around calls.
+     |  
+     |  ggeettssttaattee(self)
+     |      Return internal state; can be passed to setstate() later.
+     |  
+     |  llooggnnoorrmmvvaarriiaattee(self, mu, sigma)
+     |      Log normal distribution.
+     |      
+     |      If you take the natural logarithm of this distribution, you'll get a
+     |      normal distribution with mean mu and standard deviation sigma.
+     |      mu can have any value, and sigma must be greater than zero.
+     |  
+     |  nnoorrmmaallvvaarriiaattee(self, mu=0.0, sigma=1.0)
+     |      Normal distribution.
+     |      
+     |      mu is the mean, and sigma is the standard deviation.
+     |  
+     |  ppaarreettoovvaarriiaattee(self, alpha)
+     |      Pareto distribution.  alpha is the shape parameter.
+     |  
+     |  rraannddbbyytteess(self, n)
+     |      Generate n random bytes.
+     |  
+     |  rraannddiinntt(self, a, b)
+     |      Return random integer in range [a, b], including both end points.
+     |  
+     |  rraannddrraannggee(self, start, stop=None, step=1)
+     |      Choose a random item from range(stop) or range(start, stop[, step]).
+     |      
+     |      Roughly equivalent to ``choice(range(start, stop, step))`` but
+     |      supports arbitrarily large ranges and is optimized for common cases.
+     |  
+     |  ssaammppllee(self, population, k, *, counts=None)
+     |      Chooses k unique random elements from a population sequence.
+     |      
+     |      Returns a new list containing elements from the population while
+     |      leaving the original population unchanged.  The resulting list is
+     |      in selection order so that all sub-slices will also be valid random
+     |      samples.  This allows raffle winners (the sample) to be partitioned
+     |      into grand prize and second place winners (the subslices).
+     |      
+     |      Members of the population need not be hashable or unique.  If the
+     |      population contains repeats, then each occurrence is a possible
+     |      selection in the sample.
+     |      
+     |      Repeated elements can be specified one at a time or with the optional
+     |      counts parameter.  For example:
+     |      
+     |          sample(['red', 'blue'], counts=[4, 2], k=5)
+     |      
+     |      is equivalent to:
+     |      
+     |          sample(['red', 'red', 'red', 'red', 'blue', 'blue'], k=5)
+     |      
+     |      To choose a sample from a range of integers, use range() for the
+     |      population argument.  This is especially fast and space efficient
+     |      for sampling from a large population:
+     |      
+     |          sample(range(10000000), 60)
+     |  
+     |  sseeeedd(self, a=None, version=2)
+     |      Initialize internal state from a seed.
+     |      
+     |      The only supported seed types are None, int, float,
+     |      str, bytes, and bytearray.
+     |      
+     |      None or no argument seeds from current time or from an operating
+     |      system specific randomness source if available.
+     |      
+     |      If *a* is an int, all bits are used.
+     |      
+     |      For version 2 (the default), all of the bits are used if *a* is a str,
+     |      bytes, or bytearray.  For version 1 (provided for reproducing random
+     |      sequences from older versions of Python), the algorithm for str and
+     |      bytes generates a narrower range of seeds.
+     |  
+     |  sseettssttaattee(self, state)
+     |      Restore internal state from object returned by getstate().
+     |  
+     |  sshhuuffffllee(self, x)
+     |      Shuffle list x in place, and return None.
+     |  
+     |  ttrriiaanngguullaarr(self, low=0.0, high=1.0, mode=None)
+     |      Triangular distribution.
+     |      
+     |      Continuous distribution bounded by given lower and upper limits,
+     |      and having a given mode value in-between.
+     |      
+     |      http://en.wikipedia.org/wiki/Triangular_distribution
+     |  
+     |  uunniiffoorrmm(self, a, b)
+     |      Get a random number in the range [a, b) or [a, b] depending on rounding.
+     |  
+     |  vvoonnmmiisseessvvaarriiaattee(self, mu, kappa)
+     |      Circular data distribution.
+     |      
+     |      mu is the mean angle, expressed in radians between 0 and 2*pi, and
+     |      kappa is the concentration parameter, which must be greater than or
+     |      equal to zero.  If kappa is equal to zero, this distribution reduces
+     |      to a uniform random angle over the range 0 to 2*pi.
+     |  
+     |  wweeiibbuullllvvaarriiaattee(self, alpha, beta)
+     |      Weibull distribution.
+     |      
+     |      alpha is the scale parameter and beta is the shape parameter.
+     |  
+     |  ----------------------------------------------------------------------
+     |  Class methods defined here:
+     |  
+     |  ____iinniitt__ssuubbccllaassss____(**kwargs) from builtins.type
+     |      Control how subclasses generate random integers.
+     |      
+     |      The algorithm a subclass can use depends on the random() and/or
+     |      getrandbits() implementation available to it and determines
+     |      whether it can generate random integers from arbitrarily large
+     |      ranges.
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |  
+     |  ____ddiicctt____
+     |      dictionary for instance variables (if defined)
+     |  
+     |  ____wweeaakkrreeff____
+     |      list of weak references to the object (if defined)
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data and other attributes defined here:
+     |  
+     |  VVEERRSSIIOONN = 3
+     |  
+     |  ----------------------------------------------------------------------
+     |  Methods inherited from _random.Random:
+     |  
+     |  ggeettrraannddbbiittss(self, k, /)
+     |      getrandbits(k) -> x.  Generates an int with k random bits.
+     |  
+     |  rraannddoomm(self, /)
+     |      random() -> x in the interval [0, 1).
+     |  
+     |  ----------------------------------------------------------------------
+     |  Static methods inherited from _random.Random:
+     |  
+     |  ____nneeww____(*args, **kwargs) from builtins.type
+     |      Create and return a new object.  See help(type) for accurate signature.
+    
+    class SSyysstteemmRRaannddoomm(Random)
+     |  SystemRandom(x=None)
+     |  
+     |  Alternate random number generator using sources provided
+     |  by the operating system (such as /dev/urandom on Unix or
+     |  CryptGenRandom on Windows).
+     |  
+     |   Not available on all systems (see os.urandom() for details).
+     |  
+     |  Method resolution order:
+     |      SystemRandom
+     |      Random
+     |      _random.Random
+     |      builtins.object
+     |  
+     |  Methods defined here:
+     |  
+     |  ggeettrraannddbbiittss(self, k)
+     |      getrandbits(k) -> x.  Generates an int with k random bits.
+     |  
+     |  ggeettssttaattee = _notimplemented(self, *args, **kwds)
+     |  
+     |  rraannddbbyytteess(self, n)
+     |      Generate n random bytes.
+     |  
+     |  rraannddoomm(self)
+     |      Get the next random number in the range 0.0 <= X < 1.0.
+     |  
+     |  sseeeedd(self, *args, **kwds)
+     |      Stub method.  Not used for a system random number generator.
+     |  
+     |  sseettssttaattee = _notimplemented(self, *args, **kwds)
+     |  
+     |  ----------------------------------------------------------------------
+     |  Methods inherited from Random:
+     |  
+     |  ____ggeettssttaattee____(self)
+     |      Helper for pickle.
+     |  
+     |  ____iinniitt____(self, x=None)
+     |      Initialize an instance.
+     |      
+     |      Optional argument x controls seeding, as for Random.seed().
+     |  
+     |  ____rreedduuccee____(self)
+     |      Helper for pickle.
+     |  
+     |  ____sseettssttaattee____(self, state)
+     |  
+     |  bbeettaavvaarriiaattee(self, alpha, beta)
+     |      Beta distribution.
+     |      
+     |      Conditions on the parameters are alpha > 0 and beta > 0.
+     |      Returned values range between 0 and 1.
+     |  
+     |  cchhooiiccee(self, seq)
+     |      Choose a random element from a non-empty sequence.
+     |  
+     |  cchhooiicceess(self, population, weights=None, *, cum_weights=None, k=1)
+     |      Return a k sized list of population elements chosen with replacement.
+     |      
+     |      If the relative weights or cumulative weights are not specified,
+     |      the selections are made with equal probability.
+     |  
+     |  eexxppoovvaarriiaattee(self, lambd)
+     |      Exponential distribution.
+     |      
+     |      lambd is 1.0 divided by the desired mean.  It should be
+     |      nonzero.  (The parameter would be called "lambda", but that is
+     |      a reserved word in Python.)  Returned values range from 0 to
+     |      positive infinity if lambd is positive, and from negative
+     |      infinity to 0 if lambd is negative.
+     |  
+     |  ggaammmmaavvaarriiaattee(self, alpha, beta)
+     |      Gamma distribution.  Not the gamma function!
+     |      
+     |      Conditions on the parameters are alpha > 0 and beta > 0.
+     |      
+     |      The probability distribution function is:
+     |      
+     |                  x ** (alpha - 1) * math.exp(-x / beta)
+     |        pdf(x) =  --------------------------------------
+     |                    math.gamma(alpha) * beta ** alpha
+     |  
+     |  ggaauussss(self, mu=0.0, sigma=1.0)
+     |      Gaussian distribution.
+     |      
+     |      mu is the mean, and sigma is the standard deviation.  This is
+     |      slightly faster than the normalvariate() function.
+     |      
+     |      Not thread-safe without a lock around calls.
+     |  
+     |  llooggnnoorrmmvvaarriiaattee(self, mu, sigma)
+     |      Log normal distribution.
+     |      
+     |      If you take the natural logarithm of this distribution, you'll get a
+     |      normal distribution with mean mu and standard deviation sigma.
+     |      mu can have any value, and sigma must be greater than zero.
+     |  
+     |  nnoorrmmaallvvaarriiaattee(self, mu=0.0, sigma=1.0)
+     |      Normal distribution.
+     |      
+     |      mu is the mean, and sigma is the standard deviation.
+     |  
+     |  ppaarreettoovvaarriiaattee(self, alpha)
+     |      Pareto distribution.  alpha is the shape parameter.
+     |  
+     |  rraannddiinntt(self, a, b)
+     |      Return random integer in range [a, b], including both end points.
+     |  
+     |  rraannddrraannggee(self, start, stop=None, step=1)
+     |      Choose a random item from range(stop) or range(start, stop[, step]).
+     |      
+     |      Roughly equivalent to ``choice(range(start, stop, step))`` but
+     |      supports arbitrarily large ranges and is optimized for common cases.
+     |  
+     |  ssaammppllee(self, population, k, *, counts=None)
+     |      Chooses k unique random elements from a population sequence.
+     |      
+     |      Returns a new list containing elements from the population while
+     |      leaving the original population unchanged.  The resulting list is
+     |      in selection order so that all sub-slices will also be valid random
+     |      samples.  This allows raffle winners (the sample) to be partitioned
+     |      into grand prize and second place winners (the subslices).
+     |      
+     |      Members of the population need not be hashable or unique.  If the
+     |      population contains repeats, then each occurrence is a possible
+     |      selection in the sample.
+     |      
+     |      Repeated elements can be specified one at a time or with the optional
+     |      counts parameter.  For example:
+     |      
+     |          sample(['red', 'blue'], counts=[4, 2], k=5)
+     |      
+     |      is equivalent to:
+     |      
+     |          sample(['red', 'red', 'red', 'red', 'blue', 'blue'], k=5)
+     |      
+     |      To choose a sample from a range of integers, use range() for the
+     |      population argument.  This is especially fast and space efficient
+     |      for sampling from a large population:
+     |      
+     |          sample(range(10000000), 60)
+     |  
+     |  sshhuuffffllee(self, x)
+     |      Shuffle list x in place, and return None.
+     |  
+     |  ttrriiaanngguullaarr(self, low=0.0, high=1.0, mode=None)
+     |      Triangular distribution.
+     |      
+     |      Continuous distribution bounded by given lower and upper limits,
+     |      and having a given mode value in-between.
+     |      
+     |      http://en.wikipedia.org/wiki/Triangular_distribution
+     |  
+     |  uunniiffoorrmm(self, a, b)
+     |      Get a random number in the range [a, b) or [a, b] depending on rounding.
+     |  
+     |  vvoonnmmiisseessvvaarriiaattee(self, mu, kappa)
+     |      Circular data distribution.
+     |      
+     |      mu is the mean angle, expressed in radians between 0 and 2*pi, and
+     |      kappa is the concentration parameter, which must be greater than or
+     |      equal to zero.  If kappa is equal to zero, this distribution reduces
+     |      to a uniform random angle over the range 0 to 2*pi.
+     |  
+     |  wweeiibbuullllvvaarriiaattee(self, alpha, beta)
+     |      Weibull distribution.
+     |      
+     |      alpha is the scale parameter and beta is the shape parameter.
+     |  
+     |  ----------------------------------------------------------------------
+     |  Class methods inherited from Random:
+     |  
+     |  ____iinniitt__ssuubbccllaassss____(**kwargs) from builtins.type
+     |      Control how subclasses generate random integers.
+     |      
+     |      The algorithm a subclass can use depends on the random() and/or
+     |      getrandbits() implementation available to it and determines
+     |      whether it can generate random integers from arbitrarily large
+     |      ranges.
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data descriptors inherited from Random:
+     |  
+     |  ____ddiicctt____
+     |      dictionary for instance variables (if defined)
+     |  
+     |  ____wweeaakkrreeff____
+     |      list of weak references to the object (if defined)
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data and other attributes inherited from Random:
+     |  
+     |  VVEERRSSIIOONN = 3
+     |  
+     |  ----------------------------------------------------------------------
+     |  Static methods inherited from _random.Random:
+     |  
+     |  ____nneeww____(*args, **kwargs) from builtins.type
+     |      Create and return a new object.  See help(type) for accurate signature.
+
+FFUUNNCCTTIIOONNSS
+    bbeettaavvaarriiaattee(alpha, beta) method of Random instance
+        Beta distribution.
+        
+        Conditions on the parameters are alpha > 0 and beta > 0.
+        Returned values range between 0 and 1.
+    
+    cchhooiiccee(seq) method of Random instance
+        Choose a random element from a non-empty sequence.
+    
+    cchhooiicceess(population, weights=None, *, cum_weights=None, k=1) method of Random instance
+        Return a k sized list of population elements chosen with replacement.
+        
+        If the relative weights or cumulative weights are not specified,
+        the selections are made with equal probability.
+    
+    eexxppoovvaarriiaattee(lambd) method of Random instance
+        Exponential distribution.
+        
+        lambd is 1.0 divided by the desired mean.  It should be
+        nonzero.  (The parameter would be called "lambda", but that is
+        a reserved word in Python.)  Returned values range from 0 to
+        positive infinity if lambd is positive, and from negative
+        infinity to 0 if lambd is negative.
+    
+    ggaammmmaavvaarriiaattee(alpha, beta) method of Random instance
+        Gamma distribution.  Not the gamma function!
+        
+        Conditions on the parameters are alpha > 0 and beta > 0.
+        
+        The probability distribution function is:
+        
+                    x ** (alpha - 1) * math.exp(-x / beta)
+          pdf(x) =  --------------------------------------
+                      math.gamma(alpha) * beta ** alpha
+    
+    ggaauussss(mu=0.0, sigma=1.0) method of Random instance
+        Gaussian distribution.
+        
+        mu is the mean, and sigma is the standard deviation.  This is
+        slightly faster than the normalvariate() function.
+        
+        Not thread-safe without a lock around calls.
+    
+    ggeettrraannddbbiittss(k, /) method of Random instance
+        getrandbits(k) -> x.  Generates an int with k random bits.
+    
+    ggeettssttaattee() method of Random instance
+        Return internal state; can be passed to setstate() later.
+    
+    llooggnnoorrmmvvaarriiaattee(mu, sigma) method of Random instance
+        Log normal distribution.
+        
+        If you take the natural logarithm of this distribution, you'll get a
+        normal distribution with mean mu and standard deviation sigma.
+        mu can have any value, and sigma must be greater than zero.
+    
+    nnoorrmmaallvvaarriiaattee(mu=0.0, sigma=1.0) method of Random instance
+        Normal distribution.
+        
+        mu is the mean, and sigma is the standard deviation.
+    
+    ppaarreettoovvaarriiaattee(alpha) method of Random instance
+        Pareto distribution.  alpha is the shape parameter.
+    
+    rraannddbbyytteess(n) method of Random instance
+        Generate n random bytes.
+    
+    rraannddiinntt(a, b) method of Random instance
+        Return random integer in range [a, b], including both end points.
+    
+    rraannddoomm() method of Random instance
+        random() -> x in the interval [0, 1).
+    
+    rraannddrraannggee(start, stop=None, step=1) method of Random instance
+        Choose a random item from range(stop) or range(start, stop[, step]).
+        
+        Roughly equivalent to ``choice(range(start, stop, step))`` but
+        supports arbitrarily large ranges and is optimized for common cases.
+    
+    ssaammppllee(population, k, *, counts=None) method of Random instance
+        Chooses k unique random elements from a population sequence.
+        
+        Returns a new list containing elements from the population while
+        leaving the original population unchanged.  The resulting list is
+        in selection order so that all sub-slices will also be valid random
+        samples.  This allows raffle winners (the sample) to be partitioned
+        into grand prize and second place winners (the subslices).
+        
+        Members of the population need not be hashable or unique.  If the
+        population contains repeats, then each occurrence is a possible
+        selection in the sample.
+        
+        Repeated elements can be specified one at a time or with the optional
+        counts parameter.  For example:
+        
+            sample(['red', 'blue'], counts=[4, 2], k=5)
+        
+        is equivalent to:
+        
+            sample(['red', 'red', 'red', 'red', 'blue', 'blue'], k=5)
+        
+        To choose a sample from a range of integers, use range() for the
+        population argument.  This is especially fast and space efficient
+        for sampling from a large population:
+        
+            sample(range(10000000), 60)
+    
+    sseeeedd(a=None, version=2) method of Random instance
+        Initialize internal state from a seed.
+        
+        The only supported seed types are None, int, float,
+        str, bytes, and bytearray.
+        
+        None or no argument seeds from current time or from an operating
+        system specific randomness source if available.
+        
+        If *a* is an int, all bits are used.
+        
+        For version 2 (the default), all of the bits are used if *a* is a str,
+        bytes, or bytearray.  For version 1 (provided for reproducing random
+        sequences from older versions of Python), the algorithm for str and
+        bytes generates a narrower range of seeds.
+    
+    sseettssttaattee(state) method of Random instance
+        Restore internal state from object returned by getstate().
+    
+    sshhuuffffllee(x) method of Random instance
+        Shuffle list x in place, and return None.
+    
+    ttrriiaanngguullaarr(low=0.0, high=1.0, mode=None) method of Random instance
+        Triangular distribution.
+        
+        Continuous distribution bounded by given lower and upper limits,
+        and having a given mode value in-between.
+        
+        http://en.wikipedia.org/wiki/Triangular_distribution
+    
+    uunniiffoorrmm(a, b) method of Random instance
+        Get a random number in the range [a, b) or [a, b] depending on rounding.
+    
+    vvoonnmmiisseessvvaarriiaattee(mu, kappa) method of Random instance
+        Circular data distribution.
+        
+        mu is the mean angle, expressed in radians between 0 and 2*pi, and
+        kappa is the concentration parameter, which must be greater than or
+        equal to zero.  If kappa is equal to zero, this distribution reduces
+        to a uniform random angle over the range 0 to 2*pi.
+    
+    wweeiibbuullllvvaarriiaattee(alpha, beta) method of Random instance
+        Weibull distribution.
+        
+        alpha is the scale parameter and beta is the shape parameter.
+
+DDAATTAA
+    ____aallll____ = ['Random', 'SystemRandom', 'betavariate', 'choice', 'choices...
+
+FFIILLEE
+    /usr/lib/python3.11/random.py
+

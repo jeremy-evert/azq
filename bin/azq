@@ -39,6 +39,28 @@ PY
   exec)
     echo "[azq] Executing staged commands (not implemented yet)"
     ;;
+
+
+
+
+  # bin/azq (add to case statement)
+  doc)
+    shift
+    topic="$1"
+    mkdir -p logs/docs
+    echo "[azq] Fetching doc for $topic"
+    python - "$topic"<<'PY'
+import pydoc, sys, pathlib
+topic = sys.argv[1]
+doc = pydoc.render_doc(topic, "Help on %s")
+outpath = pathlib.Path("logs/docs") / f"{topic}.txt"
+outpath.write_text(doc)
+print(f"[azq] Doc for {topic} saved to {outpath}")
+PY
+    ;;
+
+
+
   import)
     shift
     convo_id="$1"
