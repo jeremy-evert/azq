@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# azq — Ask ChatGPT from your terminal
+# First draft CLI dispatcher
+
+set -euo pipefail
+
+cmd="${1:-help}"
+
+case "$cmd" in
+  ask)
+    shift
+    echo "[azq] Asking ChatGPT with input: $*" 
+    echo "---" >> logs/chatlog.md
+    echo "USER: $*" >> logs/chatlog.md
+    # TODO: later: actually call API
+    ;;
+  exec)
+    echo "[azq] Executing staged commands (not implemented yet)"
+    ;;
+  import)
+    shift
+    url="$1"
+    echo "[azq] Importing conversation from $url (not implemented yet)"
+    ;;
+  help|--help|-h|"")
+    echo "Usage: azq <command> [args]"
+    echo "Commands:"
+    echo "  ask    'question'   # Ask ChatGPT and log it"
+    echo "  exec               # Run staged commands"
+    echo "  import <url>       # Import conversation"
+    ;;
+  *)
+    echo "[azq] Unknown command: $cmd"
+    exit 1
+    ;;
+esac
+
