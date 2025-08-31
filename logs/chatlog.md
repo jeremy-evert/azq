@@ -59,3 +59,742 @@ ASSISTANT: To write a new function `context_snapshot` for your application, you 
 USER: How do I write a new function for context_snapshot? and I want you to focus on writing the best version of the function that does a great job and grabs the context that really helps the next prompt know what to do. I am going to pipe your response directly into azq/context_snapshot.py
 ---
 USER: How do I write a new function for context_snapshot?
+---
+USER: How do I set up a remote desktop from a Rasbperry pi to a Mac Book? what do I need to have running on the Mac and what do I need to have running on the pi? right now I can ssh in. the pi ip address is 192.168.18.31. I don't have elevated privelages on the mac so I would like to try to do something that just works in a web browser or something. what are your thoruhgs?
+---
+USER: How do I set up a remote desktop from a Rasbperry pi to a Mac Book? what do I need to have running on the Mac and what do I need to have running on the pi? right now I can ssh in. the pi ip address is 192.168.18.31. I don't have elevated privelages on the mac so I would like to try to do something that just works in a web browser or something. what are your thoruhgs?
+---
+USER: How do I set up a remote desktop from a Rasbperry pi to a Mac Book? what do I need to have running on the Mac and what do I need to have running on the pi? right now I can ssh in. the pi ip address is 192.168.18.31. I don't have elevated privelages on the mac so I would like to try to do something that just works in a web browser or something. what are your thoruhgs?
+ASSISTANT: To set up a remote desktop from your Raspberry Pi to a MacBook without requiring elevated privileges on the Mac, I recommend using a web-based remote desktop solution like **noVNC** in conjunction with **VNC**. Here's a step-by-step guide to help you get everything set up smoothly:  ### Steps for Raspberry Pi:  1. **Install a VNC Server**:    - You can use `tightvncserver` or `x11vnc`. Let's install `tightvncserver`:    ```bash    sudo apt update    sudo apt install tightvncserver    ```  2. **Start the VNC Server**:    - Run the VNC server to set a password and start the server:    ```bash    vncserver    ```    - Take note of the display number it provides (e.g., `:1`).  3. **Install a Web Browser** (if not already installed):    - Make sure you can access a web browser to install `noVNC`.    ```bash    sudo apt install firefox-esr    ```  4. **Install noVNC**:    - You can download `noVNC` via git:    ```bash    sudo apt install git    git clone https://github.com/novnc/noVNC.git    ```  5. **Start the noVNC server**:    - Navigate to the noVNC directory and run the WebSocket server specified in the setup instructions.    ```bash    cd noVNC    ./utils/launch.sh --vnc [Your Pi IP]:5901    ```    Replace `[Your Pi IP]` with `192.168.18.31`.  ### Steps on your MacBook:  1. **Open a Web Browser**:    - Open any web browser on your Mac.  2. **Connect to your Raspberry Pi**:    - Enter the URL where your noVNC is running. If you are running it on your Pi and using port 6080, the URL will look like this:    ```    http://<Your Pi IP>:6080/vnc.html    ```    Replace `<Your Pi IP>` with `192.168.18.31`.  ### Tips:  - **Firewall and Ports**: Ensure that the required ports are open. VNC typically uses port `5900 + display number` (e.g., 5901 for display `:1`), and noVNC uses port `6080` for accessing the web interface.  - **Closure**: Once you’re done, make sure to stop the VNC server to avoid unauthorized access:    ```bash    vncserver -kill :1    ```  ### Best Practices Reminder:  - **System Hygiene**: Always keep your systems updated (check for package updates regularly). - **Security**: Use strong passwords for VNC. Consider setting up a firewall for extra security. - **Documentation**: Document your setup process for future reference and to assist others who might use the same configuration.  By following these steps, you should be able to set up a lightweight remote desktop solution from your Raspberry Pi to your MacBook effectively! If you face any issues, feel free to refer back to these instructions or continue asking for help.
+[snapshot: logs/snapshots/snapshot-20250831-233016.txt]
+---
+USER: here is what I see on my pi when I tried to set up a virtual desktop for my mac book where I don't have admin privelages.  Last login: Sun Aug 31 17:18:02 on ttys000
+(base) evertj@Mac-D26VK9JRHK ~ % ssh piborg
+Linux piborg 6.12.34+rpt-rpi-v8 #1 SMP PREEMPT Debian 1:6.12.34-1+rpt1~bookworm (2025-06-26) aarch64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+Last login: Sun Aug 31 23:18:10 2025 from 192.168.18.18
+🐧 Welcome to PIBORG — Garage Pi
+jevert@piborg:~ $    sudo apt update
+   sudo apt install tightvncserver
+[sudo] password for jevert: 
+Hit:1 http://deb.debian.org/debian bookworm InRelease
+Get:2 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
+Get:3 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]                   
+Get:4 http://archive.raspberrypi.com/debian bookworm InRelease [55.0 kB]
+Get:5 http://deb.debian.org/debian-security bookworm-security/main arm64 Packages [273 kB]
+Get:6 http://archive.raspberrypi.com/debian bookworm/main arm64 Packages [554 kB]
+Fetched 985 kB in 2s (550 kB/s)   
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+All packages are up to date.
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following additional packages will be installed:
+  libxxf86dga1 tightvncpasswd x11-utils xfonts-base
+Suggested packages:
+  tightvnc-java mesa-utils
+The following packages will be REMOVED:
+  realvnc-vnc-server
+The following NEW packages will be installed:
+  libxxf86dga1 tightvncpasswd tightvncserver x11-utils xfonts-base
+0 upgraded, 5 newly installed, 1 to remove and 0 not upgraded.
+Need to get 6,757 kB of archives.
+After this operation, 31.1 MB disk space will be freed.
+Do you want to continue? [Y/n] y
+Get:1 http://deb.debian.org/debian bookworm/main arm64 libxxf86dga1 arm64 2:1.1.5-1 [21.8 kB]
+Get:2 http://deb.debian.org/debian bookworm/main arm64 tightvncpasswd arm64 1:1.3.10-7 [39.9 kB]
+Get:3 http://deb.debian.org/debian bookworm/main arm64 x11-utils arm64 7.7+5 [196 kB]
+Get:4 http://deb.debian.org/debian bookworm/main arm64 tightvncserver arm64 1:1.3.10-7 [604 kB]
+Get:5 http://deb.debian.org/debian bookworm/main arm64 xfonts-base all 1:1.0.5+nmu1 [5,895 kB]
+Fetched 6,757 kB in 1s (7,112 kB/s)      
+(Reading database ... 176235 files and directories currently installed.)
+Removing realvnc-vnc-server (7.13.1.57) ...
+Selecting previously unselected package libxxf86dga1:arm64.
+(Reading database ... 176163 files and directories currently installed.)
+Preparing to unpack .../libxxf86dga1_2%3a1.1.5-1_arm64.deb ...
+Unpacking libxxf86dga1:arm64 (2:1.1.5-1) ...
+Selecting previously unselected package tightvncpasswd.
+Preparing to unpack .../tightvncpasswd_1%3a1.3.10-7_arm64.deb ...
+Unpacking tightvncpasswd (1:1.3.10-7) ...
+Selecting previously unselected package x11-utils.
+Preparing to unpack .../x11-utils_7.7+5_arm64.deb ...
+Unpacking x11-utils (7.7+5) ...
+Selecting previously unselected package tightvncserver.
+Preparing to unpack .../tightvncserver_1%3a1.3.10-7_arm64.deb ...
+Unpacking tightvncserver (1:1.3.10-7) ...
+Selecting previously unselected package xfonts-base.
+Preparing to unpack .../xfonts-base_1%3a1.0.5+nmu1_all.deb ...
+Unpacking xfonts-base (1:1.0.5+nmu1) ...
+Setting up libxxf86dga1:arm64 (2:1.1.5-1) ...
+Setting up xfonts-base (1:1.0.5+nmu1) ...
+Setting up x11-utils (7.7+5) ...
+Setting up tightvncpasswd (1:1.3.10-7) ...
+update-alternatives: using /usr/bin/tightvncpasswd to provide /usr/bin/vncpasswd (vncpasswd) in auto mode
+Setting up tightvncserver (1:1.3.10-7) ...
+update-alternatives: using /usr/bin/tightvncserver to provide /usr/bin/vncserver (vncserver) in auto mode
+update-alternatives: using /usr/bin/Xtightvnc to provide /usr/bin/Xvnc (Xvnc) in auto mode
+Processing triggers for mailcap (3.70+nmu1) ...
+Processing triggers for fontconfig (2.14.1-4) ...
+Processing triggers for desktop-file-utils (0.26-1) ...
+Processing triggers for hicolor-icon-theme (0.17-2) ...
+Processing triggers for gnome-menus (3.36.0-1.1) ...
+Processing triggers for libc-bin (2.36-9+rpt2+deb12u12) ...
+Processing triggers for man-db (2.11.2-2) ...
+jevert@piborg:~ $ vncserver
+
+You will require a password to access your desktops.
+
+Password: 
+Warning: password truncated to the length of 8.
+Verify:   
+Would you like to enter a view-only password (y/n)? y
+Password: 
+Warning: password truncated to the length of 8.
+Verify:   
+xauth:  file /home/jevert/.Xauthority does not exist
+
+New 'X' desktop is piborg:1
+
+Creating default startup script /home/jevert/.vnc/xstartup
+Starting applications specified in /home/jevert/.vnc/xstartup
+Log file is /home/jevert/.vnc/piborg:1.log
+
+jevert@piborg:~ $ sudo apt install firefox-esr
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+Suggested packages:
+  fonts-stix | otf-stix fonts-lmodern
+The following NEW packages will be installed:
+  firefox-esr
+0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
+Need to get 63.8 MB of archives.
+After this operation, 241 MB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian-security bookworm-security/main arm64 firefox-esr arm64 128.14.0esr-1~deb12u1 [63.8 MB]
+Fetched 63.8 MB in 8s (8,090 kB/s)                                                                                   
+Selecting previously unselected package firefox-esr.
+(Reading database ... 176658 files and directories currently installed.)
+Preparing to unpack .../firefox-esr_128.14.0esr-1~deb12u1_arm64.deb ...
+Adding 'diversion of /usr/bin/firefox to /usr/bin/firefox.real by firefox-esr'
+Unpacking firefox-esr (128.14.0esr-1~deb12u1) ...
+Setting up firefox-esr (128.14.0esr-1~deb12u1) ...
+Processing triggers for hicolor-icon-theme (0.17-2) ...
+Processing triggers for gnome-menus (3.36.0-1.1) ...
+Processing triggers for man-db (2.11.2-2) ...
+Processing triggers for mailcap (3.70+nmu1) ...
+Processing triggers for desktop-file-utils (0.26-1) ...
+jevert@piborg:~ $ sudo apt install git
+   git clone https://github.com/novnc/noVNC.git
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+git is already the newest version (1:2.39.5-0+deb12u2).
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+Cloning into 'noVNC'...
+remote: Enumerating objects: 13620, done.
+remote: Counting objects: 100% (393/393), done.
+remote: Compressing objects: 100% (212/212), done.
+remote: Total 13620 (delta 242), reused 181 (delta 181), pack-reused 13227 (from 3)
+Receiving objects: 100% (13620/13620), 10.58 MiB | 8.78 MiB/s, done.
+Resolving deltas: 100% (9471/9471), done.
+jevert@piborg:~ $ cd noVNC/
+jevert@piborg:~/noVNC $ ./utils/launch.sh --vnc 192.168.18.31:5901
+-bash: ./utils/launch.sh: No such file or directory
+jevert@piborg:~/noVNC $ ls
+app      core           docs               karma.conf.js  mandatory.json  po         snap   utils   vnc.html
+AUTHORS  defaults.json  eslint.config.mjs  LICENSE.txt    package.json    README.md  tests  vendor  vnc_lite.html
+jevert@piborg:~/noVNC $ ls utils/
+b64-to-binary.pl  convert.js  genkeysymdef.js  novnc_proxy  README.md  u2x11  validate
+jevert@piborg:~/noVNC $ 
+
+Can you please confirm if you can see the orignial question and your original feedback to me in the messages that get attached?
+ASSISTANT: It looks like you're in the process of setting up a virtual desktop and incorporating some functionality with your `azq` CLI tool. Let's recap what you have done and ensure best practices throughout the process.  ### Summary of Actions 1. **Setting Up TightVNC**: You've installed TightVNC on your Raspberry Pi and configured a VNC server for remote access. 2. **Installing Packages**: You’ve installed packages like `firefox-esr` and `git`, in addition to the `tightvncserver`. 3. **Configuration Management**: You've cloned the `noVNC` repository and attempted to launch it but encountered issues due to a missing script.  ### Best Practices Recap #### 1. **Commit Messages**:    Ensure your commits have meaningful messages. Instead of generic messages, you should clearly describe what was done. For example:    ```bash    git commit -m "Set up VNC server and install dependencies"    ```  #### 2. **Branching Strategy**:    Always create a feature branch when working on new features. For example, if you're adding VNC configuration:    ```bash    git checkout -b feature/vnc-setup    ```  #### 3. **Code Quality**:    You should write tests for any new functionality. When you implement a new function or feature, ensure you run all tests to verify behavior.  #### 4. **Documentation**:    Keep your README and any other documentation up-to-date with features about your project. This is especially important for collaborative projects and tools like `azq`.  #### 5. **Environment Management**:    You are using a virtual environment, which is great. It ensures that all dependencies remain isolated. Always ensure the environment is activated:    ```bash    source ./azq_env/bin/activate    ```  #### 6. **Piping Outputs to Files**:    To pipe the output from commands or scripts directly into files without copying and pasting, you can use:    ```bash    azq ask "your question" > guidance/hygiene.md    ```  ### Regarding the Launch Script Issue You mentioned getting an error when attempting to run the `noVNC` launch command. Ensure the script (e.g., `launch.sh`) exists and is executable. You can check the contents of the `utils` directory to confirm that the script is indeed there.  ### Final Tips - Make use of Git for tracking and organizing your changes effectively. Use branches regularly and merge with pull requests. - If you're debugging the `noVNC` launch issue, ensure all dependencies required by `noVNC` are installed. Check installation instructions from the official documentation. - Always back up critical scripts and configurations. Use a version control system like Git for this purpose.  If you need assistance with specific commands (like creating the VNC server or debugging), feel free to ask!
+[snapshot: logs/snapshots/snapshot-20250831-233935.txt]
+---
+USER: hello friend. I woudl really apprecaiate your help. I am trying to figure out how to set up a remote desktop from my raspberry pi to reach out and work from my mac. I think I am getting pretty close. Could you please suggest a series of things that I can do that will help me be successful?
+
+on the pi...Last login: Sun Aug 31 17:18:02 on ttys000
+(base) evertj@Mac-D26VK9JRHK ~ % ssh piborg
+Linux piborg 6.12.34+rpt-rpi-v8 #1 SMP PREEMPT Debian 1:6.12.34-1+rpt1~bookworm (2025-06-26) aarch64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+Last login: Sun Aug 31 23:18:10 2025 from 192.168.18.18
+🐧 Welcome to PIBORG — Garage Pi
+jevert@piborg:~ $    sudo apt update
+   sudo apt install tightvncserver
+[sudo] password for jevert: 
+Hit:1 http://deb.debian.org/debian bookworm InRelease
+Get:2 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
+Get:3 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]                   
+Get:4 http://archive.raspberrypi.com/debian bookworm InRelease [55.0 kB]
+Get:5 http://deb.debian.org/debian-security bookworm-security/main arm64 Packages [273 kB]
+Get:6 http://archive.raspberrypi.com/debian bookworm/main arm64 Packages [554 kB]
+Fetched 985 kB in 2s (550 kB/s)   
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+All packages are up to date.
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following additional packages will be installed:
+  libxxf86dga1 tightvncpasswd x11-utils xfonts-base
+Suggested packages:
+  tightvnc-java mesa-utils
+The following packages will be REMOVED:
+  realvnc-vnc-server
+The following NEW packages will be installed:
+  libxxf86dga1 tightvncpasswd tightvncserver x11-utils xfonts-base
+0 upgraded, 5 newly installed, 1 to remove and 0 not upgraded.
+Need to get 6,757 kB of archives.
+After this operation, 31.1 MB disk space will be freed.
+Do you want to continue? [Y/n] y
+Get:1 http://deb.debian.org/debian bookworm/main arm64 libxxf86dga1 arm64 2:1.1.5-1 [21.8 kB]
+Get:2 http://deb.debian.org/debian bookworm/main arm64 tightvncpasswd arm64 1:1.3.10-7 [39.9 kB]
+Get:3 http://deb.debian.org/debian bookworm/main arm64 x11-utils arm64 7.7+5 [196 kB]
+Get:4 http://deb.debian.org/debian bookworm/main arm64 tightvncserver arm64 1:1.3.10-7 [604 kB]
+Get:5 http://deb.debian.org/debian bookworm/main arm64 xfonts-base all 1:1.0.5+nmu1 [5,895 kB]
+Fetched 6,757 kB in 1s (7,112 kB/s)      
+(Reading database ... 176235 files and directories currently installed.)
+Removing realvnc-vnc-server (7.13.1.57) ...
+Selecting previously unselected package libxxf86dga1:arm64.
+(Reading database ... 176163 files and directories currently installed.)
+Preparing to unpack .../libxxf86dga1_2%3a1.1.5-1_arm64.deb ...
+Unpacking libxxf86dga1:arm64 (2:1.1.5-1) ...
+Selecting previously unselected package tightvncpasswd.
+Preparing to unpack .../tightvncpasswd_1%3a1.3.10-7_arm64.deb ...
+Unpacking tightvncpasswd (1:1.3.10-7) ...
+Selecting previously unselected package x11-utils.
+Preparing to unpack .../x11-utils_7.7+5_arm64.deb ...
+Unpacking x11-utils (7.7+5) ...
+Selecting previously unselected package tightvncserver.
+Preparing to unpack .../tightvncserver_1%3a1.3.10-7_arm64.deb ...
+Unpacking tightvncserver (1:1.3.10-7) ...
+Selecting previously unselected package xfonts-base.
+Preparing to unpack .../xfonts-base_1%3a1.0.5+nmu1_all.deb ...
+Unpacking xfonts-base (1:1.0.5+nmu1) ...
+Setting up libxxf86dga1:arm64 (2:1.1.5-1) ...
+Setting up xfonts-base (1:1.0.5+nmu1) ...
+Setting up x11-utils (7.7+5) ...
+Setting up tightvncpasswd (1:1.3.10-7) ...
+update-alternatives: using /usr/bin/tightvncpasswd to provide /usr/bin/vncpasswd (vncpasswd) in auto mode
+Setting up tightvncserver (1:1.3.10-7) ...
+update-alternatives: using /usr/bin/tightvncserver to provide /usr/bin/vncserver (vncserver) in auto mode
+update-alternatives: using /usr/bin/Xtightvnc to provide /usr/bin/Xvnc (Xvnc) in auto mode
+Processing triggers for mailcap (3.70+nmu1) ...
+Processing triggers for fontconfig (2.14.1-4) ...
+Processing triggers for desktop-file-utils (0.26-1) ...
+Processing triggers for hicolor-icon-theme (0.17-2) ...
+Processing triggers for gnome-menus (3.36.0-1.1) ...
+Processing triggers for libc-bin (2.36-9+rpt2+deb12u12) ...
+Processing triggers for man-db (2.11.2-2) ...
+jevert@piborg:~ $ vncserver
+
+You will require a password to access your desktops.
+
+Password: 
+Warning: password truncated to the length of 8.
+Verify:   
+Would you like to enter a view-only password (y/n)? y
+Password: 
+Warning: password truncated to the length of 8.
+Verify:   
+xauth:  file /home/jevert/.Xauthority does not exist
+
+New 'X' desktop is piborg:1
+
+Creating default startup script /home/jevert/.vnc/xstartup
+Starting applications specified in /home/jevert/.vnc/xstartup
+Log file is /home/jevert/.vnc/piborg:1.log
+
+jevert@piborg:~ $ sudo apt install firefox-esr
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+Suggested packages:
+  fonts-stix | otf-stix fonts-lmodern
+The following NEW packages will be installed:
+  firefox-esr
+0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
+Need to get 63.8 MB of archives.
+After this operation, 241 MB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian-security bookworm-security/main arm64 firefox-esr arm64 128.14.0esr-1~deb12u1 [63.8 MB]
+Fetched 63.8 MB in 8s (8,090 kB/s)                                                                                   
+Selecting previously unselected package firefox-esr.
+(Reading database ... 176658 files and directories currently installed.)
+Preparing to unpack .../firefox-esr_128.14.0esr-1~deb12u1_arm64.deb ...
+Adding 'diversion of /usr/bin/firefox to /usr/bin/firefox.real by firefox-esr'
+Unpacking firefox-esr (128.14.0esr-1~deb12u1) ...
+Setting up firefox-esr (128.14.0esr-1~deb12u1) ...
+Processing triggers for hicolor-icon-theme (0.17-2) ...
+Processing triggers for gnome-menus (3.36.0-1.1) ...
+Processing triggers for man-db (2.11.2-2) ...
+Processing triggers for mailcap (3.70+nmu1) ...
+Processing triggers for desktop-file-utils (0.26-1) ...
+jevert@piborg:~ $ sudo apt install git
+   git clone https://github.com/novnc/noVNC.git
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+git is already the newest version (1:2.39.5-0+deb12u2).
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+Cloning into 'noVNC'...
+remote: Enumerating objects: 13620, done.
+remote: Counting objects: 100% (393/393), done.
+remote: Compressing objects: 100% (212/212), done.
+remote: Total 13620 (delta 242), reused 181 (delta 181), pack-reused 13227 (from 3)
+Receiving objects: 100% (13620/13620), 10.58 MiB | 8.78 MiB/s, done.
+Resolving deltas: 100% (9471/9471), done.
+jevert@piborg:~ $ cd noVNC/
+jevert@piborg:~/noVNC $ ./utils/launch.sh --vnc 192.168.18.31:5901
+-bash: ./utils/launch.sh: No such file or directory
+jevert@piborg:~/noVNC $ ls
+app      core           docs               karma.conf.js  mandatory.json  po         snap   utils   vnc.html
+AUTHORS  defaults.json  eslint.config.mjs  LICENSE.txt    package.json    README.md  tests  vendor  vnc_lite.html
+jevert@piborg:~/noVNC $ ls utils/
+b64-to-binary.pl  convert.js  genkeysymdef.js  novnc_proxy  README.md  u2x11  validate
+jevert@piborg:~/noVNC $ cat README.md 
+## noVNC: HTML VNC client library and application
+
+[![Test Status](https://github.com/novnc/noVNC/workflows/Test/badge.svg)](https://github.com/novnc/noVNC/actions?query=workflow%3ATest)
+[![Lint Status](https://github.com/novnc/noVNC/workflows/Lint/badge.svg)](https://github.com/novnc/noVNC/actions?query=workflow%3ALint)
+
+### Description
+
+noVNC is both a HTML VNC client JavaScript library and an application built on
+top of that library. noVNC runs well in any modern browser including mobile
+browsers (iOS and Android).
+
+Many companies, projects and products have integrated noVNC including
+[OpenStack](http://www.openstack.org),
+[OpenNebula](http://opennebula.org/),
+[LibVNCServer](http://libvncserver.sourceforge.net), and
+[ThinLinc](https://cendio.com/thinlinc). See
+[the Projects and companies wiki page](https://github.com/novnc/noVNC/wiki/Projects-and-companies-using-noVNC)
+for a more complete list with additional info and links.
+
+### Table of contents
+
+- [News/help/contact](#newshelpcontact)
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Browser requirements](#browser-requirements)
+- [Server requirements](#server-requirements)
+- [Quick start](#quick-start)
+- [Installation from snap package](#installation-from-snap-package)
+- [Integration and deployment](#integration-and-deployment)
+- [Authors/Contributors](#authorscontributors)
+
+### News/help/contact
+
+The project website is found at [novnc.com](http://novnc.com).
+
+If you are a noVNC developer/integrator/user (or want to be) please join the
+
+Bugs and feature requests can be submitted via
+[github issues](https://github.com/novnc/noVNC/issues). If you have questions
+about using noVNC then please first use the
+We also have a [wiki](https://github.com/novnc/noVNC/wiki/) with lots of
+helpful information.
+
+If you are looking for a place to start contributing to noVNC, a good place to
+start would be the issues that are marked as
+[patchwelcome](https://github.com/novnc/noVNC/issues?labels=patchwelcome).
+Please check our
+[contribution guide](https://github.com/novnc/noVNC/wiki/Contributing) though.
+
+If you want to show appreciation for noVNC you could donate to a great non-
+profits such as:
+[Compassion International](http://www.compassion.com/),
+[SIL](http://www.sil.org),
+[Habitat for Humanity](http://www.habitat.org),
+[Electronic Frontier Foundation](https://www.eff.org/),
+[Against Malaria Foundation](http://www.againstmalaria.com/),
+[Nothing But Nets](http://www.nothingbutnets.net/), etc.
+
+
+### Features
+
+* Supports all modern browsers including mobile (iOS, Android)
+* Supported authentication methods: none, classical VNC, RealVNC's
+  RSA-AES, Tight, VeNCrypt Plain, XVP, Apple's Diffie-Hellman,
+  UltraVNC's MSLogonII
+* Supported VNC encodings: raw, copyrect, rre, hextile, tight, tightPNG,
+  ZRLE, JPEG, Zlib, H.264
+* Supports scaling, clipping and resizing the desktop
+* Supports back & forward mouse buttons
+* Local cursor rendering
+* Clipboard copy/paste with full Unicode support
+* Translations
+* Touch gestures for emulating common mouse actions
+* Licensed mainly under the [MPL 2.0](http://www.mozilla.org/MPL/2.0/), see
+  [the license document](LICENSE.txt) for details
+
+### Screenshots
+
+Running in Firefox before and after connecting:
+
+<img src=http://novnc.com/img/noVNC-1-login.png width=400>&nbsp;
+<img src=http://novnc.com/img/noVNC-3-connected.png width=400>
+
+See more screenshots
+[here](http://novnc.com/screenshots.html).
+
+
+### Browser requirements
+
+noVNC uses many modern web technologies so a formal requirement list is
+not available. However these are the minimum versions we are currently
+aware of:
+
+* Chrome 89, Firefox 89, Safari 15, Opera 75, Edge 89
+
+
+### Server requirements
+
+noVNC follows the standard VNC protocol, but unlike other VNC clients it does
+require WebSockets support. Many servers include support (e.g.
+[x11vnc/libvncserver](http://libvncserver.sourceforge.net/),
+[QEMU](http://www.qemu.org/), and
+[MobileVNC](http://www.smartlab.at/mobilevnc/)), but for the others you need to
+use a WebSockets to TCP socket proxy. noVNC has a sister project
+[websockify](https://github.com/novnc/websockify) that provides a simple such
+proxy.
+
+
+### Quick start
+
+* Use the  script to automatically download and start websockify, which
+  includes a mini-webserver and the WebSockets proxy. The  option is
+  used to specify the location of a running VNC server:
+
+    
+    
+* If you don't need to expose the web server to public internet, you can
+  bind to localhost:
+  
+    
+
+* Point your browser to the cut-and-paste URL that is output by the 
+  script. Hit the Connect button, enter a password if the VNC server has one
+  configured, and enjoy!
+
+### Installation from snap package
+Running the command below will install the latest release of noVNC from snap:
+
+
+
+#### Running noVNC from snap directly
+
+You can run the snap package installed novnc directly with, for example:
+
+
+
+If you want to use certificate files, due to standard snap confinement restrictions you need to have them in the /home/\<user\>/snap/novnc/current/ directory. If your username is jsmith an example command would be:
+  
+  
+
+#### Running noVNC from snap as a service (daemon)
+The snap package also has the capability to run a 'novnc' service which can be
+configured to listen on multiple ports connecting to multiple VNC servers 
+(effectively a service running multiple instances of novnc).
+Instructions (with example values):
+
+List current services (out-of-box this will be blank):
+
+
+
+Create a new service that listens on port 6082 and connects to the VNC server 
+running on port 5902 on localhost:
+
+
+
+(Any services you define with 'snap set' will be automatically started)
+Note that the name of the service, 'n6082' in this example, can be anything 
+as long as it doesn't start with a number or contain spaces/special characters.
+
+View the configuration of the service just created:
+
+
+
+Disable a service (note that because of a limitation in snap it's currently not
+possible to unset config variables, setting them to blank values is the way 
+to disable a service):
+
+
+
+(Any services you set to blank with 'snap set' like this will be automatically stopped)
+
+Verify that the service is disabled (blank values):
+
+
+
+### Integration and deployment
+
+Please see our other documents for how to integrate noVNC in your own software,
+or deploying the noVNC application in production environments:
+
+* [Embedding](docs/EMBEDDING.md) - For the noVNC application
+* [Library](docs/LIBRARY.md) - For the noVNC JavaScript library
+
+
+### Authors/Contributors
+
+See [AUTHORS](AUTHORS) for a (full-ish) list of authors.  If you're not on
+that list and you think you should be, feel free to send a PR to fix that.
+
+* Core team:
+    * [Samuel Mannehed](https://github.com/samhed) (Cendio)
+    * [Pierre Ossman](https://github.com/CendioOssman) (Cendio)
+
+* Previous core contributors:
+    * [Joel Martin](https://github.com/kanaka) (Project founder)
+    * [Solly Ross](https://github.com/DirectXMan12) (Red Hat / OpenStack)
+
+* Notable contributions:
+    * UI and icons : Pierre Ossman, Chris Gordon
+    * Original logo : Michael Sersen
+    * tight encoding : Michael Tinglof (Mercuri.ca)
+    * RealVNC RSA AES authentication : USTC Vlab Team
+
+* Included libraries:
+    * base64 : Martijn Pieters (Digital Creations 2), Samuel Sieb (sieb.net)
+    * DES : Dave Zimmerman (Widget Workshop), Jef Poskanzer (ACME Labs)
+    * Pako : Vitaly Puzrin (https://github.com/nodeca/pako)
+
+Do you want to be on this list? Check out our
+[contribution guide](https://github.com/novnc/noVNC/wiki/Contributing) and
+start hacking!
+jevert@piborg:~/noVNC $ ls
+app      core           docs               karma.conf.js  mandatory.json  po         snap   utils   vnc.html
+AUTHORS  defaults.json  eslint.config.mjs  LICENSE.txt    package.json    README.md  tests  vendor  vnc_lite.html
+jevert@piborg:~/noVNC $ cd docs/
+jevert@piborg:~/noVNC/docs $ ls
+API-internal.md  EMBEDDING.md      LIBRARY.md            LICENSE.BSD-3-Clause  LICENSE.OFL-1.1  notes          rfb_notes         rfbproto-3.7.pdf
+API.md           flash_policy.txt  LICENSE.BSD-2-Clause  LICENSE.MPL-2.0       links            novnc_proxy.1  rfbproto-3.3.pdf  rfbproto-3.8.pdf
+jevert@piborg:~/noVNC/docs $ cd ..
+jevert@piborg:~/noVNC $ ls
+app      core           docs               karma.conf.js  mandatory.json  po         snap   utils   vnc.html
+AUTHORS  defaults.json  eslint.config.mjs  LICENSE.txt    package.json    README.md  tests  vendor  vnc_lite.html
+jevert@piborg:~/noVNC $ cd utils/
+jevert@piborg:~/noVNC/utils $ ls
+b64-to-binary.pl  convert.js  genkeysymdef.js  novnc_proxy  README.md  u2x11  validate
+jevert@piborg:~/noVNC/utils $ cd n
+-bash: cd: n: No such file or directory
+jevert@piborg:~/noVNC/utils $ ./novnc_proxy 
+Warning: could not find self.pem
+No installed websockify, attempting to clone websockify...
+Cloning into '/home/jevert/noVNC/utils/websockify'...
+remote: Enumerating objects: 4849, done.
+remote: Counting objects: 100% (403/403), done.
+remote: Compressing objects: 100% (165/165), done.
+remote: Total 4849 (delta 302), reused 253 (delta 236), pack-reused 4446 (from 2)
+Receiving objects: 100% (4849/4849), 4.73 MiB | 4.90 MiB/s, done.
+Resolving deltas: 100% (3186/3186), done.
+Using local websockify at /home/jevert/noVNC/utils/websockify/run
+Starting webserver and WebSockets proxy on port 6080
+WebSocket server settings:
+  - Listen on :6080
+  - Web server. Web root: /home/jevert/noVNC
+  - No SSL/TLS support (no cert file)
+  - proxying from :6080 to localhost:5900
+
+
+Navigate to this URL:
+
+    http://piborg:6080/vnc.html?host=piborg&port=6080
+
+Press Ctrl-C to exit
+
+
+azq ask here is what I see on my pi when I tried to set up a virtual desktop for my mac book where I dont have admin privelages.  Last login: Sun Aug 31 17:18:02 on ttys000
+(base) evertj@Mac-D26VK9JRHK ~ % ssh piborg
+Linux piborg 6.12.34+rpt-rpi-v8 #1 SMP PREEMPT Debian 1:6.12.34-1+rpt1~bookworm (2025-06-26) aarch64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+Last login: Sun Aug 31 23:18:10 2025 from 192.168.18.18
+🐧 Welcome to PIBORG — Garage Pi
+jevert@piborg:~ $    sudo apt update
+   sudo apt install tightvncserver
+[sudo] password for jevert: 
+Hit:1 http://deb.debian.org/debian bookworm InRelease
+Get:2 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
+Get:3 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]                   
+Get:4 http://archive.raspberrypi.com/debian bookworm InRelease [55.0 kB]
+Get:5 http://deb.debian.org/debian-security bookworm-security/main arm64 Packages [273 kB]
+Get:6 http://archive.raspberrypi.com/debian bookworm/main arm64 Packages [554 kB]
+Fetched 985 kB in 2s (550 kB/s)   
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+All packages are up to date.
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following additional packages will be installed:
+  libxxf86dga1 tightvncpasswd x11-utils xfonts-base
+Suggested packages:
+  tightvnc-java mesa-utils
+The following packages will be REMOVED:
+  realvnc-vnc-server
+The following NEW packages will be installed:
+  libxxf86dga1 tightvncpasswd tightvncserver x11-utils xfonts-base
+0 upgraded, 5 newly installed, 1 to remove and 0 not upgraded.
+Need to get 6,757 kB of archives.
+After this operation, 31.1 MB disk space will be freed.
+Do you want to continue? [Y/n] y
+Get:1 http://deb.debian.org/debian bookworm/main arm64 libxxf86dga1 arm64 2:1.1.5-1 [21.8 kB]
+Get:2 http://deb.debian.org/debian bookworm/main arm64 tightvncpasswd arm64 1:1.3.10-7 [39.9 kB]
+Get:3 http://deb.debian.org/debian bookworm/main arm64 x11-utils arm64 7.7+5 [196 kB]
+Get:4 http://deb.debian.org/debian bookworm/main arm64 tightvncserver arm64 1:1.3.10-7 [604 kB]
+Get:5 http://deb.debian.org/debian bookworm/main arm64 xfonts-base all 1:1.0.5+nmu1 [5,895 kB]
+Fetched 6,757 kB in 1s (7,112 kB/s)      
+(Reading database ... 176235 files and directories currently installed.)
+Removing realvnc-vnc-server (7.13.1.57) ...
+Selecting previously unselected package libxxf86dga1:arm64.
+(Reading database ... 176163 files and directories currently installed.)
+Preparing to unpack .../libxxf86dga1_2%3a1.1.5-1_arm64.deb ...
+Unpacking libxxf86dga1:arm64 (2:1.1.5-1) ...
+Selecting previously unselected package tightvncpasswd.
+Preparing to unpack .../tightvncpasswd_1%3a1.3.10-7_arm64.deb ...
+Unpacking tightvncpasswd (1:1.3.10-7) ...
+Selecting previously unselected package x11-utils.
+Preparing to unpack .../x11-utils_7.7+5_arm64.deb ...
+Unpacking x11-utils (7.7+5) ...
+Selecting previously unselected package tightvncserver.
+Preparing to unpack .../tightvncserver_1%3a1.3.10-7_arm64.deb ...
+Unpacking tightvncserver (1:1.3.10-7) ...
+Selecting previously unselected package xfonts-base.
+Preparing to unpack .../xfonts-base_1%3a1.0.5+nmu1_all.deb ...
+Unpacking xfonts-base (1:1.0.5+nmu1) ...
+Setting up libxxf86dga1:arm64 (2:1.1.5-1) ...
+Setting up xfonts-base (1:1.0.5+nmu1) ...
+Setting up x11-utils (7.7+5) ...
+Setting up tightvncpasswd (1:1.3.10-7) ...
+update-alternatives: using /usr/bin/tightvncpasswd to provide /usr/bin/vncpasswd (vncpasswd) in auto mode
+Setting up tightvncserver (1:1.3.10-7) ...
+update-alternatives: using /usr/bin/tightvncserver to provide /usr/bin/vncserver (vncserver) in auto mode
+update-alternatives: using /usr/bin/Xtightvnc to provide /usr/bin/Xvnc (Xvnc) in auto mode
+Processing triggers for mailcap (3.70+nmu1) ...
+Processing triggers for fontconfig (2.14.1-4) ...
+Processing triggers for desktop-file-utils (0.26-1) ...
+Processing triggers for hicolor-icon-theme (0.17-2) ...
+Processing triggers for gnome-menus (3.36.0-1.1) ...
+Processing triggers for libc-bin (2.36-9+rpt2+deb12u12) ...
+Processing triggers for man-db (2.11.2-2) ...
+jevert@piborg:~ $ vncserver
+
+You will require a password to access your desktops.
+
+Password: 
+Warning: password truncated to the length of 8.
+Verify:   
+Would you like to enter a view-only password (y/n)? y
+Password: 
+Warning: password truncated to the length of 8.
+Verify:   
+xauth:  file /home/jevert/.Xauthority does not exist
+
+New X desktop is piborg:1
+
+reating default startup script /home/jevert/.vnc/xstartup
+Starting applications specified in /home/jevert/.vnc/xstartup
+Log file is /home/jevert/.vnc/piborg:1.log
+
+jevert@piborg:~ $ sudo apt install firefox-esr
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+Suggested packages:
+  fonts-stix | otf-stix fonts-lmodern
+The following NEW packages will be installed:
+  firefox-esr
+0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
+Need to get 63.8 MB of archives.
+After this operation, 241 MB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian-security bookworm-security/main arm64 firefox-esr arm64 128.14.0esr-1~deb12u1 [63.8 MB]
+Fetched 63.8 MB in 8s (8,090 kB/s)                                                                                   
+Selecting previously unselected package firefox-esr.
+(Reading database ... 176658 files and directories currently installed.)
+Preparing to unpack .../firefox-esr_128.14.0esr-1~deb12u1_arm64.deb ...
+Adding diversion of /usr/bin/firefox to /usr/bin/firefox.real by firefox-esr
+Unpacking firefox-esr (128.14.0esr-1~deb12u1) ...
+Setting up firefox-esr (128.14.0esr-1~deb12u1) ...
+Processing triggers for hicolor-icon-theme (0.17-2) ...
+Processing triggers for gnome-menus (3.36.0-1.1) ...
+Processing triggers for man-db (2.11.2-2) ...
+Processing triggers for mailcap (3.70+nmu1) ...
+Processing triggers for desktop-file-utils (0.26-1) ...
+jevert@piborg:~ $ sudo apt install git
+   git clone https://github.com/novnc/noVNC.git
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+git is already the newest version (1:2.39.5-0+deb12u2).
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+Cloning into noVNC...
+remote: Enumerating objects: 13620, done.
+remote: Counting objects: 100% (393/393), done.
+remote: Compressing objects: 100% (212/212), done.
+remote: Total 13620 (delta 242), reused 181 (delta 181), pack-reused 13227 (from 3)
+Receiving objects: 100% (13620/13620), 10.58 MiB | 8.78 MiB/s, done.
+Resolving deltas: 100% (9471/9471), done.
+jevert@piborg:~ $ cd noVNC/
+jevert@piborg:~/noVNC $ ./utils/launch.sh --vnc 192.168.18.31:5901
+-bash: ./utils/launch.sh: No such file or directory
+jevert@piborg:~/noVNC $ ls
+app      core           docs               karma.conf.js  mandatory.json  po         snap   utils   vnc.html
+AUTHORS  defaults.json  eslint.config.mjs  LICENSE.txt    package.json    README.md  tests  vendor  vnc_lite.html
+jevert@piborg:~/noVNC $ ls utils/
+b64-to-binary.pl  convert.js  genkeysymdef.js  novnc_proxy  README.md  u2x11  validate
+jevert@piborg:~/noVNC $ 
+
+Can you please confirm if you can see the orignial question and your original feedback to me in the messages that get attached?"
+In exit
+Terminating WebSockets proxy (9917)
+jevert@piborg:~/noVNC/utils $ ./novnc_proxy 192.168.18.31:5901
+Warning: could not find self.pem
+Using local websockify at /home/jevert/noVNC/utils/websockify/run
+Starting webserver and WebSockets proxy on port 6080
+WebSocket server settings:
+  - Listen on :6080
+  - Web server. Web root: /home/jevert/noVNC
+  - No SSL/TLS support (no cert file)
+  - proxying from :6080 to localhost:5900
+
+
+Navigate to this URL:
+
+    http://piborg:6080/vnc.html?host=piborg&port=6080
+
+Press Ctrl-C to exit
+
+
+
+
+
+
+and from before...
+
+
+[azq] Asking ChatGPT with input: How do I set up a remote desktop from a Rasbperry pi to a Mac Book? what do I need to have running on the Mac and what do I need to have running on the pi? right now I can ssh in. the pi ip address is 192.168.18.31. I dont have elevated privelages on the mac so I would like to try to do something that just works in a web browser or something. what are your thoruhgs?
+ASSISTANT: To set up a remote desktop connection from your Raspberry Pi to your Mac using VNC (Virtual Network Computing), you seem to have made some progress installing and configuring TightVNC on your Raspberry Pi. Here are the steps you can follow to successfully set up the remote desktop connection, along with best practices to ensure clean operations:  ### Steps to Set Up Remote Desktop  1. **Start the VNC Server on Raspberry Pi**:    If you haven’t already, you can start the VNC server using the following command:    ```bash    vncserver    ```    Make sure you note the display number (usually `:1`) as you will need it for your Mac connection.  2. **Configure VNC Server**:    - You may want to edit the VNC server configuration file to customize the desktop environment and other settings. Check the file: `~/.vnc/xstartup`. You might want to ensure it includes the proper window manager. For example:    ```bash    #!/bin/sh    xrdb $HOME/.Xresources    startlxde &   # Or use the window manager you prefer.    ```  3. **Install VNC Viewer on Mac**:    Use a VNC viewer to connect to your Raspberry Pi. Since you mentioned not having admin privileges on your Mac, you can use any of the following:    - **TigerVNC** (can run without installation if you download the executable).    - **Screen Sharing** (built-in Mac app) can connect to VNC servers.  4. **Connecting from Mac**:    - Open **Screen Sharing** from Spotlight (Cmd + Space) or go to Finder > Go > Connect to Server and enter:    ```plaintext    vnc://<Raspberry_Pi_IP>:<Display_Port>    ```    Example:    ```plaintext    vnc://192.168.18.31:5901    ```    - Enter the VNC password you set during `vncserver` setup when prompted.  5. **Accessing Your Desktop**:    Once connected, you should be able to access your Raspberry Pi desktop environment within your Mac.  ### Troubleshooting  - If you encounter issues connecting:   - Ensure the VNC server is running (`vncserver -list` to check).   - Check your firewall settings on both your Mac and Raspberry Pi.   - Verify the IP address and display port you are using.  ### Best Practices for Continuous Development  1. **Stay Organized**:     - Use a directory structure to keep your configuration files and scripts easily organized.  2. **Version Control**:    - Use Git to track changes in your configuration files or scripts to easily revert if necessary.  3. **Documentation**:    - Document any changes made to server configurations and maintain a README file if you have a set of steps for future reference.  4. **Security**:    - Use strong passwords for your VNC connections.    - If possible, use an SSH tunnel to secure the VNC connection.  5. **Testing**:    - Test specific scenarios after setting up to ensure connectivity remains stable.  Following these steps and best practices will help ensure a successful remote desktop setup with ongoing maintenance and security in mind. Good luck with your project! If you need further assistance, feel free to ask.
+[snapshot: logs/snapshots/snapshot-20250831-235211.txt]
