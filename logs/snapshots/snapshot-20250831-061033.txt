@@ -1,0 +1,50 @@
+
+    === azq context snapshot ===
+    Repo: /home/jevert/git/azq
+    Commit: c0136e2b751d2d86c6bb533a0cc319fb86e505e0
+
+    --- Recent git log ---
+    c0136e2 added the ideas file
+83f7a81 have a better azq doc commanbd.
+2b1dec9 many many sins.
+819af26 bootstrap azq skeleton with dispatcher and tests
+ed1080b added more to my azq repo.
+
+    --- File tree (depth 2) ---
+    ./requirements.txt
+./logs/chatlog.md
+./azq/openai_client.py
+./azq/import_convo.py
+./azq/partse_convo.py
+./azq/context_snapshot.py
+./LICENSE
+./.pytest_cache/CACHEDIR.TAG
+./.pytest_cache/.gitignore
+./.pytest_cache/README.md
+./bin/azq
+./.git/index
+./.git/description
+./.git/HEAD
+./.git/config
+./.git/COMMIT_EDITMSG
+./ideas/teaching_mode.md
+./ideas/context_snapshot.md
+./ideas/thread-sync.md
+./ideas/VISION.md
+./ideas/version-aware-question-and-answer.md
+./ideas/manpages_integration.md
+./ideas/readme-badge.md
+./ideas/ghost_completion.md
+./ideas/BRAINSTORMING.md
+./hello.txt
+./azq_env/pyvenv.cfg
+./.env
+./.gitignore
+./README.md
+./tests/test_ask.sh
+./tests/test_cli.sh
+./tests/out.txt
+./tests/test_import.sh
+./tests/test_ask.py
+    ===========================
+    

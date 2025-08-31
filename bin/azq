@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # azq — Ask ChatGPT from your terminal
-# First draft CLI dispatcher
+# Command dispatcher
 
 set -euo pipefail
 
-# Ensure azq_env is active
+# Ensure azq_env virtual environment is active
 if [ -f "./azq_env/bin/activate" ]; then
   source ./azq_env/bin/activate
 fi
@@ -13,37 +13,83 @@ cmd="${1:-help}"
 
 case "$cmd" in
 
+
+      
+
+
+
   ask)
     shift
-    echo "[azq] Asking ChatGPT with input: $*" 
-    echo "---" >> logs/chatlog.md
-    echo "USER: $*" >> logs/chatlog.md
-    python - "$@" <<'PY'
-from azq.openai_client import client
-import sys, json
+    question="$*"
 
-question = " ".join(sys.argv[1:])
+    echo "[azq] Asking ChatGPT with input: $question" 
+    echo "---" >> logs/chatlog.md
+    echo "USER: $question" >> logs/chatlog.md
+
+    # Run Python inline to query OpenAI *and* log snapshot
+    python - "$question" <<'PY'
+import sys, pathlib, datetime
+from azq.openai_client import client
+from azq.context_snapshot import get_repo_context
+
+question = sys.argv[1]
+context = get_repo_context()
+
+# Save snapshot file with timestamp
+snap_dir = pathlib.Path("logs/snapshots")
+snap_dir.mkdir(parents=True, exist_ok=True)
+ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+snap_file = snap_dir / f"snapshot-{ts}.txt"
+snap_file.write_text(context)
+
+# Ask ChatGPT with context
 resp = client.chat.completions.create(
     model="gpt-4o-mini",
-    messages=[{"role": "user", "content": question}]
+    messages=[
+        {"role": "system", "content": "You are azq, a CLI assistant. Use repo context when answering."},
+        {"role": "user", "content": f"{question}\n\n{context}"}
+    ]
 )
 
 answer = resp.choices[0].message.content
 print(answer)
 
-# Append assistant reply to log
+# Append assistant reply + snapshot link to log
 with open("logs/chatlog.md", "a") as f:
-    f.write("ASSISTANT: " + answer.replace("\n", " ") + "\n")
+    f.write(f"ASSISTANT: {answer.replace(chr(10), ' ')}\n")
+    f.write(f"[snapshot: {snap_file}]\n")
 PY
     ;;
+
+
+
+
+
+
   exec)
     echo "[azq] Executing staged commands (not implemented yet)"
     ;;
+  thread-export)
+    mkdir -p logs/threads
+    ts=$(date +"%Y%m%d-%H%M%S")
+    cp logs/chatlog.md "logs/threads/thread-$ts.md"
+    echo "[azq] Exported current thread to logs/threads/thread-$ts.md"
+    ;;
+
+  thread-import)
+    file="$1"
+    if [ ! -f "$file" ]; then
+      echo "[azq] No such file: $file"
+      exit 1
+    fi
+    cp "$file" logs/chatlog.md
+    echo "[azq] Imported thread from $file into logs/chatlog.md"
+    ;;
 
 
 
 
-  # bin/azq (add to case statement)
+
   doc)
     shift
     topic="$1"
@@ -59,8 +105,6 @@ print(f"[azq] Doc for {topic} saved to {outpath}")
 PY
     ;;
 
-
-
   import)
     shift
     convo_id="$1"
@@ -69,13 +113,16 @@ PY
     echo "[azq] Importing conversation $convo_id"
     ./azq/import_convo.py "$convo_id" "$outdir"
     ;;
+
   help|--help|-h|"")
     echo "Usage: azq <command> [args]"
     echo "Commands:"
     echo "  ask    'question'   # Ask ChatGPT and log it"
     echo "  exec               # Run staged commands"
-    echo "  import <url>       # Import conversation"
+    echo "  doc <topic>        # Save Python/pydoc doc for topic"
+    echo "  import <id/url>    # Import conversation"
     ;;
+
   *)
     echo "[azq] Unknown command: $cmd"
     exit 1
