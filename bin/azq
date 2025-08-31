@@ -14,10 +14,6 @@ cmd="${1:-help}"
 case "$cmd" in
 
 
-      
-
-
-
   ask)
     shift
     question="$*"
@@ -31,39 +27,47 @@ case "$cmd" in
 import sys, pathlib, datetime
 from azq.openai_client import client
 from azq.context_snapshot import get_repo_context
+from pathlib import Path
 
+def load_guidance():
+    """Load all guidance markdown files into one string."""
+    texts = []
+    for file in Path("guidance").glob("*.md"):
+        texts.append(file.read_text())
+    return "\n\n".join(texts)
+
+# --- Inputs ---
 question = sys.argv[1]
 context = get_repo_context()
+guidance = load_guidance()
 
-# Save snapshot file with timestamp
+# --- Save snapshot ---
 snap_dir = pathlib.Path("logs/snapshots")
 snap_dir.mkdir(parents=True, exist_ok=True)
 ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 snap_file = snap_dir / f"snapshot-{ts}.txt"
 snap_file.write_text(context)
 
-# Ask ChatGPT with context
+# --- Ask ChatGPT ---
 resp = client.chat.completions.create(
     model="gpt-4o-mini",
     messages=[
-        {"role": "system", "content": "You are azq, a CLI assistant. Use repo context when answering."},
-        {"role": "user", "content": f"{question}\n\n{context}"}
+        {"role": "system",
+         "content": "You are azq, a CLI mentor. Always follow best practices." + "\n\n" + guidance},
+        {"role": "user",
+         "content": f"{question}\n\n{context}"}
     ]
 )
 
 answer = resp.choices[0].message.content
 print(answer)
 
-# Append assistant reply + snapshot link to log
+# --- Log answer + snapshot link ---
 with open("logs/chatlog.md", "a") as f:
     f.write(f"ASSISTANT: {answer.replace(chr(10), ' ')}\n")
     f.write(f"[snapshot: {snap_file}]\n")
 PY
     ;;
-
-
-
-
 
 
   exec)
