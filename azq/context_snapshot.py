@@ -8,9 +8,25 @@ def run(cmd: str) -> str:
     except Exception:
         return ""
 
+
+
+
+# In azq/context_snapshot.py
+
+def get_shell_history(limit=50) -> str:
+    """Grab last N commands from shell history."""
+    history_file = pathlib.Path.home() / ".bash_history"
+    if history_file.exists():
+        lines = history_file.read_text().splitlines()
+        return "\n".join(lines[-limit:])
+    # Fallback
+    return run(f"history | tail -n {limit}")
+
 def get_repo_context() -> str:
     """Collect repo + system state: commit, branch, diff, tree, README, reqs, system info."""
     parts = []
+    # ... existing system + git info ...
+    
 
     # --- System Information ---
     parts.append("## System Info")
@@ -56,6 +72,11 @@ def get_repo_context() -> str:
     if req.exists():
         parts.append("\n## requirements.txt")
         parts.append(req.read_text())
+
+    # Shell history
+    parts.append("\n## Shell History (last 200)")
+    parts.append(get_shell_history())
+
 
     return "\n".join(parts)
 
