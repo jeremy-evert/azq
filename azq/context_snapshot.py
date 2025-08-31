@@ -1,5 +1,5 @@
 # azq/context_snapshot.py
-import subprocess, pathlib
+import subprocess, pathlib, platform, sys, os
 
 def run(cmd: str) -> str:
     """Run a shell command safely, return stdout or '' if it fails."""
@@ -9,33 +9,49 @@ def run(cmd: str) -> str:
         return ""
 
 def get_repo_context() -> str:
-    """Collect repo state: commit hash, git diff, tree, README, requirements."""
+    """Collect repo + system state: commit, branch, diff, tree, README, reqs, system info."""
     parts = []
 
-    # Current commit hash
-    parts.append("## Git Commit")
+    # --- System Information ---
+    parts.append("## System Info")
+    parts.append(f"OS: {platform.system()} {platform.release()} ({platform.version()})")
+    parts.append(f"Arch: {platform.machine()}")
+    parts.append(f"Python: {sys.version.split()[0]}")
+    if os.environ.get("VIRTUAL_ENV"):
+        parts.append(f"Virtualenv: {os.environ['VIRTUAL_ENV']}")
+    else:
+        parts.append("Virtualenv: (none)")
+    parts.append("")
+
+    # Installed packages (first 30 for brevity)
+    parts.append("## Installed Packages (pip list --format=freeze | head -n 30)")
+    parts.append(run("pip list --format=freeze | head -n 30"))
+
+    # --- Git Information ---
+    parts.append("\n## Git Commit")
     parts.append(run("git rev-parse HEAD"))
 
-    # Last commit log
+    parts.append("\n## Git Branch")
+    parts.append(run("git rev-parse --abbrev-ref HEAD"))
+
     parts.append("\n## Git Log (last 3)")
     parts.append(run("git log -n 3 --oneline"))
 
-    # Diff since last commit
     parts.append("\n## Git Diff")
     diff = run("git diff HEAD~1..HEAD")
     parts.append(diff if diff else "(no diff)")
 
-    # File tree (depth 2 for readability)
-    parts.append("\n## File Tree")
+    # --- File Tree ---
+    parts.append("\n## File Tree (depth 2)")
     parts.append(run("ls -R | head -n 200"))
 
-    # README.md
+    # --- README.md ---
     readme = pathlib.Path("README.md")
     if readme.exists():
         parts.append("\n## README.md")
         parts.append(readme.read_text())
 
-    # requirements.txt
+    # --- requirements.txt ---
     req = pathlib.Path("requirements.txt")
     if req.exists():
         parts.append("\n## requirements.txt")

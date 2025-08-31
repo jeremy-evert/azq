@@ -76,7 +76,9 @@ PY
     echo "[azq] Exported current thread to logs/threads/thread-$ts.md"
     ;;
 
+
   thread-import)
+    shift
     file="$1"
     if [ ! -f "$file" ]; then
       echo "[azq] No such file: $file"
@@ -85,7 +87,6 @@ PY
     cp "$file" logs/chatlog.md
     echo "[azq] Imported thread from $file into logs/chatlog.md"
     ;;
-
 
 
 
