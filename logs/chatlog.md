@@ -10,3 +10,6 @@ ASSISTANT: Hello! How can I assist you today?
 ---
 USER: What is 2+2?
 ASSISTANT: Hello! How can I assist you today?
+---
+USER: What is 2+2?
+ASSISTANT: 2 + 2 equals 4.

@@ -18,7 +18,7 @@ case "$cmd" in
     echo "[azq] Asking ChatGPT with input: $*" 
     echo "---" >> logs/chatlog.md
     echo "USER: $*" >> logs/chatlog.md
-    python - <<'PY'
+    python - "$@" <<'PY'
 from azq.openai_client import client
 import sys, json
 
