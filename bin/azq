@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 # azq — Ask ChatGPT from your terminal
-# Command dispatcher
 
 set -euo pipefail
 
-# Ensure azq_env virtual environment is active
 if [ -f "./azq_env/bin/activate" ]; then
   source ./azq_env/bin/activate
 fi
@@ -12,175 +10,23 @@ fi
 cmd="${1:-help}"
 
 case "$cmd" in
-
-
   ask)
     shift
-    exec_mode=false
-    # detect --exec flag
+    exec_mode="false"
     if [[ "${1:-}" == "--exec" ]]; then
       exec_mode="true"
       shift
     fi
-    question="$*"
-
-
-    echo "[azq] Asking ChatGPT with input: $question" 
-    echo "---" >> logs/chatlog.md
-    echo "USER: $question" >> logs/chatlog.md
-
-    # Run Python inline to query OpenAI *and* log snapshot
-    python - "$question" <<'PY'
-import sys, pathlib, datetime
-from azq.openai_client import client
-from azq.context_snapshot import get_repo_context
-from pathlib import Path
-
-def load_guidance():
-    """Load all guidance markdown files into one string."""
-    texts = []
-    for file in Path("guidance").glob("*.md"):
-        texts.append(file.read_text())
-    return "\n\n".join(texts)
-
-# --- Inputs ---
-question = sys.argv[1]
-context = get_repo_context()
-guidance = load_guidance()
-
-# --- Save snapshot ---
-snap_dir = pathlib.Path("logs/snapshots")
-snap_dir.mkdir(parents=True, exist_ok=True)
-ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-snap_file = snap_dir / f"snapshot-{ts}.txt"
-snap_file.write_text(context)
-
-
-# --- count tokens ----
-from azq.token_counter import count_tokens
-
-total_input = f"{question}\n\n{context}"
-token_count = count_tokens(total_input, "gpt-4o-mini")
-print(f"[azq] Input length: ~{token_count} tokens")
-
-
-#from azq.usage import get_usage_cost
-#today_cost, two_week_cost = get_usage_cost()
-#print(f"[azq] Usage: ${today_cost:.2f} today | ${two_week_cost:.2f} last 14 days")
-
-
-# --- Ask ChatGPT ---
-resp = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[
-        {"role": "system",
-         "content": "You are azq, a CLI mentor. Always follow best practices." + "\n\n" + guidance},
-        {"role": "user",
-         "content": f"{question}\n\n{context}"}
-    ]
-)
-
-answer = resp.choices[0].message.content
-print(answer)
-
-exec_mode = "${exec_mode}"
-
-# --- Ask ChatGPT ---
-resp = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[
-        {"role": "system",
-         "content": "You are azq, a CLI mentor. Always follow best practices." + "\n\n" + guidance},
-        {"role": "user",
-         "content": f"{question}\n\n{context}"}
-    ]
-)
-
-answer = resp.choices[0].message.content
-print(answer)
-
-import subprocess, shutil
-
-# Determine if exec mode was passed
-exec_mode = sys.argv[2] if len(sys.argv) > 2 else "false"
-
-def run_uaskd(answer: str):
-    uaskd = shutil.which("uaskd") or "./bin/uaskd"
-    try:
-        p = subprocess.Popen([uaskd], stdin=subprocess.PIPE, text=True)
-        p.communicate(answer)
-    except Exception as e:
-        print(f"[azq] (note) uaskd not run: {e}")
-
-if exec_mode == "true":
-    # Non-interactive: always run uaskd
-    run_uaskd(answer)
-else:
-    # Interactive: ask user if they want to run it
-    choice = input("\n[azq] Parse reply for commands and walk through them? [y/N]: ").strip().lower()
-    if choice == "y":
-        run_uaskd(answer)
-    else:
-        print("[azq] Skipping command execution.")
-
-
-# --- Log answer + snapshot link ---
-with open("logs/chatlog.md", "a") as f:
-    f.write(f"ASSISTANT: {answer.replace(chr(10), ' ')}\n")
-    f.write(f"[snapshot: {snap_file}]\n")
-PY
+    # Use module mode to avoid sys.path hacks
+    python -m azq.ask "$exec_mode" "$*"
     ;;
-
 
   exec)
     echo "[azq] Executing staged commands (not implemented yet)"
     ;;
   thread-export)
-    mkdir -p logs/threads
-    ts=$(date +"%Y%m%d-%H%M%S")
-    cp logs/chatlog.md "logs/threads/thread-$ts.md"
-    echo "[azq] Exported current thread to logs/threads/thread-$ts.md"
+    # ... (leave as-is)
     ;;
-
-
-  thread-import)
-    shift
-    file="$1"
-    if [ ! -f "$file" ]; then
-      echo "[azq] No such file: $file"
-      exit 1
-    fi
-    cp "$file" logs/chatlog.md
-    echo "[azq] Imported thread from $file into logs/chatlog.md"
-    ;;
-
-
-
-
-  doc)
-    shift
-    topic="$1"
-    mkdir -p logs/docs
-    echo "[azq] Fetching doc for $topic"
-    python - "$topic"<<'PY'
-import pydoc, sys, pathlib
-topic = sys.argv[1]
-doc = pydoc.render_doc(topic, "Help on %s")
-outpath = pathlib.Path("logs/docs") / f"{topic}.txt"
-outpath.write_text(doc)
-print(f"[azq] Doc for {topic} saved to {outpath}")
-PY
-    ;;
-
-  import)
-    shift
-    convo_id="$1"
-    outdir="logs/imported/$convo_id"
-    mkdir -p "$outdir"
-    echo "[azq] Importing conversation $convo_id"
-    ./azq/import_convo.py "$convo_id" "$outdir"
-    ;;
-
   help|--help|-h|"")
     echo "Usage: azq <command> [args]"
     echo "Commands:"
@@ -189,7 +35,6 @@ PY
     echo "  doc <topic>        # Save Python/pydoc doc for topic"
     echo "  import <id/url>    # Import conversation"
     ;;
-
   *)
     echo "[azq] Unknown command: $cmd"
     exit 1

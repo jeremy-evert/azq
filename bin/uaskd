@@ -41,16 +41,50 @@ def interactive_prompt(commands):
                 print("Invalid choice, please use y/s/e/p/a or Enter for skip.")
 
 def main():
-    # For now, just read commands from stdin (pipeline from azq ask)
-    text = sys.stdin.read().splitlines()
-    # Look for lines that are shell commands
-    commands = [line for line in text if line.startswith("!") or line.startswith("```bash") or line.startswith("./") or line.startswith("git ")]
-    # Strip any prefixes like "!":
-    commands = [c.lstrip("!").replace("```bash", "").strip() for c in commands]
+    if len(sys.argv) > 1:
+        with open(sys.argv[1], "r") as f:
+            text = f.read().splitlines()
+    else:
+        text = sys.stdin.read().splitlines()
+
+    commands = []
+    in_cmd_block = False
+
+    for line in text:
+        stripped = line.strip()
+
+        # Our explicit markers
+        if stripped == "::CMD":
+            in_cmd_block = True
+            continue
+        if stripped == "::END_CMD":
+            in_cmd_block = False
+            continue
+
+        if in_cmd_block and stripped:
+            commands.append(stripped)
+            continue
+
+        # Fallback: catch "likely shell commands"
+        if (
+            stripped.startswith("git ")
+            or stripped.startswith("./")
+            or stripped.startswith("cd ")
+            or stripped.startswith("ls ")
+            or stripped.startswith("python ")
+        ):
+            commands.append(stripped.lstrip("!"))
+
     if not commands:
         print("[uaskd] No commands found in input.")
         return
+
     interactive_prompt(commands)
+
+
+
+
+
 
 if __name__ == "__main__":
     main()
