@@ -17,10 +17,28 @@ case "$cmd" in
 
     # Call Python helper
     python3 - "$question" <<'PY'
-import sys
+import sys, os
 from openai import OpenAI
+from dotenv import load_dotenv
 
-client = OpenAI()
+dotenv_path = os.path.expanduser(os.path.join(os.path.dirname(__file__), "..", ".env"))
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path=dotenv_path)
+
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    print("""
+[azq ERROR] No OpenAI API key found.
+
+Fix this by either:
+  1. Creating a file named .env in the project root with:
+       OPENAI_API_KEY=your_api_key_here
+  2. Or setting it in your shell:
+       export OPENAI_API_KEY=your_api_key_here
+""")
+    sys.exit(1)
+
+client = OpenAI(api_key=api_key)
 
 question = sys.argv[1]
 response = client.chat.completions.create(
