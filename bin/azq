@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# azq — Ask ChatGPT from your terminal
+# Command dispatcher
+
+set -euo pipefail
+
+cmd="${1:-help}"
+
+case "$cmd" in
+  ask)
+    shift
+    question="$*"
+    if [[ -z "$question" ]]; then
+      echo "Usage: azq ask \"your question here\""
+      exit 1
+    fi
+
+    # Call Python helper
+    python3 - "$question" <<'PY'
+import sys
+from openai import OpenAI
+
+client = OpenAI()
+
+question = sys.argv[1]
+response = client.chat.completions.create(
+    model="gpt-5",
+    messages=[{"role": "user", "content": question}],
+)
+
+print(response.choices[0].message.content)
+PY
+    ;;
+  *)
+    echo "Usage: azq ask \"your question here\""
+    ;;
+esac
+
