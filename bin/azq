@@ -16,7 +16,14 @@ case "$cmd" in
 
   ask)
     shift
+    exec_mode=false
+    # detect --exec flag
+    if [[ "${1:-}" == "--exec" ]]; then
+      exec_mode="true"
+      shift
+    fi
     question="$*"
+
 
     echo "[azq] Asking ChatGPT with input: $question" 
     echo "---" >> logs/chatlog.md
@@ -48,6 +55,20 @@ ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 snap_file = snap_dir / f"snapshot-{ts}.txt"
 snap_file.write_text(context)
 
+
+# --- count tokens ----
+from azq.token_counter import count_tokens
+
+total_input = f"{question}\n\n{context}"
+token_count = count_tokens(total_input, "gpt-4o-mini")
+print(f"[azq] Input length: ~{token_count} tokens")
+
+
+#from azq.usage import get_usage_cost
+#today_cost, two_week_cost = get_usage_cost()
+#print(f"[azq] Usage: ${today_cost:.2f} today | ${two_week_cost:.2f} last 14 days")
+
+
 # --- Ask ChatGPT ---
 resp = client.chat.completions.create(
     model="gpt-4o-mini",
@@ -61,6 +82,47 @@ resp = client.chat.completions.create(
 
 answer = resp.choices[0].message.content
 print(answer)
+
+exec_mode = "${exec_mode}"
+
+# --- Ask ChatGPT ---
+resp = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+        {"role": "system",
+         "content": "You are azq, a CLI mentor. Always follow best practices." + "\n\n" + guidance},
+        {"role": "user",
+         "content": f"{question}\n\n{context}"}
+    ]
+)
+
+answer = resp.choices[0].message.content
+print(answer)
+
+import subprocess, shutil
+
+# Determine if exec mode was passed
+exec_mode = sys.argv[2] if len(sys.argv) > 2 else "false"
+
+def run_uaskd(answer: str):
+    uaskd = shutil.which("uaskd") or "./bin/uaskd"
+    try:
+        p = subprocess.Popen([uaskd], stdin=subprocess.PIPE, text=True)
+        p.communicate(answer)
+    except Exception as e:
+        print(f"[azq] (note) uaskd not run: {e}")
+
+if exec_mode == "true":
+    # Non-interactive: always run uaskd
+    run_uaskd(answer)
+else:
+    # Interactive: ask user if they want to run it
+    choice = input("\n[azq] Parse reply for commands and walk through them? [y/N]: ").strip().lower()
+    if choice == "y":
+        run_uaskd(answer)
+    else:
+        print("[azq] Skipping command execution.")
+
 
 # --- Log answer + snapshot link ---
 with open("logs/chatlog.md", "a") as f:

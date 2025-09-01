@@ -1,0 +1,122 @@
+## System Info
+OS: Linux 6.12.34+rpt-rpi-v8
+Arch: aarch64
+Python: 3.11.2
+Virtualenv: /home/jevert/git/azq/azq_env
+
+## Installed Packages (first 10)
+annotated-types==0.7.0
+anyio==4.10.0
+certifi==2025.8.3
+distro==1.9.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.10
+iniconfig==2.1.0
+jiter==0.10.0
+
+## Git Commit
+03776de34ff7d870e7c6a27c63525fb5210b621e
+
+## Git Branch
+main
+
+## Git Log (last 2)
+03776de updated the context snapshot.
+bc33866 added more brainstorming ideas.
+
+## Git Diff (last commit)
+diff --git a/azq/context_snapshot.py b/azq/context_snapshot.py
+index ba61e88..2af990d 100644
+--- a/azq/context_snapshot.py
++++ b/azq/context_snapshot.py
+@@ -1,44 +1,41 @@
+ # azq/context_snapshot.py
+-import subprocess
+-import pathlib
+-import platform
+-import sys
+-import os
++import subprocess, pathlib, platform, sys, os
+ 
+-def run(cmd: str) -> str:
+-    """Run a shell command safely, return stdout or '' if it fails."""
++def run(cmd: str, limit: int = None) -> str:
++    """Run a shell command safely, return stdout or '' if it fails.
++       Optionally limit to first N lines."""
+     try:
+-        return subprocess.check_output(cmd, shell=True, text=True).strip()
++        output = subprocess.check_output(cmd, shell=True, text=True).strip()
++        if limit:
++            return "\n".join(output.splitlines()[:limit])
++        return output
+     except Exception:
+         return ""
+ 
+-def get_shell_history(limit: int = 50) -> str:
++def get_shell_history(limit=25) -> str:
+     """Grab last N commands from shell history."""
+     history_file = pathlib.Path.home() / ".bash_history"
+     if history_file.exists():
+         lines = history_file.read_text().splitlines()
+         return "\n".join(lines[-limit:])
+-    # Fallback to shell builtin
+     return run(f"history | tail -n {limit}")
+ 
+ def get_repo_context() -> str:
+-    """Collect repo + system state: commit, branch, diff, tree, README, reqs, system info, shell history."""
++    """Slimmed repo + system snapshot for azq ask.
+
+## File Tree (top level)
+azq
+azq_env
+bin
+debian
+docs
+guidance
+hello.txt
+home
+ideas
+LICENSE
+logs
+README.md
+requirements.txt
+rpm
+tests
+
+## README.md (first 50 lines)
+# azq — Ask ChatGPT from your terminal
+
+## requirements.txt (first 20 lines)
+openai
+python-dotenv
+pytest
+
+
+## Shell History (last 25)
+
+
+
+
+
+and from before...
+
+
+[azq] Asking ChatGPT with input: How do I set up a remote desktop from a Rasbperry pi to a Mac Book? what do I need to have running on the Mac and what do I need to have running on the pi? right now I can ssh in. the pi ip address is 192.168.18.31. I don't have elevated privelages on the mac so I would like to try to do something that just works in a web browser or something. what are your thoruhgs?
+To set up a remote desktop from your Raspberry Pi to a MacBook without requiring elevated privileges on the Mac, I recommend using a web-based remote desktop solution like **noVNC** in conjunction with **VNC**. Here's a step-by-step guide to help you get everything set up smoothly:
+
+### Steps for Raspberry Pi:
+
+1. **Install a VNC Server**:
+   - You can use `tightvncserver` or `x11vnc`. Let's install `tightvncserver`:
+2. **Start the VNC Server**:
+3. **Install a Web Browser** (if not already installed):
+4. **Install noVNC**:
+5. **Start the noVNC server**:
+### Steps on your MacBook:
+1. **Open a Web Browser**:
+2. **Connect to your Raspberry Pi**:
+### Tips:
+- **Firewall and Ports**: Ensure that the required ports are open. VNC typically uses port `5900 + display number` (e.g., 5901 for display `:1`), and noVNC uses port `6080` for accessing the web interface.
+- **Closure**: Once you’re done, make sure to stop the VNC server to avoid unauthorized access:
