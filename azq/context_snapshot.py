@@ -1,75 +1,44 @@
-# azq/context_snapshot.py
-import subprocess, pathlib, platform, sys, os
+(azq_env) jevert@piborg:~/git/azq $ azq ask "I want to run my unit tests. do you see what I tried before? how do I fix that?"
+[azq] Input length: ~1024 tokens
 
-def run(cmd: str, limit: int = None) -> str:
-    """Run a shell command safely, return stdout or '' if it fails.
-       Optionally limit to first N lines."""
-    try:
-        output = subprocess.check_output(cmd, shell=True, text=True).strip()
-        if limit:
-            return "\n".join(output.splitlines()[:limit])
-        return output
-    except Exception:
-        return ""
+--- ChatGPT Response ---
 
-def get_shell_history(limit=25) -> str:
-    """Grab last N commands from shell history."""
-    history_file = pathlib.Path.home() / ".bash_history"
-    if history_file.exists():
-        lines = history_file.read_text().splitlines()
-        return "\n".join(lines[-limit:])
-    return run(f"history | tail -n {limit}")
+It seems you are trying to run your unit tests, but I don't see any specific errors or issues from your provided details. However, I can guide you on how to run your tests in a virtual environment using `pytest`, which is mentioned in your `requirements.txt`. Here's how to do it:
 
-def get_repo_context() -> str:
-    """Slimmed repo + system snapshot for azq ask.
-    Keeps essentials without blowing token limits."""
-    parts = []
+1. First, ensure your virtual environment is activated.
+2. Then run the tests using `pytest`.
 
-    # --- System Information ---
-    parts.append("## System Info")
-    parts.append(f"OS: {platform.system()} {platform.release()}")
-    parts.append(f"Arch: {platform.machine()}")
-    parts.append(f"Python: {sys.version.split()[0]}")
-    parts.append(f"Virtualenv: {os.environ.get('VIRTUAL_ENV', '(none)')}")
-    parts.append("")
+Here’s how you can do that:
 
-    # --- Installed packages (just 10 for context) ---
-    parts.append("## Installed Packages (first 10)")
-    parts.append(run("pip list --format=freeze", limit=10))
+Activate your virtual environment:
 
-    # --- Git Information ---
-    parts.append("\n## Git Commit")
-    parts.append(run("git rev-parse HEAD"))
+::CMD
+source /home/jevert/git/azq/azq_env/bin/activate
+::END_CMD
 
-    parts.append("\n## Git Branch")
-    parts.append(run("git rev-parse --abbrev-ref HEAD"))
+After activating the virtual environment, run your tests with:
 
-    parts.append("\n## Git Log (last 2)")
-    parts.append(run("git log -n 2 --oneline"))
+::CMD
+pytest
+::END_CMD
 
-    parts.append("\n## Git Diff (last commit)")
-    diff = run("git diff HEAD~1..HEAD", limit=40)  # only 40 lines
-    parts.append(diff if diff else "(no diff)")
+Make sure you're in the root directory of your project (where the `tests` folder is located) when you run the `pytest` command. You can also specify the directory or individual test files if needed. 
 
-    # --- File Tree (just top-level + 20 entries) ---
-    parts.append("\n## File Tree (top level)")
-    parts.append(run("ls -1 | head -n 20"))
+Make sure that your tests are properly formatted according to pytest conventions. If there are any specific errors that occur when you try to run the tests, sharing those would help in diagnosing the problem. 
 
-    # --- README.md (first 50 lines) ---
-    readme = pathlib.Path("README.md")
-    if readme.exists():
-        parts.append("\n## README.md (first 50 lines)")
-        parts.append("\n".join(readme.read_text().splitlines()[:50]))
+Also, ensure that any modifications or features you've recently added are accompanied by relevant tests to maintain good testing practices.
 
-    # --- requirements.txt (first 20 lines) ---
-    req = pathlib.Path("requirements.txt")
-    if req.exists():
-        parts.append("\n## requirements.txt (first 20 lines)")
-        parts.append("\n".join(req.read_text().splitlines()[:20]))
+--- End Response ---
 
-    # --- Shell History ---
-    parts.append("\n## Shell History (last 25)")
-    parts.append(get_shell_history(limit=25))
+[azq] Parse reply for commands and walk through them? [y/N]: y
 
-    return "\n".join(parts)
+Command suggested: source /home/jevert/git/azq/azq_env/bin/activate
+Run it? [y=Yes, s=Skip (default/Enter), e=Edit, p=Pause, a=Abort]: y
+[uaskd] Running: source /home/jevert/git/azq/azq_env/bin/activate
+[uaskd] Command failed: Command 'source /home/jevert/git/azq/azq_env/bin/activate' returned non-zero exit status 127.
 
+Command suggested: pytest
+Run it? [y=Yes, s=Skip (default/Enter), e=Edit, p=Pause, a=Abort]: y
+[uaskd] Running: pytest
+[uaskd] Command failed: Command 'pytest' returned non-zero exit status 2.
+(azq_env) jevert@piborg:~/git/azq $ 
