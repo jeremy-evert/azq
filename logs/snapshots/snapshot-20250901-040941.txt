@@ -1,0 +1,122 @@
+## System Info
+OS: Linux 6.12.34+rpt-rpi-v8
+Arch: aarch64
+Python: 3.11.2
+Virtualenv: /home/jevert/git/azq/azq_env
+
+## Installed Packages (first 10)
+annotated-types==0.7.0
+anyio==4.10.0
+certifi==2025.8.3
+charset-normalizer==3.4.3
+distro==1.9.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.10
+iniconfig==2.1.0
+
+## Git Commit
+0e9709fe8b88b6e27b897fd713fc549654e94f32
+
+## Git Branch
+main
+
+## Git Log (last 2)
+0e9709f added a logging markdown file.
+de1be40 able to do a little better.
+
+## Git Diff (last commit)
+diff --git a/guidance/logging.md b/guidance/logging.md
+new file mode 100644
+index 0000000..84ae3a7
+--- /dev/null
++++ b/guidance/logging.md
+@@ -0,0 +1,38 @@
++# Logging Guidance for azq
++
++When you respond, format so `ask.py` and `uaskd` can produce a rich log.
++
++## Format Rules
++- Always treat the conversation as a transcript.
++- Begin every assistant answer with clear prose, **outside** of command markers.
++- When you want to suggest commands, wrap them like this:
++
++::CMD
++git status
++::END_CMD
++
++::CMD
++git add .
++git commit -m "Describe changes"
++git push origin main
++::END_CMD
++
++- Do not prefix commands with $, !, or backticks.
++- Explanations go outside command blocks.
++- Commands go inside `::CMD`/`::END_CMD` only.
++
++## Logging Goals
++- `ask.py` will write:
++  - USER question
++  - ASSISTANT answer (with formatting preserved)
++  - [snapshot: ...] pointer
++- `uaskd` will append:
++  - COMMAND: actual command string
++  - RESULT: captured stdout/stderr (FAILED if exit non-zero)
++
++This structure ensures `logs/chatlog.md` contains a complete transcript:
++  1. Question
+
+## File Tree (top level)
+azq
+azq_env
+bin
+debian
+docs
+guidance
+hello.txt
+home
+ideas
+LICENSE
+logs
+README.md
+requirements.txt
+rpm
+tests
+
+## README.md (first 50 lines)
+# azq — Ask ChatGPT from your terminal
+
+## requirements.txt (first 20 lines)
+openai
+python-dotenv
+pytest
+
+
+## Shell History (last 25)
+
+
+
+
+
+and from before...
+
+
+[azq] Asking ChatGPT with input: How do I set up a remote desktop from a Rasbperry pi to a Mac Book? what do I need to have running on the Mac and what do I need to have running on the pi? right now I can ssh in. the pi ip address is 192.168.18.31. I don't have elevated privelages on the mac so I would like to try to do something that just works in a web browser or something. what are your thoruhgs?
+To set up a remote desktop from your Raspberry Pi to a MacBook without requiring elevated privileges on the Mac, I recommend using a web-based remote desktop solution like **noVNC** in conjunction with **VNC**. Here's a step-by-step guide to help you get everything set up smoothly:
+
+### Steps for Raspberry Pi:
+
+1. **Install a VNC Server**:
+   - You can use `tightvncserver` or `x11vnc`. Let's install `tightvncserver`:
+2. **Start the VNC Server**:
+3. **Install a Web Browser** (if not already installed):
+4. **Install noVNC**:
+5. **Start the noVNC server**:
+### Steps on your MacBook:
+1. **Open a Web Browser**:
+2. **Connect to your Raspberry Pi**:
+### Tips:
+- **Firewall and Ports**: Ensure that the required ports are open. VNC typically uses port `5900 + display number` (e.g., 5901 for display `:1`), and noVNC uses port `6080` for accessing the web interface.
+- **Closure**: Once you’re done, make sure to stop the VNC server to avoid unauthorized access:

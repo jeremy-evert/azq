@@ -1,22 +1,32 @@
 #!/usr/bin/env python3
 # uaskd — "because you asked" interactive command runner
 
-import sys, subprocess
+import sys, subprocess, datetime
+
+LOGFILE = "logs/chatlog.md"
+
+def log(text: str):
+    with open(LOGFILE, "a") as f:
+        f.write(text + "\n")
 
 def run_command(cmd: str):
     """Run a shell command and stream its output + log it."""
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log(f"\n[{ts}] COMMAND: {cmd}")
     try:
         result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
         print(result.stdout)
-        with open("logs/chatlog.md", "a") as f:
-            f.write(f"\n[CMD] {cmd}\n")
-            f.write(result.stdout)
+        if result.stdout.strip():
+            log("RESULT (stdout):\n" + result.stdout.strip())
+        if result.stderr.strip():
+            log("RESULT (stderr):\n" + result.stderr.strip())
     except subprocess.CalledProcessError as e:
         print(f"[uaskd] Command failed: {e}")
-        with open("logs/chatlog.md", "a") as f:
-            f.write(f"\n[CMD] {cmd} (FAILED)\n")
-            f.write(e.stdout or "")
-            f.write(e.stderr or "")
+        log("RESULT: (FAILED)")
+        if e.stdout:
+            log("stdout:\n" + e.stdout)
+        if e.stderr:
+            log("stderr:\n" + e.stderr)
 
 def interactive_prompt(commands):
     for cmd in commands:
@@ -32,6 +42,7 @@ def interactive_prompt(commands):
                 break
             elif choice == "s" or choice == "":
                 print("[uaskd] Skipped.")
+                log(f"COMMAND: {cmd} (skipped)")
                 break
             elif choice == "e":
                 edited = input("Edit command: ")
@@ -60,27 +71,16 @@ def main():
 
     for line in text:
         stripped = line.strip()
-
-        # Our explicit markers
         if stripped == "::CMD":
             in_cmd_block = True
             continue
         if stripped == "::END_CMD":
             in_cmd_block = False
             continue
-
         if in_cmd_block and stripped:
             commands.append(stripped)
             continue
-
-        # Fallback: catch "likely shell commands"
-        if (
-            stripped.startswith("git ")
-            or stripped.startswith("./")
-            or stripped.startswith("cd ")
-            or stripped.startswith("ls ")
-            or stripped.startswith("python ")
-        ):
+        if stripped.startswith(("git ", "./", "cd ", "ls ", "python ", "pip ")):
             commands.append(stripped.lstrip("!"))
 
     if not commands:
@@ -88,11 +88,6 @@ def main():
         return
 
     interactive_prompt(commands)
-
-
-
-
-
 
 if __name__ == "__main__":
     main()

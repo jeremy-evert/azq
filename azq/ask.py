@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 import pathlib, datetime, subprocess, shutil
-
 import sys, os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-
 from pathlib import Path
 from azq.openai_client import client
 from azq.context_snapshot import get_repo_context
@@ -19,19 +15,20 @@ def load_guidance():
 def run_uaskd(answer: str):
     uaskd = shutil.which("uaskd") or "./bin/uaskd"
     try:
-        # Write answer to a temp file for uaskd to read
         import tempfile
         with tempfile.NamedTemporaryFile("w+", delete=False) as tmp:
             tmp.write(answer)
             tmp.flush()
             tmp_path = tmp.name
-
-        # Launch uaskd with terminal stdin/stdout, passing file path
         subprocess.run([uaskd, tmp_path], check=False)
     except Exception as e:
         print(f"[azq] (note) uaskd not run: {e}")
 
 def main():
+    if len(sys.argv) < 3:
+        print("Usage: azq ask <exec_mode> <question>")
+        sys.exit(1)
+
     exec_mode, question = sys.argv[1], sys.argv[2]
 
     context = get_repo_context()
@@ -58,11 +55,10 @@ def main():
         ]
     )
     answer = resp.choices[0].message.content
-    #print(answer)
+
     print("\n--- ChatGPT Response ---\n")
     print(answer)
     print("\n--- End Response ---\n")
-
 
     # Decide on execution
     if exec_mode == "true":
@@ -77,10 +73,12 @@ def main():
         except EOFError:
             print("[azq] Skipping command execution (no stdin).")
 
-    # Log
+    # Log rich session
     with open("logs/chatlog.md", "a") as f:
+        f.write("\n--- NEW SESSION ---\n")
         f.write(f"USER: {question}\n")
-        f.write(f"ASSISTANT: {answer.replace(chr(10), ' ')}\n")
+        f.write("ASSISTANT:\n")
+        f.write(answer + "\n")
         f.write(f"[snapshot: {snap_file}]\n")
 
 if __name__ == "__main__":
