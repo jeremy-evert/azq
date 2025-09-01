@@ -4,11 +4,19 @@
 import sys, subprocess
 
 def run_command(cmd: str):
-    """Run a shell command and stream its output."""
+    """Run a shell command and stream its output + log it."""
     try:
-        subprocess.run(cmd, shell=True, check=True)
+        result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
+        print(result.stdout)
+        with open("logs/chatlog.md", "a") as f:
+            f.write(f"\n[CMD] {cmd}\n")
+            f.write(result.stdout)
     except subprocess.CalledProcessError as e:
         print(f"[uaskd] Command failed: {e}")
+        with open("logs/chatlog.md", "a") as f:
+            f.write(f"\n[CMD] {cmd} (FAILED)\n")
+            f.write(e.stdout or "")
+            f.write(e.stderr or "")
 
 def interactive_prompt(commands):
     for cmd in commands:
