@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "azq"
+version = "0.1.0"
+description = "AZQ craft engine – starting with Cole Scintilla for gathering sparks."
+readme = "README.md"
+requires-python = ">=3.9"
+
+authors = [
+  { name = "Jeremy Evert" }
+]
+
+license = "MIT"
+
+dependencies = [
+  "sounddevice",
+  "scipy",
+  "openai-whisper"
+]
+
+
+[project.scripts]
+azq = "azq.cli:main"
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["azq*"]
+exclude = ["data*"]
