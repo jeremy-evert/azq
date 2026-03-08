@@ -1,23 +1,21 @@
-from datetime import datetime
-from pathlib import Path
 import sounddevice as sd
-from scipy.io.wavfile import write
 import numpy as np
+from scipy.io.wavfile import write
+from pathlib import Path
+from datetime import datetime
+import sys
 
-AUDIO_DIR = Path("data/scintilla/audio")
-AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-
-SAMPLE_RATE = 44100
+SAMPLE_RATE = 16000
+OUT = Path("data/scintilla/audio")
+OUT.mkdir(parents=True, exist_ok=True)
 
 
 def record():
 
-    print("\nRecording started (press 2 to stop)...")
+    frames = []
 
-    recording = []
-
-    def callback(indata, frames, time, status):
-        recording.append(indata.copy())
+    def callback(indata, frame_count, time, status):
+        frames.append(indata.copy())
 
     stream = sd.InputStream(
         samplerate=SAMPLE_RATE,
@@ -29,23 +27,33 @@ def record():
 
     while True:
         cmd = input().strip()
-
         if cmd == "2":
             break
 
-        if cmd == "3":
-            print("Recording discarded.")
-            stream.stop()
-            return None
-
     stream.stop()
+    stream.close()
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    filename = AUDIO_DIR / f"{timestamp}.wav"
+    audio = np.concatenate(frames, axis=0)
 
-    audio = np.concatenate(recording, axis=0)
-    write(filename, SAMPLE_RATE, audio)
+    # normalize volume
+    max_val = np.max(np.abs(audio))
+    if max_val > 0:
+        audio = audio / max_val
 
-    print(f"Saved audio: {filename}")
+    # trim silence
+    threshold = 0.01
+    mask = np.abs(audio) > threshold
 
-    return filename
+    if np.any(mask):
+        start = np.argmax(mask)
+        end = len(audio) - np.argmax(mask[::-1])
+        audio = audio[start:end]
+
+    filename = datetime.now().strftime("%Y-%m-%d_%H%M%S") + ".wav"
+    path = OUT / filename
+
+    write(path, SAMPLE_RATE, audio)
+
+    print(f"Saved audio: {path}")
+
+    return path

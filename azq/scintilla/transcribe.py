@@ -5,22 +5,34 @@ OUT = Path("data/scintilla/transcripts")
 OUT.mkdir(parents=True, exist_ok=True)
 
 print("Loading Whisper model (GPU if available)...")
-MODEL = whisper.load_model("base")
+
+MODEL = whisper.load_model("small")
+
 print("Whisper ready")
 
 
 def run(audio_file):
 
     try:
-        result = MODEL.transcribe(str(audio_file))
-    except Exception as e:
+
+        result = MODEL.transcribe(
+            str(audio_file),
+            language="en",
+            temperature=0
+        )
+
+    except Exception:
 
         print("GPU transcription failed, retrying on CPU...")
 
-        
+        cpu_model = whisper.load_model("small", device="cpu")
 
-        cpu_model = whisper.load_model("base", device="cpu")
-        result = cpu_model.transcribe(str(audio_file), fp16=False)
+        result = cpu_model.transcribe(
+            str(audio_file),
+            language="en",
+            temperature=0,
+            fp16=False
+        )
 
     transcript = result["text"]
 
