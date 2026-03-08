@@ -2,26 +2,45 @@ from datetime import datetime
 from pathlib import Path
 import sounddevice as sd
 from scipy.io.wavfile import write
+import numpy as np
+import sys
 
-DATA = Path("data/scintilla/audio")
-DATA.mkdir(parents=True, exist_ok=True)
+AUDIO_DIR = Path("data/scintilla/audio")
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 SAMPLE_RATE = 44100
-SECONDS = 5
 
 
-def run():
+def wait_for_space(prompt):
+    print(prompt)
+    while True:
+        key = sys.stdin.read(1)
+        if key == " ":
+            return
+
+
+def record():
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    filename = DATA / f"{timestamp}.wav"
+    filename = AUDIO_DIR / f"{timestamp}.wav"
 
-    print("Speak your thought...")
+    wait_for_space("\nPress SPACE to start recording")
 
-    audio = sd.rec(int(SECONDS * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1)
-    sd.wait()
+    print("Recording... press SPACE to stop")
+
+    recording = []
+
+    def callback(indata, frames, time, status):
+        recording.append(indata.copy())
+
+    with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, callback=callback):
+
+        wait_for_space("")
+
+    audio = np.concatenate(recording, axis=0)
 
     write(filename, SAMPLE_RATE, audio)
 
-    print(f"Saved: {filename}")
+    print(f"Saved audio: {filename}")
 
     return filename
