@@ -1,1 +1,51 @@
-.env
+# --------------------------------------------------
+# Python environments
+# --------------------------------------------------
+
+.venv/
+venv/
+env/
+ENV/
+
+# --------------------------------------------------
+# Python build artifacts
+# --------------------------------------------------
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --------------------------------------------------
+# Editor / OS junk
+# --------------------------------------------------
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+
+# --------------------------------------------------
+# Logs
+# --------------------------------------------------
+
+*.log
+
+# --------------------------------------------------
+# Runtime data (Scintilla engine outputs)
+# --------------------------------------------------
+
+data/scintilla/audio/*
+data/scintilla/transcripts/*
+data/scintilla/sparks/*
+
+# Keep the folders themselves
+!data/scintilla/audio/.keep
+!data/scintilla/transcripts/.keep
+!data/scintilla/sparks/.keep
