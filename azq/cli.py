@@ -1,28 +1,38 @@
 import sys
-
-from azq.scintilla import capture
-from azq.scintilla import transcribe
-from azq.scintilla import extract
+from azq.scintilla import capture, transcribe, extract
 
 
 def capture_loop():
 
     print("\nCole Scintilla")
     print("Gather Sparks\n")
-    print("SPACE = record")
-    print("CTRL+C = exit\n")
+
+    print("1 → start recording")
+    print("2 → stop recording")
+    print("3 → discard recording")
+    print("4 → exit\n")
 
     while True:
 
-        audio = capture.record()
+        cmd = input("Command: ").strip()
 
-        input("Press ENTER to transcribe...")
+        if cmd == "1":
 
-        transcript = transcribe.run(audio)
+            audio = capture.record()
 
-        extract.run(transcript)
+            if audio is None:
+                continue
 
-        print("\nSpark captured.\n")
+            transcript = transcribe.run(audio)
+
+            extract.run(transcript)
+
+            print("\nSpark captured.\n")
+
+        elif cmd == "4":
+
+            print("Exiting Scintilla.")
+            break
 
 
 def main():
@@ -35,6 +45,3 @@ def main():
 
     if cmd == "capture":
         capture_loop()
-
-    else:
-        print("Unknown command")
