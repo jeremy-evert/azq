@@ -5,7 +5,7 @@ OUT = Path("data/scintilla/transcripts")
 OUT.mkdir(parents=True, exist_ok=True)
 
 print("Loading Whisper model...")
-MODEL = whisper.load_model("base", device="cpu")
+MODEL = whisper.load_model("base")
 print("Whisper ready")
 
 
