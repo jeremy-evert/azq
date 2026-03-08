@@ -1,47 +1,92 @@
 from pathlib import Path
 import whisper
+import torch
 
 OUT = Path("data/scintilla/transcripts")
 OUT.mkdir(parents=True, exist_ok=True)
 
-print("Loading Whisper model (GPU if available)...")
+print("Loading Whisper model...")
 
-MODEL = whisper.load_model("small")
+# ------------------------------------------------
+# Decide device safely
+# ------------------------------------------------
+
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+    print("CUDA detected")
+else:
+    DEVICE = "cpu"
+    print("Running on CPU")
+
+# ------------------------------------------------
+# Load models once
+# ------------------------------------------------
+
+MODEL = whisper.load_model("small", device=DEVICE)
+
+CPU_MODEL = None
+if DEVICE == "cuda":
+    CPU_MODEL = whisper.load_model("small", device="cpu")
 
 print("Whisper ready")
 
 
+def _safe_transcribe(model, audio_file):
+    """
+    Runs whisper transcription with safe settings.
+    """
+
+    result = model.transcribe(
+        str(audio_file),
+        language="en",
+        temperature=0,
+        fp16=False
+    )
+
+    text = result.get("text", "").strip()
+
+    return text
+
+
 def run(audio_file):
+
+    audio_file = Path(audio_file)
+
+    print(f"Transcribing: {audio_file.name}")
+
+    # ---------------------------------------------
+    # First attempt
+    # ---------------------------------------------
 
     try:
 
-        result = MODEL.transcribe(
-            str(audio_file),
-            language="en",
-            temperature=0
-        )
+        transcript = _safe_transcribe(MODEL, audio_file)
 
-    except Exception:
+        # detect pathological outputs
+        if not transcript or transcript.count("!") > 10:
+            raise RuntimeError("Whisper produced invalid output")
 
-        print("GPU transcription failed, retrying on CPU...")
+    except Exception as e:
 
-        cpu_model = whisper.load_model("small", device="cpu")
+        print("Primary transcription failed:", e)
 
-        result = cpu_model.transcribe(
-            str(audio_file),
-            language="en",
-            temperature=0,
-            fp16=False
-        )
+        if CPU_MODEL is None:
+            raise
 
-    transcript = result["text"]
+        print("Retrying on CPU model...")
 
-    name = Path(audio_file).stem
+        transcript = _safe_transcribe(CPU_MODEL, audio_file)
+
+    # ---------------------------------------------
+    # Save transcript
+    # ---------------------------------------------
+
+    name = audio_file.stem
     outfile = OUT / f"{name}.txt"
 
     with open(outfile, "w") as f:
         f.write(transcript)
 
-    print(f"Transcript: {outfile}")
+    print(f"Transcript saved → {outfile}")
 
     return outfile

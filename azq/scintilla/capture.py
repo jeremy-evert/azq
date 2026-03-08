@@ -1,24 +1,47 @@
 import sounddevice as sd
 import numpy as np
 from scipy.io.wavfile import write
+from scipy.signal import resample_poly
 from pathlib import Path
 from datetime import datetime
 import sys
 
-SAMPLE_RATE = 16000
-DEVICE = 9  # PipeWire default input
+TARGET_RATE = 16000
 
 OUT = Path("data/scintilla/audio")
 OUT.mkdir(parents=True, exist_ok=True)
 
 
+def find_input_device():
+    devices = sd.query_devices()
+
+    for i, dev in enumerate(devices):
+        if dev["max_input_channels"] > 0:
+            return i, dev
+
+    raise RuntimeError("No microphone input devices found")
+
+
 def record():
+
+    device_id, device_info = find_input_device()
+
+    device_rate = int(device_info["default_samplerate"])
+    channels = min(device_info["max_input_channels"], 2)
+
+    print("\n🎤 Using input device:")
+    print(f"   {device_id}: {device_info['name']}")
+    print(f"   channels available: {device_info['max_input_channels']}")
+    print(f"   device sample rate: {device_rate}\n")
 
     frames = []
 
-    print("\n🟢 Mic armed (waiting for speech)\n")
+    print("🟢 Mic armed (waiting for speech)\n")
 
     def callback(indata, frames_count, time, status):
+
+        if status:
+            print(status, file=sys.stderr)
 
         audio = indata.copy()
         frames.append(audio)
@@ -37,13 +60,11 @@ def record():
         )
         sys.stdout.flush()
 
-    # IMPORTANT: assign stream
     stream = sd.InputStream(
-        samplerate=SAMPLE_RATE,
-        channels=1,
-        device=DEVICE,
+        samplerate=device_rate,
+        device=device_id,
+        channels=channels,
         dtype="float32",
-        blocksize=0,
         callback=callback
     )
 
@@ -65,15 +86,17 @@ def record():
 
     audio = np.concatenate(frames, axis=0)
 
-    # protect against clipping
+    # convert stereo → mono
+    if audio.ndim > 1:
+        audio = np.mean(audio, axis=1)
+
     audio = np.clip(audio, -1.0, 1.0)
 
     print("Recorded samples:", len(audio))
     print("Peak amplitude:", np.max(np.abs(audio)))
 
+    # normalize
     max_val = np.max(np.abs(audio))
-
-    # normalize if strong enough
     if max_val > 0.01:
         audio = audio / max_val
 
@@ -86,11 +109,16 @@ def record():
         end = len(audio) - np.argmax(mask[::-1])
         audio = audio[start:end]
 
+    # resample → whisper rate
+    if device_rate != TARGET_RATE:
+        print(f"Resampling {device_rate} → {TARGET_RATE}")
+        audio = resample_poly(audio, TARGET_RATE, device_rate)
+
     filename = datetime.now().strftime("%Y-%m-%d_%H%M%S") + ".wav"
     path = OUT / filename
 
     audio_int16 = (audio * 32767).astype(np.int16)
-    write(path, SAMPLE_RATE, audio_int16)
+    write(path, TARGET_RATE, audio_int16)
 
     print(f"Saved audio: {path}")
 
