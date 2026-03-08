@@ -35,14 +35,20 @@ def record():
 
     audio = np.concatenate(frames, axis=0)
 
-    # normalize volume
     max_val = np.max(np.abs(audio))
-    if max_val > 0:
+
+    # safe normalization
+    if max_val > 0.02:
         audio = audio / max_val
 
     # trim silence
-    threshold = 0.01
+    threshold = 0.003
     mask = np.abs(audio) > threshold
+
+    if np.any(mask):
+        start = np.argmax(mask)
+        end = len(audio) - np.argmax(mask[::-1])
+        audio = audio[start:end]
 
     if np.any(mask):
         start = np.argmax(mask)
