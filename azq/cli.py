@@ -8,6 +8,7 @@ from azq.scintilla.spark_search import search_sparks
 
 from azq.finis.fine import run_fine
 from azq.finis.goals import show_goals
+from azq.finis.goal_manager import add_goal, close_goal, archive_goal
 
 
 def capture_loop():
@@ -54,6 +55,9 @@ def main():
         print("  spark search <text>")
         print("  fine")
         print("  goals")
+        print("  goal add")
+        print("  goal close <id>")
+        print("  goal archive <id>")
         return
 
     cmd = sys.argv[1]
@@ -96,3 +100,30 @@ def main():
 
     elif cmd == "goals":
         show_goals()
+
+    elif cmd == "goal":
+
+        if len(sys.argv) < 3:
+            print("Usage: azq goal [add|close|archive]")
+            return
+
+        sub = sys.argv[2]
+
+        if sub == "add":
+            add_goal()
+
+        elif sub == "close":
+
+            if len(sys.argv) < 4:
+                print("Usage: azq goal close <id>")
+                return
+
+            close_goal(sys.argv[3])
+
+        elif sub == "archive":
+
+            if len(sys.argv) < 4:
+                print("Usage: azq goal archive <id>")
+                return
+
+            archive_goal(sys.argv[3])
