@@ -14,5 +14,46 @@
     "derived_from": [
       "2026-03-08_195132.json"
     ]
+  },
+  {
+    "goal_id": "FINIS_003",
+    "goal": "I would like to see the ability to go through my code and look at test coverage and check out a repository and see if there's good test coverage for the repository",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": [
+      "2026-03-09_083032"
+    ]
+  },
+  {
+    "goal_id": "FINIS_004",
+    "goal": "\"Review repo for test coverage\"",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_005",
+    "goal": "To be able to go through a repository and check the branches and see if there are any unfinished projects waiting in the wings that we can go through and get rid of or finish up",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": [
+      "2026-03-09_083151"
+    ]
+  },
+  {
+    "goal_id": "FINIS_006",
+    "goal": "The idea is that sometimes our branches and our get environment can get untidy and i want to get that addressed",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": [
+      "2026-03-09_083151"
+    ]
+  },
+  {
+    "goal_id": "FINIS_007",
+    "goal": "FINIS_006",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
   }
 ]
