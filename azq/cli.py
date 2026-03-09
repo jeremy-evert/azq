@@ -1,6 +1,7 @@
 import sys
 from azq.scintilla import capture, transcribe, extract
-
+from azq.finis.fine import run_fine
+from azq.finis.goals import show_goals
 
 def capture_loop():
 
@@ -45,3 +46,8 @@ def main():
 
     if cmd == "capture":
         capture_loop()
+    elif cmd == "fine":
+        run_fine()
+
+    elif cmd == "goals":
+        show_goals()
