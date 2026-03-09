@@ -1,33 +1,101 @@
 import json
 import difflib
 from pathlib import Path
+from datetime import date
+
 from .goals import load_goals, save_goals, next_goal_id
 
 SPARK_DIR = Path("data/scintilla/sparks")
 
 
+# ------------------------------------------------
+# Load sparks
+# ------------------------------------------------
+
 def load_sparks():
     """Read all spark files."""
+
     sparks = []
 
     for file in sorted(SPARK_DIR.glob("*.json")):
+
         with open(file) as f:
             data = json.load(f)
 
         for s in data:
+
             sparks.append({
                 "spark": s["spark"],
-                "source": file.name
+                "source": file.stem
             })
 
     return sparks
+
+
+# ------------------------------------------------
+# Similarity check
+# ------------------------------------------------
 
 def similar(a, b):
     """Return similarity ratio between two strings."""
     return difflib.SequenceMatcher(None, a, b).ratio()
 
+
+# ------------------------------------------------
+# Goal text cleanup
+# ------------------------------------------------
+
+def clean_goal_text(text):
+    """
+    Convert spoken phrases into better goal statements.
+    """
+
+    text = text.strip()
+
+    prefixes = [
+        "i would like to",
+        "i want to",
+        "my goal is to",
+        "one of the goals that i have is",
+        "one goal is to",
+        "the goal is to"
+    ]
+
+    lower = text.lower()
+
+    for p in prefixes:
+        if lower.startswith(p):
+            text = text[len(p):].strip()
+
+    # normalize whitespace
+    text = " ".join(text.split())
+
+    # capitalize nicely
+    text = text[0].upper() + text[1:]
+
+    return text
+
+
+# ------------------------------------------------
+# Extract used spark sources
+# ------------------------------------------------
+
+def get_used_sources(goals):
+
+    used = set()
+
+    for g in goals:
+        for s in g.get("derived_from", []):
+            used.add(s)
+
+    return used
+
+
+# ------------------------------------------------
+# Propose goals
+# ------------------------------------------------
+
 def propose_goals(sparks):
-    """Convert sparks into candidate goals."""
 
     existing_goals = load_goals()
 
@@ -36,14 +104,24 @@ def propose_goals(sparks):
         for g in existing_goals
     ]
 
+    used_sources = get_used_sources(existing_goals)
+
     candidates = []
 
     for s in sparks:
+
+        source = s["source"]
+
+        # skip sparks already used
+        if source in used_sources:
+            continue
 
         text = s["spark"].strip()
 
         if len(text) < 10:
             continue
+
+        text = clean_goal_text(text)
 
         text_lower = text.lower()
 
@@ -59,16 +137,23 @@ def propose_goals(sparks):
             continue
 
         candidates.append({
-            "goal": text.capitalize(),
-            "source": s["source"]
+            "goal": text,
+            "source": source
         })
 
     return candidates
 
 
+# ------------------------------------------------
+# Confirm goals interactively
+# ------------------------------------------------
+
 def confirm_goals(candidates):
-    """Ask user which goals to keep."""
+
     confirmed = []
+
+    if not candidates:
+        return confirmed
 
     print("\nCandidate Goals\n")
 
@@ -81,11 +166,16 @@ def confirm_goals(candidates):
         if ans.lower().startswith("y"):
             confirmed.append(c)
 
+        print()
+
     return confirmed
 
 
+# ------------------------------------------------
+# Main Finis engine
+# ------------------------------------------------
+
 def run_fine():
-    """Main Fine Finem engine."""
 
     sparks = load_sparks()
 
@@ -111,6 +201,7 @@ def run_fine():
             "goal_id": goal_id,
             "goal": c["goal"],
             "status": "active",
+            "created": str(date.today()),
             "derived_from": [c["source"]]
         })
 
