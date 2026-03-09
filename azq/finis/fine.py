@@ -1,4 +1,5 @@
 import json
+import difflib
 from pathlib import Path
 from .goals import load_goals, save_goals, next_goal_id
 
@@ -21,15 +22,40 @@ def load_sparks():
 
     return sparks
 
+def similar(a, b):
+    """Return similarity ratio between two strings."""
+    return difflib.SequenceMatcher(None, a, b).ratio()
 
 def propose_goals(sparks):
     """Convert sparks into candidate goals."""
+
+    existing_goals = load_goals()
+
+    existing_text = [
+        g["goal"].lower()
+        for g in existing_goals
+    ]
+
     candidates = []
 
     for s in sparks:
+
         text = s["spark"].strip()
 
         if len(text) < 10:
+            continue
+
+        text_lower = text.lower()
+
+        duplicate = False
+
+        for g in existing_text:
+
+            if similar(text_lower, g) > 0.75:
+                duplicate = True
+                break
+
+        if duplicate:
             continue
 
         candidates.append({
