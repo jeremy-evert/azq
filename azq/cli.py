@@ -1,17 +1,14 @@
 import sys
 
-from azq.scintilla import capture, transcribe, extract
-from azq.scintilla.sparks import list_sparks
-from azq.scintilla.spark_view import view_spark
-from azq.scintilla.spark_delete import delete_spark
-from azq.scintilla.spark_search import search_sparks
 
-from azq.finis.fine import run_fine
-from azq.finis.goals import show_goals
-from azq.finis.goal_manager import add_goal, close_goal, archive_goal
-
+# ------------------------------------------------
+# Scintilla capture loop
+# ------------------------------------------------
 
 def capture_loop():
+
+    # Lazy import so Whisper does not load unless needed
+    from azq.scintilla import capture, transcribe, extract
 
     print("\nCole Scintilla")
     print("Gather Sparks\n")
@@ -44,9 +41,14 @@ def capture_loop():
             break
 
 
+# ------------------------------------------------
+# CLI entry
+# ------------------------------------------------
+
 def main():
 
     if len(sys.argv) < 2:
+
         print("Commands:")
         print("  capture")
         print("  sparks")
@@ -58,15 +60,31 @@ def main():
         print("  goal add")
         print("  goal close <id>")
         print("  goal archive <id>")
+
         return
 
     cmd = sys.argv[1]
 
+    # ---------------------------------------------
+    # Capture
+    # ---------------------------------------------
+
     if cmd == "capture":
+
         capture_loop()
 
+    # ---------------------------------------------
+    # List sparks
+    # ---------------------------------------------
+
     elif cmd == "sparks":
+
+        from azq.scintilla.sparks import list_sparks
         list_sparks()
+
+    # ---------------------------------------------
+    # Spark operations
+    # ---------------------------------------------
 
     elif cmd == "spark":
 
@@ -82,6 +100,7 @@ def main():
                 print("Usage: azq spark rm <id>")
                 return
 
+            from azq.scintilla.spark_delete import delete_spark
             delete_spark(sys.argv[3])
 
         elif sub == "search":
@@ -90,16 +109,35 @@ def main():
                 print("Usage: azq spark search <text>")
                 return
 
+            from azq.scintilla.spark_search import search_sparks
             search_sparks(" ".join(sys.argv[3:]))
 
         else:
+
+            from azq.scintilla.spark_view import view_spark
             view_spark(sub)
 
+    # ---------------------------------------------
+    # Finis engine
+    # ---------------------------------------------
+
     elif cmd == "fine":
+
+        from azq.finis.fine import run_fine
         run_fine()
 
+    # ---------------------------------------------
+    # List goals
+    # ---------------------------------------------
+
     elif cmd == "goals":
+
+        from azq.finis.goals import show_goals
         show_goals()
+
+    # ---------------------------------------------
+    # Goal operations
+    # ---------------------------------------------
 
     elif cmd == "goal":
 
@@ -110,6 +148,8 @@ def main():
         sub = sys.argv[2]
 
         if sub == "add":
+
+            from azq.finis.goal_manager import add_goal
             add_goal()
 
         elif sub == "close":
@@ -118,6 +158,7 @@ def main():
                 print("Usage: azq goal close <id>")
                 return
 
+            from azq.finis.goal_manager import close_goal
             close_goal(sys.argv[3])
 
         elif sub == "archive":
@@ -126,4 +167,9 @@ def main():
                 print("Usage: azq goal archive <id>")
                 return
 
+            from azq.finis.goal_manager import archive_goal
             archive_goal(sys.argv[3])
+
+    else:
+
+        print("Unknown command:", cmd)
