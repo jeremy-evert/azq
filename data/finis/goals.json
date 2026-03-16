@@ -52,6 +52,162 @@
   {
     "goal_id": "FINIS_007",
     "goal": "FINIS_006",
+    "status": "archived",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_008",
+    "goal": "\"If you'd like, the next stabilization step (very interesting) is making Scintilla smarter about audio cleanup, so the system can automatically detect:",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_009",
+    "goal": "Improve Scintilla audio cleanup by detecting empty, short, and duplicate recordings",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_010",
+    "goal": "Stabilize the Scintilla and Finis engines of AZQ",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_011",
+    "goal": "If you'd like, I can also show you a small trick for organizing goals into \u201cthemes\u201d later so your list doesn't become a long flat wall once you reach 30\u201350 goals",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_012",
+    "goal": "I would like to be able to enter goals as a file, so I can copy things over from the llm when I am working with them.",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_013",
+    "goal": "\"design Strue Formam so AZQ never turns into a project manager while still generating real deliverables.\"",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_014",
+    "goal": "\"burner goal to close.\"",
+    "status": "archived",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_015",
+    "goal": "One of the goals that azq suggested is azq space goals space minus minus flag that allows us to go and basically view all the goals even the ones that have a status of archived",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": [
+      "2026-03-09_090132"
+    ]
+  },
+  {
+    "goal_id": "FINIS_016",
+    "goal": "I think this is an okay goal and i want to add this to our list of things we can do in the future",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": [
+      "2026-03-09_090132"
+    ]
+  },
+  {
+    "goal_id": "FINIS_017",
+    "goal": "Azq suggested the goal that we could have a torture test that takes around five minutes for finesse that stress tests duplicates, identifies goal ids, and jason corruption protection",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": [
+      "2026-03-09_090255"
+    ]
+  },
+  {
+    "goal_id": "FINIS_018",
+    "goal": "It's kind of the thing that makes the system rock solid very quickly",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": [
+      "2026-03-09_090255"
+    ]
+  },
+  {
+    "goal_id": "FINIS_019",
+    "goal": "Azq suggested the goal to add a stabilization step",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": [
+      "2026-03-09_090431"
+    ]
+  },
+  {
+    "goal_id": "FINIS_020",
+    "goal": "They recommended a 15 line guard rail that prevents corrupted goals",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": [
+      "2026-03-09_090431"
+    ]
+  },
+  {
+    "goal_id": "FINIS_021",
+    "goal": "Json files from accidentally crashing azq",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": [
+      "2026-03-09_090431"
+    ]
+  },
+  {
+    "goal_id": "FINIS_022",
+    "goal": "It's small, but it makes the system dramatically more durable",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": [
+      "2026-03-09_090431"
+    ]
+  },
+  {
+    "goal_id": "FINIS_023",
+    "goal": "Goal text cleanup. Convert Conversational sentences into shorter goal phrases",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_024",
+    "goal": "Strict goal id matching: Change archive/close lookup from fuzzy match to exact match",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_025",
+    "goal": "add azq goals --all to show all active, completed, and archived goals.",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_026",
+    "goal": "JSON corruption guardrail: a small try/except around laoding goals.json to add a cheap reliability improvemenbt",
+    "status": "active",
+    "created": "2026-03-09",
+    "derived_from": []
+  },
+  {
+    "goal_id": "FINIS_027",
+    "goal": "Desigining Strue Formam so goals can turn into deliverables withough become a task manager. this is where AZQ starts becoming truly usable.",
     "status": "active",
     "created": "2026-03-09",
     "derived_from": []
