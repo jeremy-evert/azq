@@ -1,0 +1,194 @@
+{
+  "version": 1,
+  "name": "AZQ Stage 1 Wave B Checks",
+  "purpose": "Define task-specific automated checks for Stage 1 Wave B so the Codex runner can evaluate migration and command-layer refactors without hardcoding all task logic.",
+  "defaults": {
+    "retry_cap": 3,
+    "baseline_checks": [
+      {
+        "name": "compileall",
+        "type": "shell",
+        "command": "python -m compileall azq",
+        "required": true,
+        "description": "Verify the azq package still compiles after the patch."
+      },
+      {
+        "name": "storage_import",
+        "type": "shell",
+        "command": "python -c \"import azq.finis.storage\"",
+        "required": true,
+        "description": "Verify the Finis storage module still imports cleanly."
+      }
+    ]
+  },
+  "tasks": {
+    "STAGE1-WAVEB-01": {
+      "description": "Add canonical goal write helpers to storage.",
+      "checks": [
+        {
+          "name": "goal_write_helper_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify storage.py exposes a canonical single-record write helper.",
+          "code": "from azq.finis import storage\nassert any(hasattr(storage, name) for name in ['write_goal', 'save_goal', 'upsert_goal']), 'missing canonical goal write helper'"
+        },
+        {
+          "name": "goal_write_helper_writes_canonical_file",
+          "type": "python",
+          "required": true,
+          "description": "Verify one normalized goal can be persisted as a canonical FINIS markdown file.",
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.finis import storage\nwriter = getattr(storage, 'write_goal', None) or getattr(storage, 'save_goal', None) or getattr(storage, 'upsert_goal', None)\nassert writer is not None, 'write helper not found'\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    storage.GOALS_DIR = tmp_path / 'goals'\n    storage.LEGACY_GOALS_FILE = tmp_path / 'goals.json'\n    record = {\n        'goal_id': 'FINIS_123',\n        'title': 'Write helper test',\n        'status': 'active',\n        'created': '2026-01-01',\n        'description': 'desc',\n        'derived_from': ['spark_001']\n    }\n    goal_path = writer(record)\n    assert goal_path == storage.goal_file_path('FINIS_123')\n    assert goal_path.is_file(), 'canonical goal file was not written'\n    text = goal_path.read_text(encoding='utf-8')\n    assert '# FINIS_123' in text\n    assert '- title: Write helper test' in text\n    assert '- derived_from:' in text"
+        }
+      ],
+      "human_checks": [
+        "The write helper rewrites exactly one canonical file per goal record.",
+        "Write-side storage ownership stays in azq/finis/storage.py rather than leaking back into command modules."
+      ]
+    },
+    "STAGE1-WAVEB-02": {
+      "description": "Implement one-way legacy migration into canonical goal files.",
+      "checks": [
+        {
+          "name": "legacy_migration_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify storage.py exposes a dedicated one-way legacy migration helper.",
+          "code": "from azq.finis import storage\nassert any(hasattr(storage, name) for name in ['migrate_legacy_goals', 'migrate_legacy_goals_json', 'migrate_legacy_to_canonical_goals']), 'missing legacy migration helper'"
+        },
+        {
+          "name": "legacy_migration_preserves_ids_and_is_idempotent",
+          "type": "python",
+          "required": true,
+          "description": "Verify legacy JSON records migrate into canonical files without changing ids or duplicating files on repeat runs.",
+          "code": "import json\nfrom pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.finis import storage\nmigrate = getattr(storage, 'migrate_legacy_goals', None) or getattr(storage, 'migrate_legacy_goals_json', None) or getattr(storage, 'migrate_legacy_to_canonical_goals', None)\nassert migrate is not None, 'migration helper not found'\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    storage.GOALS_DIR = tmp_path / 'goals'\n    storage.LEGACY_GOALS_FILE = tmp_path / 'goals.json'\n    storage.LEGACY_GOALS_FILE.write_text(json.dumps([\n        {'goal_id': 'FINIS_001', 'goal': 'First legacy goal', 'status': 'active'},\n        {'goal_id': 'FINIS_002', 'goal': 'Second legacy goal', 'status': 'archived', 'derived_from': ['spark_2']}\n    ]), encoding='utf-8')\n    first = migrate()\n    second = migrate()\n    files = sorted(path.name for path in storage.GOALS_DIR.glob('FINIS_*.md'))\n    assert files == ['FINIS_001.md', 'FINIS_002.md']\n    assert first['migrated'] == 2, first\n    assert second['migrated'] == 0, second\n    assert second['skipped'] == 2, second\n    loaded = {item['goal_id']: item for item in storage.load_all_goals()}\n    assert set(loaded) == {'FINIS_001', 'FINIS_002'}\n    assert loaded['FINIS_001']['title'] == 'First legacy goal'\n    assert loaded['FINIS_002']['status'] == 'archived'"
+        }
+      ],
+      "human_checks": [
+        "Migration remains one-way and additive rather than trying to sync canonical files back into goals.json.",
+        "Idempotence comes from exact canonical file detection, not from fuzzy data merging."
+      ]
+    },
+    "STAGE1-WAVEB-03": {
+      "description": "Choose and wire the migration trigger.",
+      "checks": [
+        {
+          "name": "canonical_migration_trigger_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify storage.py exposes one inspectable migration trigger with an explicit triggered flag.",
+          "code": "import json\nfrom pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.finis import storage\ntrigger = getattr(storage, 'ensure_canonical_goals_migrated', None) or getattr(storage, 'ensure_goals_migrated', None)\nassert trigger is not None, 'missing migration trigger helper'\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    storage.GOALS_DIR = tmp_path / 'goals'\n    storage.LEGACY_GOALS_FILE = tmp_path / 'goals.json'\n    storage.LEGACY_GOALS_FILE.write_text(json.dumps([\n        {'goal_id': 'FINIS_001', 'goal': 'Trigger test', 'status': 'active'}\n    ]), encoding='utf-8')\n    first = trigger()\n    second = trigger()\n    assert first['triggered'] is True, first\n    assert first['migrated'] == 1, first\n    assert second['triggered'] is False, second\n    assert second['skipped'] == 1, second"
+        },
+        {
+          "name": "cli_wires_storage_ready_for_active_finis_commands",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('azq/cli.py').read_text(encoding='utf-8')\nassert 'def ensure_finis_storage_ready' in text\nfor snippet in [\n    \"elif cmd == \\\"fine\\\":\\n        ensure_finis_storage_ready()\",\n    \"elif cmd == \\\"goals\\\":\\n        ensure_finis_storage_ready()\",\n    \"elif cmd == \\\"goal\\\":\\n\",\n    \"        ensure_finis_storage_ready()\"\n]:\n    assert snippet in text, snippet\nPY",
+          "required": true,
+          "description": "Verify the CLI runs the storage migration trigger before active Finis command flows."
+        }
+      ],
+      "human_checks": [
+        "The migration trigger is easy to find and reason about during debugging.",
+        "The chosen trigger strategy does not broaden into unrelated command refactors."
+      ]
+    },
+    "STAGE1-WAVEB-04": {
+      "description": "Refactor azq goals into a thin presentation layer.",
+      "checks": [
+        {
+          "name": "goals_module_is_thin_presentation_layer",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('azq/finis/goals.py').read_text(encoding='utf-8')\nassert 'load_all_goals' in text\nassert 'def load_goals' not in text\nassert 'def save_goals' not in text\nassert 'def next_goal_id' not in text\nPY",
+          "required": true,
+          "description": "Verify goals.py no longer owns duplicated JSON-era storage helpers."
+        },
+        {
+          "name": "show_goals_reads_canonical_titles_and_filters_active",
+          "type": "python",
+          "required": true,
+          "description": "Verify show_goals() reads canonical records, prints title, and preserves no-goals versus no-active behavior.",
+          "code": "import io\nfrom contextlib import redirect_stdout\nfrom unittest.mock import patch\nfrom azq.finis.goals import show_goals\nbuf = io.StringIO()\nwith patch('azq.finis.goals.load_all_goals', return_value=[]):\n    with redirect_stdout(buf):\n        show_goals()\nassert 'No goals defined.' in buf.getvalue()\nbuf = io.StringIO()\nwith patch('azq.finis.goals.load_all_goals', return_value=[{'goal_id': 'FINIS_001', 'title': 'Dormant', 'status': 'archived'}]):\n    with redirect_stdout(buf):\n        show_goals()\nassert 'No active goals.' in buf.getvalue()\nbuf = io.StringIO()\nwith patch('azq.finis.goals.load_all_goals', return_value=[\n    {'goal_id': 'FINIS_001', 'title': 'Active title', 'status': 'active'},\n    {'goal_id': 'FINIS_002', 'title': 'Archived title', 'status': 'archived'}\n]):\n    with redirect_stdout(buf):\n        show_goals()\nout = buf.getvalue()\nassert 'Active title' in out\nassert 'Archived title' not in out\nassert 'FINIS_001' in out"
+        }
+      ],
+      "human_checks": [
+        "goals.py stays focused on display logic rather than becoming a second storage layer.",
+        "The visible output is still simple and readable for terminal use."
+      ]
+    },
+    "STAGE1-WAVEB-05": {
+      "description": "Refactor goal_manager into a thin command-layer writer.",
+      "checks": [
+        {
+          "name": "goal_manager_no_longer_owns_json_storage",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('azq/finis/goal_manager.py').read_text(encoding='utf-8')\nassert 'load_goal' in text and 'write_goal' in text and 'next_goal_id' in text\nassert 'goals.json' not in text\nassert 'def load_goals' not in text\nassert 'def save_goals' not in text\nPY",
+          "required": true,
+          "description": "Verify goal_manager.py delegates persistence to storage.py rather than keeping JSON-era helpers."
+        },
+        {
+          "name": "goal_manager_commands_use_exact_ids_and_canonical_records",
+          "type": "python",
+          "required": true,
+          "description": "Verify add_goal(), close_goal(), and archive_goal() coordinate canonical storage operations with exact id lookup.",
+          "code": "import io\nfrom contextlib import redirect_stdout\nfrom unittest.mock import patch\nfrom azq.finis.goal_manager import add_goal, close_goal, archive_goal\nwritten = []\nwith patch('builtins.input', side_effect=['New canonical goal', 'optional description']), patch('azq.finis.goal_manager.next_goal_id', return_value='FINIS_010'), patch('azq.finis.goal_manager.write_goal', side_effect=lambda record: written.append(dict(record))):\n    buf = io.StringIO()\n    with redirect_stdout(buf):\n        add_goal()\nassert written and written[0]['goal_id'] == 'FINIS_010'\nassert written[0]['title'] == 'New canonical goal'\nassert written[0]['description'] == 'optional description'\nassert written[0]['derived_from'] == []\nassert written[0]['status'] == 'active'\nwith patch('azq.finis.goal_manager.load_goal', return_value={'goal_id': 'FINIS_010', 'title': 'Existing', 'status': 'active', 'created': '2026-01-01', 'description': '', 'derived_from': []}), patch('azq.finis.goal_manager.write_goal', side_effect=lambda record: written.append(dict(record))):\n    close_goal('FINIS_010')\nassert written[-1]['goal_id'] == 'FINIS_010'\nassert written[-1]['status'] == 'completed'\nwith patch('azq.finis.goal_manager.load_goal', return_value={'goal_id': 'FINIS_011', 'title': 'Existing', 'status': 'active', 'created': '2026-01-01', 'description': '', 'derived_from': []}), patch('azq.finis.goal_manager.write_goal', side_effect=lambda record: written.append(dict(record))):\n    archive_goal('FINIS_011')\nassert written[-1]['goal_id'] == 'FINIS_011'\nassert written[-1]['status'] == 'archived'"
+        }
+      ],
+      "human_checks": [
+        "Status transitions only rewrite the addressed goal file, not the whole repository state.",
+        "Manual goal creation stays minimal and readable at the command layer."
+      ]
+    },
+    "STAGE1-WAVEB-06": {
+      "description": "Refactor fine onto canonical storage and title-based dedupe.",
+      "checks": [
+        {
+          "name": "fine_imports_canonical_storage_instead_of_legacy_goals",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('azq/finis/fine.py').read_text(encoding='utf-8')\nassert 'from .goals import' not in text\nassert 'load_all_goals' in text or 'load_goal' in text\nassert 'write_goal' in text\nPY",
+          "required": true,
+          "description": "Verify fine.py no longer depends on JSON-era helper imports from goals.py."
+        },
+        {
+          "name": "fine_uses_canonical_titles_and_file_backed_writes",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('azq/finis/fine.py').read_text(encoding='utf-8')\nassert \"g['goal']\" not in text\nassert '\"goal\":' not in text\nassert \"g['title']\" in text or '\"title\":' in text\nassert 'goals.json' not in text\nPY",
+          "required": true,
+          "description": "Verify fine.py uses canonical title fields and no longer writes accepted goals to goals.json."
+        },
+        {
+          "name": "fine_run_uses_canonical_records",
+          "type": "python",
+          "required": true,
+          "description": "Verify run_fine() can dedupe against canonical titles and write confirmed goals one file at a time.",
+          "code": "import io\nfrom contextlib import redirect_stdout\nfrom unittest.mock import patch\nfrom azq.finis.fine import run_fine, propose_goals\nexisting = [\n    {'goal_id': 'FINIS_001', 'title': 'Improve testing', 'status': 'active', 'created': '2026-01-01', 'description': '', 'derived_from': ['spark_old']}\n]\ncandidates = propose_goals([\n    {'spark': 'I want to improve testing', 'source': 'spark_dup'},\n    {'spark': 'I want to improve deployment', 'source': 'spark_new'}\n])\nassert len(candidates) == 1, candidates\nassert candidates[0]['title'] == 'Improve deployment'\nwritten = []\nwith patch('azq.finis.fine.load_sparks', return_value=[{'spark': 'I want to improve deployment', 'source': 'spark_new'}]), patch('azq.finis.fine.load_all_goals', return_value=existing), patch('azq.finis.fine.confirm_goals', return_value=[{'title': 'Improve deployment', 'source': 'spark_new'}]), patch('azq.finis.fine.next_goal_id', return_value='FINIS_002'), patch('azq.finis.fine.write_goal', side_effect=lambda record: written.append(dict(record))):\n    buf = io.StringIO()\n    with redirect_stdout(buf):\n        run_fine()\nassert written and written[0]['goal_id'] == 'FINIS_002'\nassert written[0]['title'] == 'Improve deployment'\nassert written[0]['derived_from'] == ['spark_new']\nassert written[0]['status'] == 'active'"
+        }
+      ],
+      "human_checks": [
+        "Candidate dedupe still behaves conservatively enough to avoid obvious near-duplicate goals.",
+        "fine.py now looks like a command-layer workflow over storage.py rather than a second persistence path."
+      ]
+    },
+    "STAGE1-WAVEB-07": {
+      "description": "Remove duplicated JSON-era Finis helpers.",
+      "checks": [
+        {
+          "name": "legacy_modules_no_longer_define_json_storage_helpers",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\nfor rel in ['azq/finis/goals.py', 'azq/finis/goal_manager.py', 'azq/finis/fine.py']:\n    text = Path(rel).read_text(encoding='utf-8')\n    assert 'def load_goals' not in text, rel\n    assert 'def save_goals' not in text, rel\n    assert 'def next_goal_id' not in text, rel\nPY",
+          "required": true,
+          "description": "Verify legacy modules no longer define duplicated JSON-era persistence helpers."
+        },
+        {
+          "name": "legacy_modules_no_longer_reference_legacy_goal_storage",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\nfor rel in ['azq/finis/goals.py', 'azq/finis/goal_manager.py', 'azq/finis/fine.py']:\n    text = Path(rel).read_text(encoding='utf-8')\n    assert 'goals.json' not in text, rel\n    assert 'from .goals import' not in text, rel\nPY",
+          "required": true,
+          "description": "Verify the active Finis command modules no longer route persistence through legacy goal storage paths."
+        }
+      ],
+      "human_checks": [
+        "There is one obvious shared storage authority for Finis persistence after this cleanup.",
+        "Any remaining helper in the command modules is presentation or workflow logic, not hidden persistence."
+      ]
+    }
+  }
+}
