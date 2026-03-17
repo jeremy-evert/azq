@@ -2,231 +2,607 @@
 
 ## Purpose
 
-This document proposes the command set needed to execute AZQ's stated goals across all five engines:
+This document defines the command-line interface for AZQ.
 
-`spark -> goal -> deliverable -> task -> artifact -> archive`
+The command model is the primary way users interact with the system.  
+It exposes the five engines of AZQ as a small, memorable set of commands.
 
-It combines:
+The CLI must obey the Craft Charter:
 
-- commands already implemented in the current CLI
-- commands required by the spec but not yet implemented
-- shell commands needed to bootstrap and operate the repository
+- stages remain distinct
+- commands remain simple
+- every command produces or modifies a visible artifact
+- no command should bypass the craft pipeline
 
----
+The command model mirrors the AZQ flow:
 
-## Command Design Rules
+```
 
-- Keep commands short, memorable, and stage-specific.
-- Preserve stage boundaries: no task commands before form commands.
-- Favor inspectable file outputs in `data/`.
-- Every command should map to a durable artifact or explicit state change.
+spark → goal → deliverable → task → artifact → archive
 
----
-
-## 1. Bootstrap And Environment Commands
-
-Use these to initialize a repository consistent with the filesystem model.
-
-```bash
-# create required directories
-mkdir -p \
-  data/scintilla/audio data/scintilla/transcripts data/scintilla/sparks \
-  data/finis/goals data/finis/reviews \
-  data/form/deliverables data/form/maps \
-  data/agenda/tasks data/agenda/dags data/agenda/logs \
-  data/artifacts/code data/artifacts/notes data/artifacts/docs data/artifacts/modules \
-  data/archive/goals data/archive/tasks data/archive/sparks data/archive/artifacts \
-  logs scripts tests
-
-# install package in editable mode
-pip install -e .
-
-# show available CLI commands
-azq
 ```
 
 ---
 
-## 2. Canonical CLI Surface
+# CLI Philosophy
 
-Top-level layout:
+The AZQ CLI follows three rules.
 
-```text
-azq <engine|resource> <verb> [args]
+### 1 — Commands mirror the craft stages
+
+Each command group corresponds to an engine.
+
 ```
 
-Shared utility commands:
+spark
+goal
+form
+task
+archive
 
-```bash
-azq status           # pipeline snapshot across stages
-azq doctor           # validate directories/filesystem health
-azq review           # daily/weekly summary
-azq version
 ```
+
+This keeps the user mentally aligned with the craft process.
 
 ---
 
-## 3. Engine Commands
+### 2 — Commands are short and memorable
 
-### Cole Scintilla (Gather Sparks)
+Commands should feel like natural verbs.
 
-Implemented now:
+Good command design helps memory and reduces friction.
 
-```bash
+Examples:
+
+```
+
 azq capture
 azq sparks
-azq spark <id>
-azq spark search <text>
-azq spark rm <id>
-```
-
-Suggested additions:
-
-```bash
-azq capture text "<note>"
-azq capture import <file>
-azq spark tag <id> <tag>
-azq spark link <spark_id> <goal_id>
-```
-
-### Respice Finem (Consider The End)
-
-Implemented now:
-
-```bash
-azq fine
 azq goals
-azq goal add
-azq goal close <id>
-azq goal archive <id>
-```
+azq form
+azq task
 
-Spec-aligned aliases/additions:
-
-```bash
-azq goals review
-azq goal create
-azq goal show <id>
-azq goal link-sparks <goal_id> <spark_ids...>
-azq goal reopen <id>
-```
-
-### Strue Formam (Build The Form)
-
-Needed for full spec:
-
-```bash
-azq form build <goal_id>
-azq form list
-azq form show <deliverable_id>
-azq form map <goal_id>
-azq form validate <deliverable_id>
-```
-
-### Age Agenda (Drive The Work)
-
-Needed for full spec:
-
-```bash
-azq agenda
-azq task list
-azq task show <task_id>
-azq task start <task_id>
-azq task complete <task_id>
-azq task block <task_id> "<reason>"
-azq dag build <goal_id>
-azq dag show <goal_id>
-```
-
-### Custodi Domum (Keep The House)
-
-Needed for full spec:
-
-```bash
-azq archive
-azq archive goal <goal_id>
-azq archive task <task_id>
-azq prune
-azq prune sparks --older-than <days>
-azq review
-azq report health
 ```
 
 ---
 
-## 4. Scripts And Operational Commands
+### 3 — Commands create durable artifacts
 
-Scripts identified in the filesystem model should be callable directly and through CLI wrappers.
+Every command should modify or generate files in `data/`.
 
-```bash
+Opaque state is avoided.
+
+---
+
+# CLI Structure
+
+General pattern:
+
+```
+
+azq <resource> <verb> [arguments]
+
+```
+
+Examples:
+
+```
+
+azq spark list
+azq goal create
+azq form build
+azq task start
+
+```
+
+---
+
+# Global Commands
+
+These operate across the entire system.
+
+```
+
+azq status
+azq doctor
+azq review
+azq version
+
+```
+
+### azq status
+
+Shows pipeline status across stages.
+
+Example output:
+
+```
+
+sparks:       37
+goals:        5 active
+deliverables: 12
+tasks:        9 open
+
+```
+
+---
+
+### azq doctor
+
+Checks repository health.
+
+Validates:
+
+- directory structure
+- missing files
+- corrupted artifacts
+- configuration problems
+
+---
+
+### azq review
+
+Produces a summary of recent activity.
+
+Typical use:
+
+```
+
+azq review
+azq review weekly
+
+```
+
+---
+
+# Engine Commands
+
+## 1. Cole Scintilla
+
+Gather sparks.
+
+### Capture
+
+```
+
+azq capture
+
+```
+
+Starts audio capture and transcription.
+
+Pipeline:
+
+```
+
+audio → transcript → sparks
+
+```
+
+Artifacts created:
+
+```
+
+data/scintilla/audio/
+data/scintilla/transcripts/
+data/scintilla/sparks/
+
+```
+
+---
+
+### Capture Text
+
+```
+
+azq capture text "note"
+
+```
+
+Creates a spark directly from text.
+
+---
+
+### List Sparks
+
+```
+
+azq sparks
+
+```
+
+Shows recent sparks.
+
+---
+
+### Inspect Spark
+
+```
+
+azq spark show <id>
+
+```
+
+---
+
+### Search Sparks
+
+```
+
+azq spark search <text>
+
+```
+
+---
+
+### Remove Spark
+
+```
+
+azq spark rm <id>
+
+```
+
+---
+
+# 2. Respice Finem
+
+Define goals.
+
+### List Goals
+
+```
+
+azq goals
+
+```
+
+---
+
+### Review Goals
+
+```
+
+azq goals review
+
+```
+
+---
+
+### Create Goal
+
+```
+
+azq goal create
+
+```
+
+Creates a goal from selected sparks.
+
+Artifacts:
+
+```
+
+data/finis/goals/
+
+```
+
+---
+
+### Show Goal
+
+```
+
+azq goal show <goal_id>
+
+```
+
+---
+
+### Link Sparks
+
+```
+
+azq goal link-sparks <goal_id> <spark_ids>
+
+```
+
+---
+
+### Close Goal
+
+```
+
+azq goal close <goal_id>
+
+```
+
+---
+
+# 3. Strue Formam
+
+Build structure.
+
+### Build Form
+
+```
+
+azq form build <goal_id>
+
+```
+
+Produces deliverables.
+
+Artifacts:
+
+```
+
+data/form/deliverables/
+
+```
+
+---
+
+### List Deliverables
+
+```
+
+azq form list
+
+```
+
+---
+
+### Show Deliverable
+
+```
+
+azq form show <deliverable_id>
+
+```
+
+---
+
+### Build Map
+
+```
+
+azq form map <goal_id>
+
+```
+
+Creates dependency structure.
+
+Artifacts:
+
+```
+
+data/form/maps/
+
+```
+
+---
+
+# 4. Age Agenda
+
+Drive the work.
+
+### Show Agenda
+
+```
+
+azq agenda
+
+```
+
+Overview of current tasks.
+
+---
+
+### List Tasks
+
+```
+
+azq task list
+
+```
+
+---
+
+### Start Task
+
+```
+
+azq task start <task_id>
+
+```
+
+---
+
+### Complete Task
+
+```
+
+azq task complete <task_id>
+
+```
+
+---
+
+### Build DAG
+
+```
+
+azq dag build <goal_id>
+
+```
+
+Artifacts:
+
+```
+
+data/agenda/dags/
+
+```
+
+---
+
+### Show DAG
+
+```
+
+azq dag show <goal_id>
+
+```
+
+---
+
+# 5. Custodi Domum
+
+Maintain the system.
+
+### Archive
+
+```
+
+azq archive
+
+```
+
+Moves completed work into archive.
+
+Artifacts:
+
+```
+
+data/archive/
+
+```
+
+---
+
+### Archive Goal
+
+```
+
+azq archive goal <goal_id>
+
+```
+
+---
+
+### Archive Task
+
+```
+
+azq archive task <task_id>
+
+```
+
+---
+
+### Prune
+
+```
+
+azq prune
+
+```
+
+Removes stale sparks and abandoned records.
+
+---
+
+### Health Report
+
+```
+
+azq report health
+
+```
+
+---
+
+# Operational Scripts
+
+Some maintenance tasks run through scripts.
+
+Examples:
+
+```
+
 python scripts/daily_review.py
 python scripts/archive_cleanup.py
-python scripts/goal_report.py
+
 ```
 
-Wrapper equivalents:
-
-```bash
-azq review daily
-azq archive cleanup
-azq report goals
-```
+CLI wrappers may call these.
 
 ---
 
-## 5. Test And Quality Commands
+# Recommended Daily Workflow
 
-```bash
-pytest -q
-pytest tests/test_scintilla.py -q
-pytest tests/test_finis.py -q
-pytest tests/test_formam.py -q
 ```
 
-Optional checks:
+# gather
 
-```bash
-python -m pip check
-python -m compileall azq
-```
-
----
-
-## 6. Recommended End-To-End Daily Flow
-
-```bash
-# 1) gather
 azq capture
 azq sparks
 
-# 2) choose ends
-azq fine
+# choose ends
+
 azq goals review
+azq goal create
 
-# 3) shape work
+# build structure
+
 azq form build FINIS_001
-azq form list
 
-# 4) execute
-azq dag build FINIS_001
+# execute work
+
 azq task list
 azq task start TASK_001
 azq task complete TASK_001
 
-# 5) maintain
+# maintain system
+
 azq review
 azq archive
 azq prune
+
 ```
 
 ---
 
-## 7. Implementation Priority (Command Backlog)
+# Command Backlog
 
-1. Add `azq status` and `azq doctor` for observability.
-2. Implement `form` command group (`build/list/show`).
-3. Implement `task` and `dag` command groups.
-4. Implement `archive/prune/report` command group.
-5. Add aliases so implemented Finis commands match engine spec (`goal create`, `goals review`).
+Future commands may include:
 
-This priority preserves the charter rule: shape before tasks, tasks before maintenance.
+```
+
+azq artifact list
+azq artifact show
+azq spark summarize
+azq goal research
+azq agenda focus
+
+```
+
+These should only be added if they serve the craft pipeline.
+
+---
+
+# Closing
+
+The command model is the path system of the AZQ garden.
+
+If the paths are clear, users can move naturally from spark to artifact.
+
+If the paths become tangled, the garden becomes unusable.
+
+The CLI should therefore remain:
+
+- small
+- memorable
+- faithful to the craft sequence
+
