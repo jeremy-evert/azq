@@ -283,7 +283,7 @@ def next_goal_id() -> str:
     return f"{GOAL_FILE_PREFIX}{highest_goal_number + 1:03d}"
 
 
-def _write_goal_file(goal_record: dict[str, Any]) -> Path:
+def write_goal(goal_record: dict[str, Any]) -> Path:
     """Write one canonical goal record to its exact Markdown file."""
     record = normalize_goal_record(goal_record)
     goal_id = str(record["goal_id"]).strip()
@@ -324,7 +324,7 @@ def migrate_legacy_goals() -> dict[str, int]:
             skipped += 1
             continue
 
-        _write_goal_file(normalized_goal)
+        write_goal(normalized_goal)
         migrated += 1
 
     return {
@@ -401,6 +401,7 @@ __all__ = [
     "load_goal",
     "load_all_goals",
     "next_goal_id",
+    "write_goal",
     "migrate_legacy_goals",
     "ensure_canonical_goals_migrated",
 ]
