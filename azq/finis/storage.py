@@ -8,7 +8,8 @@ later tasks.
 """
 
 from pathlib import Path
-from typing import Any
+import re
+from typing import Any, Optional
 
 DATA_DIR = Path("data")
 FINIS_DIR = DATA_DIR / "finis"
@@ -17,6 +18,8 @@ LEGACY_GOALS_FILE = FINIS_DIR / "goals.json"
 GOAL_FILE_PREFIX = "FINIS_"
 GOAL_FILE_SUFFIX = ".md"
 GOAL_FILE_GLOB = f"{GOAL_FILE_PREFIX}*{GOAL_FILE_SUFFIX}"
+DESCRIPTION_HEADING = "## Description"
+GOAL_ID_PATTERN = re.compile(rf"^{GOAL_FILE_PREFIX}(\d+)$")
 
 
 def ensure_goals_dir() -> Path:
@@ -36,6 +39,14 @@ def list_goal_files() -> list[Path]:
 def goal_file_path(goal_id: str) -> Path:
     """Map an exact goal id to its canonical Markdown file path."""
     return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
+
+
+def _goal_id_number(goal_id: str) -> Optional[int]:
+    """Extract the numeric suffix from a canonical FINIS goal id."""
+    match = GOAL_ID_PATTERN.fullmatch(goal_id)
+    if match is None:
+        return None
+    return int(match.group(1))
 
 
 def normalize_goal_record(legacy_goal: dict[str, Any]) -> dict[str, Any]:
@@ -66,6 +77,163 @@ def normalize_goal_record(legacy_goal: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def serialize_goal_markdown(goal_record: dict[str, Any]) -> str:
+    """Serialize a canonical goal record into a diff-friendly Markdown file."""
+    record = normalize_goal_record(goal_record)
+    lines = [
+        f"# {record['goal_id']}",
+        "",
+        f"- title: {record['title']}",
+        f"- status: {record['status']}",
+        f"- created: {record['created']}",
+    ]
+
+    derived_from = record["derived_from"]
+    if derived_from:
+        lines.append("- derived_from:")
+        for item in derived_from:
+            lines.append(f"  - {item}")
+    else:
+        lines.append("- derived_from: []")
+
+    lines.extend(["", DESCRIPTION_HEADING, ""])
+
+    description = record["description"]
+    if description:
+        lines.extend(str(description).splitlines())
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def serialize_goal_record(goal_record: dict[str, Any]) -> str:
+    """Backward-compatible alias for canonical goal Markdown serialization."""
+    return serialize_goal_markdown(goal_record)
+
+
+def goal_to_markdown(goal_record: dict[str, Any]) -> str:
+    """Alias for callers expecting a goal-to-Markdown helper."""
+    return serialize_goal_markdown(goal_record)
+
+
+def parse_goal_markdown(markdown_text: str) -> dict[str, Any]:
+    """Parse a canonical Markdown goal file back into a goal record."""
+    lines = markdown_text.splitlines()
+    if not lines:
+        raise ValueError("Goal markdown is empty.")
+
+    header = lines[0].strip()
+    if not header.startswith("# "):
+        raise ValueError("Goal markdown must start with a '# <goal_id>' header.")
+
+    goal_id = header[2:].strip()
+    if not goal_id:
+        raise ValueError("Goal markdown header must include a goal id.")
+
+    metadata: dict[str, str] = {}
+    derived_from: list[str] = []
+    index = 1
+
+    while index < len(lines) and lines[index].strip() == "":
+        index += 1
+
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.strip()
+
+        if stripped == DESCRIPTION_HEADING:
+            index += 1
+            break
+
+        if stripped == "":
+            index += 1
+            continue
+
+        if stripped == "- derived_from: []":
+            index += 1
+            continue
+
+        if stripped == "- derived_from:":
+            index += 1
+            while index < len(lines):
+                derived_line = lines[index]
+                derived_stripped = derived_line.strip()
+                if derived_stripped == "":
+                    index += 1
+                    continue
+                if derived_stripped == DESCRIPTION_HEADING:
+                    break
+                if not derived_line.startswith("  - "):
+                    raise ValueError(
+                        "Goal markdown derived_from items must use '  - <value>'."
+                    )
+                derived_from.append(derived_line[4:])
+                index += 1
+            continue
+
+        if not stripped.startswith("- ") or ": " not in stripped:
+            raise ValueError(f"Unrecognized goal metadata line: {line!r}")
+
+        field_name, field_value = stripped[2:].split(": ", 1)
+        metadata[field_name] = field_value
+        index += 1
+
+    description_lines = lines[index:]
+    while description_lines and description_lines[0].strip() == "":
+        description_lines.pop(0)
+    while description_lines and description_lines[-1].strip() == "":
+        description_lines.pop()
+
+    return normalize_goal_record(
+        {
+            "goal_id": goal_id,
+            "title": metadata.get("title", ""),
+            "status": metadata.get("status", "active"),
+            "created": metadata.get("created", ""),
+            "description": "\n".join(description_lines),
+            "derived_from": derived_from,
+        }
+    )
+
+
+def parse_goal_record(markdown_text: str) -> dict[str, Any]:
+    """Backward-compatible alias for canonical goal Markdown parsing."""
+    return parse_goal_markdown(markdown_text)
+
+
+def goal_from_markdown(markdown_text: str) -> dict[str, Any]:
+    """Alias for callers expecting a Markdown-to-goal helper."""
+    return parse_goal_markdown(markdown_text)
+
+
+def load_goal(goal_id: str) -> Optional[dict[str, Any]]:
+    """Load one canonical goal record by exact goal id."""
+    goal_path = goal_file_path(goal_id)
+    if not goal_path.is_file():
+        return None
+    return parse_goal_markdown(goal_path.read_text(encoding="utf-8"))
+
+
+def load_all_goals() -> list[dict[str, Any]]:
+    """Load all canonical goal files in deterministic order."""
+    goals: list[dict[str, Any]] = []
+    for goal_path in list_goal_files():
+        goals.append(parse_goal_markdown(goal_path.read_text(encoding="utf-8")))
+    return goals
+
+
+def next_goal_id() -> str:
+    """Compute the next stable FINIS id from canonical goal files."""
+    highest_goal_number = 0
+
+    for goal_path in list_goal_files():
+        goal_number = _goal_id_number(goal_path.stem)
+        if goal_number is not None:
+            highest_goal_number = max(highest_goal_number, goal_number)
+
+    return f"{GOAL_FILE_PREFIX}{highest_goal_number + 1:03d}"
+
+
 __all__ = [
     "DATA_DIR",
     "FINIS_DIR",
@@ -74,8 +242,19 @@ __all__ = [
     "GOAL_FILE_PREFIX",
     "GOAL_FILE_SUFFIX",
     "GOAL_FILE_GLOB",
+    "DESCRIPTION_HEADING",
+    "GOAL_ID_PATTERN",
     "ensure_goals_dir",
     "list_goal_files",
     "goal_file_path",
     "normalize_goal_record",
+    "serialize_goal_record",
+    "serialize_goal_markdown",
+    "goal_to_markdown",
+    "parse_goal_record",
+    "parse_goal_markdown",
+    "goal_from_markdown",
+    "load_goal",
+    "load_all_goals",
+    "next_goal_id",
 ]
