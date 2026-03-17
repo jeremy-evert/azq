@@ -83,7 +83,21 @@ def build_original_prompt(template_file: Path, task: Dict[str, Any], add_conserv
     template_md = template_file.read_text(encoding="utf-8")
     template = extract_text_code_block(template_md)
     conservative = '\nDo not "help" by beginning the next task.\n' if add_conservative_line else ""
-    return f"{template.rstrip()}\n{conservative}\nTask object:\n{json.dumps(task, indent=2, ensure_ascii=False)}\n"
+    task_json = json.dumps(task, indent=2, ensure_ascii=False)
+
+    filled = template.replace(
+        "Task object:\n[paste one JSON task here]",
+        f'Task object:\n{task_json}'
+    )
+
+    if add_conservative_line:
+        filled = filled.replace(
+            "Task object:\n",
+            'Do not "help" by beginning the next task.\n\nTask object:\n',
+            1,
+        )
+
+    return filled.rstrip() + "\n"
 
 
 def build_repair_prompt(original_prompt: str, failing_output: str) -> str:
