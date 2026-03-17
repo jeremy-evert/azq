@@ -19,6 +19,8 @@ DEFAULT_REPORT_FILE = "codex_reports/codex_azq_task_status_report.md"
 DEFAULT_MAX_ATTEMPTS = 3
 TASKS_FILE_GLOB = "AZQ_BUILD_TASKS_STAGE_1_WAVE_*.json"
 TASKS_FILE_PATTERN = re.compile(r"^AZQ_BUILD_TASKS_STAGE_1_(WAVE_[A-Z0-9_]+)\.json$")
+CHECKS_FILE_GLOB = "AZQ_CHECKS_STAGE_1_WAVE_*.json"
+CHECKS_FILE_PATTERN = re.compile(r"^AZQ_CHECKS_STAGE_1_(WAVE_[A-Z0-9_]+)\.json$")
 
 
 @dataclass
@@ -107,6 +109,21 @@ def load_checks_recipe(checks_file: Path) -> Dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError(f"Checks file must contain a JSON object: {checks_file}")
     return data
+
+
+def is_task_manifest(data: Any) -> bool:
+    if not isinstance(data, list):
+        return False
+    return all(isinstance(item, dict) and "task_id" in item for item in data)
+
+
+def task_manifest_exists(path: Path) -> bool:
+    if not path.exists():
+        return False
+    try:
+        return is_task_manifest(read_json(path))
+    except (OSError, json.JSONDecodeError, ValueError):
+        return False
 
 
 def extract_text_code_block(markdown: str) -> str:
@@ -280,7 +297,7 @@ def write_attempt_artifacts(
     checks: List[CheckResult],
     human_checks: List[str],
     check_specs: List[dict[str, Any]],
-    checks_file: Path,
+    checks_file: Optional[Path],
     metadata: Dict[str, Any],
     workspace: Path,
 ) -> None:
@@ -289,7 +306,7 @@ def write_attempt_artifacts(
     write_json(attempt_dir / "metadata.json", metadata)
     write_json(
         attempt_dir / "checks_recipe_snapshot.json",
-        {"checks_file": str(checks_file), "checks": check_specs, "human_checks": human_checks},
+        {"checks_file": str(checks_file) if checks_file is not None else "", "checks": check_specs, "human_checks": human_checks},
     )
 
     if response is not None:
@@ -371,28 +388,65 @@ def normalize_task_status(raw_status: Optional[str]) -> str:
 
 
 def discover_stage1_waves(workspace: Path) -> List[WavePaths]:
-    discovered: List[WavePaths] = []
+    discovered: Dict[str, WavePaths] = {}
     for tasks_file in sorted(workspace.glob(TASKS_FILE_GLOB)):
         match = TASKS_FILE_PATTERN.match(tasks_file.name)
         if not match:
             continue
-        discovered.append(derive_wave_paths(match.group(1).lower()))
-    return discovered
+        wave_paths = derive_wave_paths(match.group(1).lower())
+        discovered[wave_paths.wave] = wave_paths
+
+    for checks_file in sorted(workspace.glob(CHECKS_FILE_GLOB)):
+        match = CHECKS_FILE_PATTERN.match(checks_file.name)
+        if not match:
+            continue
+        wave_paths = derive_wave_paths(match.group(1).lower())
+        if wave_paths.wave in discovered:
+            continue
+        if task_manifest_exists(checks_file):
+            discovered[wave_paths.wave] = wave_paths
+
+    return [discovered[name] for name in sorted(discovered)]
+
+
+def resolve_manifest_paths(
+    workspace: Path,
+    wave_paths: WavePaths,
+    tasks_override: Optional[str],
+    checks_override: Optional[str],
+) -> tuple[Path, Optional[Path], List[str]]:
+    warnings: List[str] = []
+    tasks_file = (workspace / (tasks_override or wave_paths.tasks_file)).resolve()
+    checks_file: Optional[Path] = (workspace / (checks_override or wave_paths.checks_file)).resolve()
+
+    if tasks_override or tasks_file.exists():
+        return tasks_file, checks_file, warnings
+
+    if checks_override:
+        return tasks_file, checks_file, warnings
+
+    if checks_file is not None and task_manifest_exists(checks_file):
+        warnings.append(
+            f"Using {checks_file.name} as the task manifest for {wave_paths.wave} because {tasks_file.name} is missing."
+        )
+        warnings.append(f"No standalone checks recipe found for {wave_paths.wave}; automated checks are disabled for this wave.")
+        return checks_file, None, warnings
+
+    return tasks_file, checks_file, warnings
 
 
 def summarize_wave(paths: WavePaths, workspace: Path) -> WaveSummary:
-    tasks_path = workspace / paths.tasks_file
-    state_path = workspace / paths.state_file
-    checks_path = workspace / paths.checks_file
-
-    warnings: List[str] = []
+    tasks_path, checks_path, warnings = resolve_manifest_paths(workspace, paths, None, None)
+    state_path = (workspace / paths.state_file).resolve()
     tasks = load_tasks(tasks_path)
     state = load_state(state_path)
     task_state = state.get("tasks", {})
 
     if not state_path.exists():
         warnings.append(f"Missing state file: {state_path.name}; tasks without entries are treated as pending.")
-    if not checks_path.exists():
+    if checks_path is None:
+        warnings.append(f"Checks disabled for {paths.wave}; no standalone checks recipe was resolved.")
+    elif not checks_path.exists():
         warnings.append(f"Missing checks file: {checks_path.name}.")
 
     counts = {"done": 0, "pending": 0, "failed": 0, "active": 0, "unknown": 0}
@@ -416,9 +470,9 @@ def summarize_wave(paths: WavePaths, workspace: Path) -> WaveSummary:
 
     return WaveSummary(
         wave=paths.wave,
-        tasks_file=paths.tasks_file,
+        tasks_file=tasks_path.name,
         state_file=paths.state_file,
-        checks_file=paths.checks_file,
+        checks_file=checks_path.name if checks_path is not None else "(none)",
         runs_dir=paths.runs_dir,
         tasks_present=len(tasks),
         counts=counts,
@@ -500,30 +554,39 @@ def render_markdown_report(summaries: List[WaveSummary], workspace: Path) -> str
     return "\n".join(lines)
 
 
-def resolve_run_paths(args: argparse.Namespace) -> tuple[WavePaths, Path, Path, Path, Path, Path]:
+def resolve_run_paths(args: argparse.Namespace) -> tuple[WavePaths, Path, Path, Path, Optional[Path], Path, Path, List[str]]:
     workspace = Path(args.workspace).resolve()
     wave_paths = derive_wave_paths(args.wave)
-    tasks_file = (workspace / (args.tasks_file or wave_paths.tasks_file)).resolve()
+    tasks_file, checks_file, warnings = resolve_manifest_paths(workspace, wave_paths, args.tasks_file, args.checks_file)
     template_file = (workspace / args.prompt_template).resolve()
-    checks_file = (workspace / (args.checks_file or wave_paths.checks_file)).resolve()
     state_file = (workspace / (args.state_file or wave_paths.state_file)).resolve()
     runs_dir = (workspace / (args.runs_dir or wave_paths.runs_dir)).resolve()
-    return wave_paths, workspace, tasks_file, template_file, checks_file, state_file, runs_dir
+    return wave_paths, workspace, tasks_file, template_file, checks_file, state_file, runs_dir, warnings
 
 
 def run_mode(args: argparse.Namespace) -> int:
-    _, workspace, tasks_file, template_file, checks_file, state_file, runs_dir = resolve_run_paths(args)
+    _, workspace, tasks_file, template_file, checks_file, state_file, runs_dir, path_warnings = resolve_run_paths(args)
     persist_state = not args.dry_run
 
     tasks = load_tasks(tasks_file)
     checks_recipe: Dict[str, Any] = {}
-    if checks_file.exists():
+    for warning in path_warnings:
+        print(f"Warning: {warning}", file=sys.stderr)
+    if checks_file is not None and checks_file.exists():
         checks_recipe = load_checks_recipe(checks_file)
     else:
-        print(f"Warning: checks file not found, continuing with no automated checks: {checks_file}", file=sys.stderr)
+        missing = str(checks_file) if checks_file is not None else f"{args.wave} (no checks recipe)"
+        print(f"Warning: checks file not found, continuing with no automated checks: {missing}", file=sys.stderr)
 
     state = load_state(state_file)
-    task = choose_next_task(tasks, state, args.task_id)
+    try:
+        task = choose_next_task(tasks, state, args.task_id)
+    except ValueError as exc:
+        if str(exc) != "No remaining tasks found.":
+            raise
+        print(f"No remaining tasks found in {args.wave}.")
+        print("Stage 1 Complete.")
+        return 0
     task_id = task["task_id"]
     task_slug = safe_task_slug(task_id)
 
@@ -558,7 +621,7 @@ def run_mode(args: argparse.Namespace) -> int:
             "started_at": now_iso(),
             "dry_run": args.dry_run,
             "wave": args.wave,
-            "checks_file": str(checks_file),
+            "checks_file": str(checks_file) if checks_file is not None else "",
             "codex_command": None if args.dry_run else [args.codex_bin, "exec", *args.codex_extra, "<prompt elided>"],
         }
         write_attempt_artifacts(
