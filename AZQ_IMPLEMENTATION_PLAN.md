@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document translates the AZQ doctrine into a staged engineering roadmap.
+This document translates AZQ doctrine into a staged engineering roadmap.
 
 The repository already implements part of the first two engines:
 
@@ -25,13 +25,31 @@ The build order is intentionally strict:
 5. add doctor/status
 6. remove destructive delete paths
 
-That order connects doctrine to code and prevents AZQ from becoming a task manager before it becomes a craft system.
+That order connects doctrine to code and prevents AZQ from becoming a task manager before it becomes a craft system. fileciteturn11file5turn11file12
+
+---
+
+## Planning Principles
+
+All implementation work should obey the following rules:
+
+* preserve durable evidence at every stage
+* prefer additive migration over destructive conversion
+* introduce archive paths before removing anything permanently
+* keep each engine small and filesystem-driven
+* add read commands before aggressive write automation when a stage is new
+* do not allow later-stage objects without a traceable parent
+* keep the CLI aligned with the craft stages and filesystem pipeline fileciteturn10file2turn10file1turn10file4
+
+These principles are not decoration. They are the guardrails that keep the implementation aligned with the charter and state model. fileciteturn10file2turn10file8
 
 ---
 
 ## Current Baseline
 
 ### Implemented now
+
+The current repository already supports:
 
 * `azq capture`
 * `azq sparks`
@@ -42,27 +60,26 @@ That order connects doctrine to code and prevents AZQ from becoming a task manag
 * `azq goals`
 * `azq goal add`
 * `azq goal close <id>`
-* `azq goal archive <id>`
+* `azq goal archive <id>` fileciteturn11file5
+
+This means AZQ can currently complete the first live loop:
+
+```text
+capture -> spark -> goal
+```
+
+That is enough for bootstrap, but not enough for the intended five-engine architecture. fileciteturn10file0turn10file5
 
 ### Structural mismatches to resolve
 
-* `finis` stores all goals in `data/finis/goals.json`, while the filesystem model expects `data/finis/goals/FINIS_*.md`
-* goal persistence logic is duplicated across [`azq/finis/goals.py`](/data/git/azq/azq/finis/goals.py) and [`azq/finis/goal_manager.py`](/data/git/azq/azq/finis/goal_manager.py)
-* CLI shape in [`azq/cli.py`](/data/git/azq/azq/cli.py) does not yet match the command model for `form`, `task`, `archive`, `status`, and `doctor`
-* `azq spark rm` currently deletes files permanently through [`azq/scintilla/spark_delete.py`](/data/git/azq/azq/scintilla/spark_delete.py)
-* there is no archive layer protecting prior artifacts
-* there is no repository-wide health or maturity reader
+The main mismatches between doctrine and implementation are:
 
----
-
-## Delivery Principles
-
-* Preserve durable evidence at every stage.
-* Prefer additive migration over destructive conversion.
-* Introduce archive paths before removing anything permanently.
-* Keep each engine small and filesystem-driven.
-* Add read commands before write automation when a stage is new.
-* Do not allow later-stage objects without a traceable parent.
+* `finis` stores all goals in `data/finis/goals.json`, while the filesystem model expects `data/finis/goals/FINIS_*.md` files fileciteturn10file4turn10file5
+* goal persistence logic is duplicated across the current Finis modules rather than flowing through one storage layer fileciteturn10file5
+* the CLI does not yet match the full command model for `form`, `task`, `archive`, `status`, and `doctor` fileciteturn10file1turn10file5
+* `azq spark rm` still teaches destructive deletion in a system whose state model explicitly prefers archive over prune and rejects silent loss fileciteturn10file8turn11file5
+* there is no archive layer yet protecting prior artifacts fileciteturn10file4turn11file5
+* there is no repository-wide health or maturity reader even though the state model defines both fileciteturn10file8
 
 ---
 
@@ -74,7 +91,7 @@ Move `finis` from transitional JSON storage to first-class goal files so the on-
 
 ### Why first
 
-Finis is already live, but its storage model contradicts the architecture documents. That makes every later engine harder because `formam` needs stable goal records, IDs, status fields, and backlinks.
+Finis is already live, but its storage model contradicts the architectural documents. Later engines need stable goal records, stable IDs, explicit status fields, and traceable backlinks. Without that, Formam sits on mud. fileciteturn10file4turn10file8
 
 ### Scope
 
@@ -83,6 +100,7 @@ Finis is already live, but its storage model contradicts the architecture docume
 * introduce a single goal repository module instead of duplicated JSON helpers
 * keep `goals.json` readable only as a migration source, not as the long-term source of truth
 * normalize goal fields:
+
   * `goal_id`
   * `title`
   * `status`
@@ -93,19 +111,18 @@ Finis is already live, but its storage model contradicts the architecture docume
 
 ### Recommended file work
 
-* add `azq/finis/storage.py`
-* update [`azq/finis/fine.py`](/data/git/azq/azq/finis/fine.py)
-* update [`azq/finis/goals.py`](/data/git/azq/azq/finis/goals.py)
-* update [`azq/finis/goal_manager.py`](/data/git/azq/azq/finis/goal_manager.py)
+* add `src/azq/finis/storage.py`
+* update the Finis command handlers to use that storage layer
 * create `data/finis/goals/`
+* preserve `data/finis/goals.json` as legacy input until migration is stable
 
 ### Migration strategy
 
 1. Read existing `data/finis/goals.json`.
 2. Write each record into `data/finis/goals/FINIS_###.md`.
 3. Preserve original values where possible, even if they are noisy.
-4. Mark `goals.json` as legacy input and stop writing to it.
-5. Add a one-time migration command or automatic migration on first load.
+4. Mark `goals.json` as legacy input and stop writing new state to it.
+5. Add either a one-time migration command or automatic migration on first load.
 
 ### Exit criteria
 
@@ -113,7 +130,7 @@ Finis is already live, but its storage model contradicts the architecture docume
 * goal IDs remain stable
 * no command writes new state to `data/finis/goals.json`
 * goal files are inspectable and diff-friendly
-* `formam` can depend on file-based goals without transitional glue
+* Formam can depend on file-based goals without transitional glue
 
 ---
 
@@ -125,18 +142,21 @@ Introduce the form-building stage that turns goals into deliverables and depende
 
 ### Why second
 
-The doctrine is explicit: form comes before execution. If AZQ creates tasks before deliverables, it collapses into undisciplined activity tracking.
+The craft doctrine is explicit: form comes before execution. If AZQ creates tasks before deliverables, it collapses into undisciplined activity tracking. fileciteturn10file2turn10file6
 
 ### Scope
 
-* add `azq/formam/`
+* add `src/azq/formam/`
 * create `data/form/deliverables/`
 * create `data/form/maps/`
 * implement the first Formam commands:
+
   * `azq form build <goal_id>`
   * `azq form list`
   * `azq form show <deliverable_id>`
+  * `azq form map <goal_id>`
 * define a deliverable record format with at least:
+
   * `deliverable_id`
   * `goal_id`
   * `title`
@@ -150,13 +170,14 @@ The doctrine is explicit: form comes before execution. If AZQ creates tasks befo
 * one or more deliverables may descend from a goal
 * every deliverable must point back to exactly one goal initially
 * maps should remain human-readable, even if later exported to JSON
-* Formam should define boundaries of work, not task lists
+* Formam should define boundaries of work, not task lists fileciteturn10file3turn10file8
 
 ### Recommended initial implementation
 
 * start with Markdown deliverable files
 * allow manual or assisted generation from a goal file
 * make `azq form build <goal_id>` generate a stub deliverable and a goal map rather than trying to solve full planning on day one
+* make backlinks mandatory from deliverable to goal
 
 ### Exit criteria
 
@@ -164,6 +185,7 @@ The doctrine is explicit: form comes before execution. If AZQ creates tasks befo
 * deliverables can be listed and inspected from the CLI
 * every deliverable has a valid parent goal
 * no task commands are introduced before deliverables exist
+* the repository can truthfully reach `formed` from visible files fileciteturn10file8
 
 ---
 
@@ -175,20 +197,23 @@ Turn deliverables into executable tasks with visible work logs and dependency or
 
 ### Why third
 
-Agenda is only useful once Formam has defined what should exist. Tasks must serve deliverables rather than replace them.
+Agenda is only useful once Formam has defined what should exist. Tasks must serve deliverables rather than replace them. fileciteturn10file3turn11file13
 
 ### Scope
 
-* add `azq/agenda/`
+* add `src/azq/agenda/`
 * create `data/agenda/tasks/`
 * create `data/agenda/dags/`
 * create `data/agenda/logs/`
 * implement the first Agenda commands:
+
   * `azq task list`
   * `azq task start <task_id>`
   * `azq task complete <task_id>`
-  * `azq agenda <deliverable_id>` or equivalent task-generation entrypoint
+  * `azq dag build <goal_id>`
+  * `azq dag show <goal_id>`
 * define a task record format with at least:
+
   * `task_id`
   * `deliverable_id`
   * `description`
@@ -202,6 +227,7 @@ Agenda is only useful once Formam has defined what should exist. Tasks must serv
 * task dependencies must be inspectable on disk
 * in-progress work should leave a log artifact in `data/agenda/logs/`
 * task completion should not imply artifact publication automatically
+* blocked work must become a first-class visible state, not a vague feeling fileciteturn10file8
 
 ### Recommended initial implementation
 
@@ -216,6 +242,7 @@ Agenda is only useful once Formam has defined what should exist. Tasks must serv
 * task start and complete transitions write durable logs
 * no task exists without a valid deliverable parent
 * repository state can reach `actionable` from real artifacts
+* the trace chain `task -> deliverable -> goal` is machine-checkable and human-readable fileciteturn10file8turn11file9
 
 ---
 
@@ -227,19 +254,21 @@ Add stewardship: archive, prune, and review operations that keep AZQ trustworthy
 
 ### Why fourth
 
-Before adding more mutating behavior, the system needs a safe place for finished and stale material to go. Domum protects inspectability and prevents silent loss.
+Before adding more mutating behavior, the system needs a safe place for finished and stale material to go. Domum protects inspectability and prevents silent loss. fileciteturn10file2turn11file11
 
 ### Scope
 
-* add `azq/domum/`
+* add `src/azq/domum/`
 * create `data/archive/`
 * create archive subdirectories aligned to the state model:
+
   * `data/archive/sparks/`
   * `data/archive/goals/`
   * `data/archive/tasks/`
   * `data/archive/artifacts/`
 * create `data/reports/` if review output becomes first-class
 * implement the first Domum commands:
+
   * `azq archive ...`
   * `azq prune`
   * `azq review`
@@ -250,13 +279,14 @@ Before adding more mutating behavior, the system needs a safe place for finished
 * archive actions should write a reason or manifest
 * prune should be policy-based, not silent deletion
 * review should summarize recent state transitions from visible files
+* archive failure must be non-destructive: active artifacts remain in place if the move is incomplete fileciteturn11file4turn11file18
 
 ### Recommended initial implementation
 
-* start with goal and spark archiving
+* start with spark and goal archiving
 * preserve original IDs and timestamps
 * write a small archive manifest next to archived objects or in a shared log
-* treat failed archive as non-destructive: active artifacts remain in place if the move is incomplete
+* route existing `goal archive` behavior through Domum rather than leaving it embedded in Finis
 
 ### Exit criteria
 
@@ -273,15 +303,16 @@ Before adding more mutating behavior, the system needs a safe place for finished
 
 Add repository-wide read commands that report maturity and health without mutating state.
 
-### Why after Domum
+### Why fifth
 
-`status` and `doctor` should describe the actual system, not a hypothetical one. They are more useful after the major object layers and archive paths exist.
+`status` and `doctor` should describe the actual system, not a hypothetical one. They are more useful after the major object layers and archive paths exist. fileciteturn10file1turn10file8
 
 ### Scope
 
 * implement `azq status`
 * implement `azq doctor`
 * compute repository maturity:
+
   * `empty`
   * `seeded`
   * `purposed`
@@ -290,6 +321,7 @@ Add repository-wide read commands that report maturity and health without mutati
   * `realized`
   * `kept`
 * compute repository health:
+
   * `healthy`
   * `warning`
   * `degraded`
@@ -313,12 +345,14 @@ Add repository-wide read commands that report maturity and health without mutati
 * malformed IDs
 * missing parent references
 * legacy storage still in use
+* contradictions between visible files and expected state rules
 
 ### Exit criteria
 
 * `azq status` reads the repository without side effects
 * `azq doctor` reports concrete issues tied to files
 * maturity and health are derived from on-disk evidence, not hidden state
+* the repository can explain itself without hand-waving
 
 ---
 
@@ -330,14 +364,15 @@ Eliminate silent permanent deletion from the live system.
 
 ### Why last
 
-Permanent deletion should only be removed after archive and health mechanisms exist. Otherwise the system loses a capability before a safer replacement is in place.
+Permanent deletion should only be removed after archive and health mechanisms exist. Otherwise the system loses a capability before a safer replacement is in place. fileciteturn11file1turn11file18
 
 ### Scope
 
 * remove or deprecate `azq spark rm <id>`
-* replace direct unlink behavior in [`azq/scintilla/spark_delete.py`](/data/git/azq/azq/scintilla/spark_delete.py) with archive-oriented behavior
+* replace direct unlink behavior in spark deletion logic with archive-oriented behavior
 * audit other destructive transitions added during implementation
 * align CLI language with stewardship:
+
   * prefer `archive`
   * avoid `rm`
   * keep destructive actions explicit and rare
@@ -346,7 +381,7 @@ Permanent deletion should only be removed after archive and health mechanisms ex
 
 1. Change `spark rm` into a deprecation shim that archives the spark.
 2. Add `azq archive spark <id>` as the canonical command.
-3. Update help text in [`azq/cli.py`](/data/git/azq/azq/cli.py).
+3. Update CLI help and bootstrap docs.
 4. Remove permanent delete behavior after the archive path is stable.
 
 ### Exit criteria
@@ -354,6 +389,7 @@ Permanent deletion should only be removed after archive and health mechanisms ex
 * no routine user command permanently deletes primary craft artifacts
 * archival replacement exists for current delete flows
 * the CLI no longer teaches users to destroy evidence
+* doctrine and implementation finally stop contradicting each other
 
 ---
 
@@ -364,15 +400,19 @@ These tasks should be done alongside the stages above rather than treated as a s
 * add tests for each state transition
 * normalize ID parsing and validation across engines
 * keep CLI help synchronized with the command model
-* add small fixtures under `data/` or `tests/fixtures/` for migration and health checks
+* add fixtures under `tests/fixtures/` for migration and health checks
 * document file formats as they stabilize
+* make backlinks mandatory wherever the state model requires them
 
-Priority test coverage should include:
+### Priority test coverage
+
+Start with tests for:
 
 * Finis migration from `goals.json` to goal files
-* parent-child integrity across goal -> deliverable -> task
+* parent-child integrity across `goal -> deliverable -> task`
 * archive non-destructiveness
 * `doctor` detection of orphaned and malformed artifacts
+* command runs that fail after partial work and must preserve durable evidence fileciteturn11file4turn11file9
 
 ---
 
@@ -462,5 +502,24 @@ AZQ reaches the intended five-engine baseline when all of the following are true
 * archive exists before destructive removal disappears
 * `status` and `doctor` can classify the repository from visible evidence
 * the practical command flow matches the doctrinal pipeline
+* the repository can move from `empty` to `kept` without violating the state model
 
-At that point, AZQ is no longer a partial capture-and-goals prototype. It is a coherent five-engine craft system.
+At that point, AZQ is no longer a partial capture-and-goals prototype.
+It is a coherent five-engine craft system.
+
+---
+
+## Closing
+
+This plan is not a wishlist.
+It is the build order that keeps AZQ honest.
+
+Implement the stages in order.
+Do not skip form.
+Do not let tasks outrun structure.
+Do not add deletion before stewardship.
+Do not add hidden state where durable files should suffice.
+
+If this order is respected, doctrine and code will converge.
+If it is ignored, AZQ will decay into the kind of system it was designed not to become.
+
