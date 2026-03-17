@@ -95,7 +95,7 @@ Make the wave runner behave like a closeout tool rather than a brittle loop when
 
 **Tasks**
 
-* [ ] modify `run_wave_b_step.sh` or the generic runner path so completion is treated as a successful terminal state
+* [ ] modify `run_next_task_in_current_wave.sh` or the generic runner path so completion is treated as a successful terminal state
 * [ ] add a graceful-exit branch for the no-tasks-remaining case
 * [ ] make the runner emit a summary report when no tasks remain
 * [ ] make the runner print an explicit `Stage 1 Complete` status message instead of returning a non-zero exit code
