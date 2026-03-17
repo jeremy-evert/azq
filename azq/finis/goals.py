@@ -1,9 +1,9 @@
-from azq.finis.storage import load_all_goals
+from azq.finis import storage
 
 
 def show_goals():
     """Display active goals."""
-    goals = load_all_goals()
+    goals = storage.load_all_goals()
 
     if not goals:
         print("No goals defined.")
