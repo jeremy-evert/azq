@@ -1,0 +1,33 @@
+[PASS] compileall
+Description: Verify the azq package still compiles after the patch.
+Type: shell
+Required: True
+Command: python -m compileall azq
+Return code: 0
+--- stdout ---
+Listing 'azq'...
+Listing 'azq/finis'...
+Listing 'azq/scintilla'...
+--- stderr ---
+
+
+[PASS] storage_import
+Description: Verify the new Finis storage module imports cleanly.
+Type: shell
+Required: True
+Command: python -c "import azq.finis.storage"
+Return code: 0
+--- stdout ---
+
+--- stderr ---
+
+
+[PASS] goal_normalization_schema
+Description: Verify a legacy-shaped goal normalizes into the canonical Stage 1 schema.
+Type: python
+Required: True
+Command: /usr/bin/python -c <python check>
+Return code: 0
+--- stdout ---
+
+--- stderr ---

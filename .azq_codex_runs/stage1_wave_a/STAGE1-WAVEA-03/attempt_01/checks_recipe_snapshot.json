@@ -1,0 +1,30 @@
+{
+  "checks_file": "/data/git/azq/AZQ_CHECKS_STAGE_1_WAVE_A.json",
+  "checks": [
+    {
+      "name": "compileall",
+      "type": "shell",
+      "command": "python -m compileall azq",
+      "required": true,
+      "description": "Verify the azq package still compiles after the patch."
+    },
+    {
+      "name": "storage_import",
+      "type": "shell",
+      "command": "python -c \"import azq.finis.storage\"",
+      "required": true,
+      "description": "Verify the new Finis storage module imports cleanly."
+    },
+    {
+      "name": "goal_normalization_schema",
+      "type": "python",
+      "required": true,
+      "description": "Verify a legacy-shaped goal normalizes into the canonical Stage 1 schema.",
+      "code": "from azq.finis import storage\nlegacy = {'goal_id': 'FINIS_001', 'goal': 'Test title', 'status': 'active'}\nfn = getattr(storage, 'normalize_goal_record', None) or getattr(storage, 'normalize_goal', None)\nassert fn is not None, 'normalization helper not found'\nresult = fn(legacy)\nfor field in ['goal_id', 'title', 'status', 'created', 'description', 'derived_from']:\n    assert field in result, f'missing field: {field}'\nassert result['title'] == 'Test title'"
+    }
+  ],
+  "human_checks": [
+    "Legacy goal -> title mapping is explicit.",
+    "Fallback behavior for missing fields is conservative, not destructive."
+  ]
+}

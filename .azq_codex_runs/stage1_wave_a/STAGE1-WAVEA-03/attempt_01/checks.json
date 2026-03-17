@@ -1,0 +1,35 @@
+[
+  {
+    "name": "compileall",
+    "check_type": "shell",
+    "required": true,
+    "command": "python -m compileall azq",
+    "returncode": 0,
+    "stdout": "Listing 'azq'...\nListing 'azq/finis'...\nListing 'azq/scintilla'...\n",
+    "stderr": "",
+    "description": "Verify the azq package still compiles after the patch.",
+    "passed": true
+  },
+  {
+    "name": "storage_import",
+    "check_type": "shell",
+    "required": true,
+    "command": "python -c \"import azq.finis.storage\"",
+    "returncode": 0,
+    "stdout": "",
+    "stderr": "",
+    "description": "Verify the new Finis storage module imports cleanly.",
+    "passed": true
+  },
+  {
+    "name": "goal_normalization_schema",
+    "check_type": "python",
+    "required": true,
+    "command": "/usr/bin/python -c <python check>",
+    "returncode": 0,
+    "stdout": "",
+    "stderr": "",
+    "description": "Verify a legacy-shaped goal normalizes into the canonical Stage 1 schema.",
+    "passed": true
+  }
+]

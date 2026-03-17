@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "name": "AZQ Stage 1 Wave A Checks",
+  "purpose": "Define task-specific automated checks for Stage 1 Wave A so the Codex runner can evaluate patches without hardcoding all task logic.",
+  "defaults": {
+    "retry_cap": 3,
+    "baseline_checks": [
+      {
+        "name": "compileall",
+        "type": "shell",
+        "command": "python -m compileall azq",
+        "required": true,
+        "description": "Verify the azq package still compiles after the patch."
+      },
+      {
+        "name": "storage_import",
+        "type": "shell",
+        "command": "python -c \"import azq.finis.storage\"",
+        "required": true,
+        "description": "Verify the new Finis storage module imports cleanly."
+      }
+    ]
+  },
+  "tasks": {
+    "STAGE1-WAVEA-01": {
+      "description": "Create Finis storage module scaffolding.",
+      "checks": [
+        {
+          "name": "storage_file_exists",
+          "type": "shell",
+          "command": "test -f azq/finis/storage.py",
+          "required": true,
+          "description": "Verify azq/finis/storage.py exists."
+        }
+      ],
+      "human_checks": [
+        "No existing Finis command handlers were refactored yet.",
+        "The patch is limited to storage module scaffolding and tiny import-safe changes only."
+      ]
+    },
+    "STAGE1-WAVEA-02": {
+      "description": "Add canonical Finis path constants and directory helpers.",
+      "checks": [
+        {
+          "name": "path_helpers_smoke",
+          "type": "python",
+          "required": true,
+          "description": "Verify storage path helpers exist and return stable-looking paths.",
+          "code": "from azq.finis import storage\nassert hasattr(storage, 'GOALS_DIR') or hasattr(storage, 'FINIS_GOALS_DIR')\nassert hasattr(storage, 'GOALS_JSON') or hasattr(storage, 'LEGACY_GOALS_JSON')"
+        }
+      ],
+      "human_checks": [
+        "All Finis path ownership now lives in azq/finis/storage.py.",
+        "Directory helper behavior is deterministic and readable."
+      ]
+    },
+    "STAGE1-WAVEA-03": {
+      "description": "Define the canonical normalized goal schema.",
+      "checks": [
+        {
+          "name": "goal_normalization_schema",
+          "type": "python",
+          "required": true,
+          "description": "Verify a legacy-shaped goal normalizes into the canonical Stage 1 schema.",
+          "code": "from azq.finis import storage\nlegacy = {'goal_id': 'FINIS_001', 'goal': 'Test title', 'status': 'active'}\nfn = getattr(storage, 'normalize_goal_record', None) or getattr(storage, 'normalize_goal', None)\nassert fn is not None, 'normalization helper not found'\nresult = fn(legacy)\nfor field in ['goal_id', 'title', 'status', 'created', 'description', 'derived_from']:\n    assert field in result, f'missing field: {field}'\nassert result['title'] == 'Test title'"
+        }
+      ],
+      "human_checks": [
+        "Legacy goal -> title mapping is explicit.",
+        "Fallback behavior for missing fields is conservative, not destructive."
+      ]
+    },
+    "STAGE1-WAVEA-04": {
+      "description": "Implement markdown goal file serialization and parsing.",
+      "checks": [
+        {
+          "name": "goal_round_trip",
+          "type": "python",
+          "required": true,
+          "description": "Verify a canonical goal record can round-trip through markdown serialization and parsing.",
+          "code": "from azq.finis import storage\nrecord = {\n    'goal_id': 'FINIS_001',\n    'title': 'Round trip test',\n    'status': 'active',\n    'created': '2026-01-01T00:00:00',\n    'description': 'desc',\n    'derived_from': ['spark_001']\n}\nserializer = getattr(storage, 'serialize_goal_record', None) or getattr(storage, 'goal_to_markdown', None)\nparser = getattr(storage, 'parse_goal_record', None) or getattr(storage, 'goal_from_markdown', None)\nassert serializer is not None, 'serializer not found'\nassert parser is not None, 'parser not found'\ntext = serializer(record)\nparsed = parser(text)\nfor field in ['goal_id', 'title', 'status', 'created', 'description', 'derived_from']:\n    assert parsed[field] == record[field], f'round-trip mismatch: {field}'"
+        }
+      ],
+      "human_checks": [
+        "The markdown format is human-readable and diff-friendly.",
+        "The file format is simple enough for future Formam code to consume."
+      ]
+    },
+    "STAGE1-WAVEA-05": {
+      "description": "Implement file-backed goal repository reads and id allocation.",
+      "checks": [
+        {
+          "name": "repository_read_helpers_exist",
+          "type": "python",
+          "required": true,
+          "description": "Verify file-backed read helpers and next-id allocation helpers exist.",
+          "code": "from azq.finis import storage\nassert any(hasattr(storage, name) for name in ['load_goal', 'load_goal_by_id']), 'missing single-goal loader'\nassert any(hasattr(storage, name) for name in ['load_goals', 'load_all_goals']), 'missing all-goals loader'\nassert any(hasattr(storage, name) for name in ['next_goal_id', 'get_next_goal_id']), 'missing next-id helper'"
+        }
+      ],
+      "human_checks": [
+        "Exact lookup uses exact goal_id matching.",
+        "Goal ordering is deterministic."
+      ]
+    },
+    "STAGE1-WAVEA-06": {
+      "description": "Add read-only legacy goals.json migration reader.",
+      "checks": [
+        {
+          "name": "legacy_reader_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify a dedicated legacy JSON reader exists.",
+          "code": "from azq.finis import storage\nassert any(hasattr(storage, name) for name in ['load_legacy_goals_json', 'load_legacy_goals']), 'missing legacy reader'"
+        },
+        {
+          "name": "legacy_reader_missing_file_behavior",
+          "type": "python",
+          "required": true,
+          "description": "Verify the legacy reader handles missing goals.json cleanly.",
+          "code": "from pathlib import Path\nfrom azq.finis import storage\nreader = getattr(storage, 'load_legacy_goals_json', None) or getattr(storage, 'load_legacy_goals', None)\nassert reader is not None\nmissing = Path('this_file_should_not_exist_12345.json')\ntry:\n    reader(missing)\nexcept FileNotFoundError:\n    pass\nexcept TypeError:\n    # acceptable if reader does not take a path override yet\n    pass"
+        }
+      ],
+      "human_checks": [
+        "Legacy parsing is clearly separated from canonical file-backed reads.",
+        "No code in this task writes back to goals.json."
+      ]
+    }
+  }
+}
+

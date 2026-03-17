@@ -1,0 +1,2 @@
+- Legacy goal -> title mapping is explicit.
+- Fallback behavior for missing fields is conservative, not destructive.

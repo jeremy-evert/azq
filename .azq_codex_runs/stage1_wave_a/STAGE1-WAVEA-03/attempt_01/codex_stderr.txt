@@ -1,0 +1,737 @@
+OpenAI Codex v0.115.0 (research preview)
+--------
+workdir: /data/git/azq
+model: gpt-5.4
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, /home/jevert/.codex/memories]
+reasoning effort: none
+reasoning summaries: none
+session id: 019cfa1e-2bcc-72c3-b643-893949b21639
+--------
+user
+You are helping implement Stage 1 of AZQ.
+
+Read the repository files that are relevant to this task before making changes.
+Use the attached architectural documents as constraints, especially:
+- AZQ_IMPLEMENTATION_PLAN.md
+- AZQ_BUILD_TASKS_STAGE_1.md
+- AZQ_STATE_MODEL.md
+- AZQ_FILESYSTEM_MODEL.md
+- AZQ_COMMAND_MODEL.md
+
+Your job is to complete exactly one task object.
+
+Rules:
+
+1. Stay inside the files named by the task unless a tiny supporting edit is absolutely required to make the code importable or runnable.
+2. Keep the patch atomic and commit-sized.
+3. Do not implement future tasks early.
+4. Do not refactor unrelated modules.
+5. Do not change architecture documents unless the task explicitly asks for it.
+6. Preserve the current repository layout under `azq/`, not the aspirational `src/azq/` layout.
+7. Prefer simple, readable code over clever abstractions.
+8. Preserve backwards compatibility where practical during Stage 1.
+9. If a task depends on behavior that does not yet exist, do the smallest correct implementation that satisfies the current task only.
+10. Stop when the task’s acceptance criteria are satisfied.
+
+Before editing files:
+- briefly state what you think the task requires
+- name the files you plan to inspect
+- identify any dependency from `depends_on`
+
+When coding:
+- make only the smallest necessary changes
+- keep file formats human-readable and diff-friendly
+- preserve durable evidence on disk where relevant
+- avoid destructive behavior
+
+After coding:
+- show a concise summary of what changed
+- list the files changed
+- state how the acceptance criteria were satisfied
+- mention any tests or checks you ran
+- state any follow-up risk or note, but do not continue into the next task
+
+If the task is underspecified, make the smallest reasonable choice and explain it briefly.
+If the task cannot be completed cleanly without violating the rules, stop and explain the blocker rather than broadening scope.
+
+Task object:
+[paste one JSON task here]
+
+Do not "help" by beginning the next task.
+
+Task object:
+{
+  "task_id": "STAGE1-WAVEA-03",
+  "title": "Define the canonical normalized goal schema",
+  "goal": "Create a normalization function that converts legacy JSON-shaped goal records into the Stage 1 canonical schema.",
+  "files_to_create": [],
+  "files_to_modify": [
+    "azq/finis/storage.py"
+  ],
+  "depends_on": [
+    "STAGE1-WAVEA-02"
+  ],
+  "context": [
+    "Canonical Stage 1 goal fields are: goal_id, title, status, created, description, derived_from.",
+    "Legacy goal records use goal instead of title.",
+    "Migration should preserve noisy historical values rather than cleaning them aggressively."
+  ],
+  "requirements": [
+    "Add a normalization helper that accepts a legacy goal dict and returns a canonical goal dict.",
+    "Map legacy goal -> title.",
+    "Provide conservative fallback values for missing created, description, and derived_from fields.",
+    "Do not read or write files yet in this task beyond code changes."
+  ],
+  "acceptance_criteria": [
+    "One function returns a complete canonical goal record.",
+    "The canonical output always includes goal_id, title, status, created, description, and derived_from.",
+    "Legacy fields are preserved where possible."
+  ],
+  "suggested_commit_message": "add canonical finis goal normalization"
+}
+
+mcp startup: no servers
+codex
+This task looks like adding a single normalization helper in `azq/finis/storage.py` that turns legacy goal-shaped dicts into the Stage 1 canonical schema, with `STAGE1-WAVEA-02` as the dependency to verify in existing code. I’m inspecting the Stage 1 architecture docs plus `azq/finis/storage.py` first so the change stays within the task boundary.
+exec
+/bin/bash -lc "sed -n '1,220p' AZQ_FILESYSTEM_MODEL.md" in /data/git/azq succeeded in 0ms:
+# AZQ Filesystem Model
+
+## Purpose
+
+This document defines the on‑disk structure of the AZQ system.
+
+The filesystem layout mirrors the intellectual pipeline of AZQ. Each stage of the craft process has a corresponding location on disk where its artifacts are stored. This allows the system to remain transparent, inspectable, and resilient.
+
+The guiding principle is simple:
+
+> The filesystem should teach the architecture.
+
+Anyone browsing the repository should be able to understand how ideas move through the system simply by reading the directory tree.
+
+---
+
+# Root Repository Layout
+
+```
+azq/
+exec
+/bin/bash -lc "sed -n '1,220p' AZQ_BUILD_TASKS_STAGE_1.md" in /data/git/azq succeeded in 0ms:
+# AZQ Build Tasks: Stage 1
+
+## Purpose
+
+This checklist turns **Stage 1: Normalize Finis Storage** from `AZQ_IMPLEMENTATION_PLAN.md` into atomic, commit-sized engineering work for the current repository.
+
+The goal of Stage 1 is simple:
+
+> move Finis from transitional JSON storage to first-class goal files so the on-disk structure matches the filesystem and state models.
+
+This checklist is intentionally grounded in the **current live tree**.
+The repository does **not** currently use `src/azq/...`; the live code is under `azq/`.
+
+Stage 1 therefore targets:
+
+* `azq/cli.py`
+* `azq/finis/goals.py`
+* `azq/finis/goal_manager.py`
+* `azq/finis/fine.py`
+* `azq/finis/storage.py` (new)
+exec
+/bin/bash -lc "sed -n '1,240p' azq/finis/storage.py" in /data/git/azqexec
+/bin/bash -lc "sed -n '1,220p' AZQ_IMPLEMENTATION_PLAN.md" in /data/git/azq succeeded in 0ms:
+"""Filesystem scaffolding for canonical Finis goal storage.
+
+Stage 1 moves Finis persistence toward one goal record per file under
+``data/finis/goals/`` while preserving ``data/finis/goals.json`` as a legacy
+input during migration. This module currently owns only the shared path
+decisions and basic filesystem helpers required for later tasks.
+"""
+
+from pathlib import Path
+
+DATA_DIR = Path("data")
+FINIS_DIR = DATA_DIR / "finis"
+GOALS_DIR = FINIS_DIR / "goals"
+LEGACY_GOALS_FILE = FINIS_DIR / "goals.json"
+GOAL_FILE_PREFIX = "FINIS_"
+GOAL_FILE_SUFFIX = ".md"
+GOAL_FILE_GLOB = f"{GOAL_FILE_PREFIX}*{GOAL_FILE_SUFFIX}"
+
+
+def ensure_goals_dir() -> Path:
+ succeeded in 0ms:
+# AZQ Implementation Plan
+
+## Purpose
+
+This document translates AZQ doctrine into a staged engineering roadmap.
+
+The repository already implements part of the first two engines:
+
+* `scintilla` exists and writes durable spark artifacts
+* `finis` exists, but still uses transitional JSON storage
+* `formam`, `agenda`, and `domum` are specified in documents but not yet implemented in code
+
+The goal of this plan is to move from the current partial system to a coherent five-engine system without violating the craft order:
+
+```text
+spark -> goal -> deliverable -> task -> artifact -> archive
+```
+
+The build order is intentionally strict:
+
+exec
+/bin/bash -lc "sed -n '1,220p' AZQ_STATE_MODEL.md" in /data/git/azq succeeded in 0ms:
+# AZQ State Model
+
+## Purpose
+
+This document defines the formal state model of AZQ.
+
+It is the lifecycle grammar of the system: how work exists, how it moves, what commands are allowed to change it, and what evidence on disk proves that a transition actually occurred.
+
+The state model exists to keep five things true:
+
+1. The craft stages remain distinct.
+2. The filesystem remains the visible source of truth.
+3. Every meaningful transition is inspectable.
+4. The CLI remains small and memorable.
+5. No command can claim success without leaving durable evidence.
+
+AZQ is not a bag of commands.
+It is a staged craft system.
+Its state model therefore expresses the Rule of Craft:
+
+exec
+/bin/bash -lc "sed -n '1,220p' AZQ_COMMAND_MODEL.md" in /data/git/azq succeeded in 0ms:
+# AZQ Command Model
+
+## Purpose
+
+This document defines the command-line interface for AZQ.
+
+The command model is the primary way users interact with the system.  
+It exposes the five engines of AZQ as a small, memorable set of commands.
+
+The CLI must obey the Craft Charter:
+
+- stages remain distinct
+- commands remain simple
+- every command produces or modifies a visible artifact
+- no command should bypass the craft pipeline
+
+The command model mirrors the AZQ flow:
+
+```
+
+exec
+/bin/bash -lc 'rg -n "STAGE1-WAVEA-02|normalize|goal_id|derived_from|legacy goal|goal -> title" -S .' in /data/git/azq succeeded in 0ms:
+./AZQ_ENGINE_SPEC.md:224:goal_id
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:29:"task_id": "STAGE1-WAVEA-02",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:45:"Define constants for the goals directory and legacy goals.json file.",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:47:"Add a helper to map a goal_id like FINIS_001 to a markdown file path in data/finis/goals/.",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:59:"title": "Define the canonical normalized goal schema",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:66:"STAGE1-WAVEA-02"
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:69:"Canonical Stage 1 goal fields are: goal_id, title, status, created, description, derived_from.",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:74:"Add a normalization helper that accepts a legacy goal dict and returns a canonical goal dict.",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:75:"Map legacy goal -> title.",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:76:"Provide conservative fallback values for missing created, description, and derived_from fields.",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:81:"The canonical output always includes goal_id, title, status, created, description, and derived_from.",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:127:"Lookup should be exact-match on goal_id.",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:132:"Add a function to load one goal by exact goal_id.",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:138:"Exact lookup by goal_id works.",
+./AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json:145:"title": "Add read-only legacy goals.json migration reader",
+./AZQ_CHECKS_STAGE_1_WAVE_A.json:41:    "STAGE1-WAVEA-02": {
+./AZQ_CHECKS_STAGE_1_WAVE_A.json:58:      "description": "Define the canonical normalized goal schema.",
+./AZQ_CHECKS_STAGE_1_WAVE_A.json:64:          "description": "Verify a legacy-shaped goal normalizes into the canonical Stage 1 schema.",
+./AZQ_CHECKS_STAGE_1_WAVE_A.json:65:          "code": "from azq.finis import storage\nlegacy = {'goal_id': 'FINIS_001', 'goal': 'Test title', 'status': 'active'}\nfn = getattr(storage, 'normalize_goal_record', None) or getattr(storage, 'normalize_goal', None)\nassert fn is not None, 'normalization helper not found'\nresult = fn(legacy)\nfor field in ['goal_id', 'title', 'status', 'created', 'description', 'derived_from']:\n    assert field in result, f'missing field: {field}'\nassert result['title'] == 'Test title'"
+./AZQ_CHECKS_STAGE_1_WAVE_A.json:69:        "Legacy goal -> title mapping is explicit.",
+codex
+The dependency is `STAGE1-WAVEA-02`, which is already reflected by the path scaffolding in `azq/finis/storage.py`. I’m checking the current Finis goal shape in the live modules and legacy JSON so the normalization helper preserves existing values instead of inventing a broader schema.
+exec
+/bin/bash -lc "sed -n '1,220p' azq/finis/goals.py" in /data/git/azqexec
+/bin/bash -lc "sed -n '1,220p' azq/finis/goal_manager.py" in /data/git/azq succeeded in 0ms:
+import json
+from pathlib import Path
+
+GOALS_FILE = Path("data/finis/goals.json")
+
+
+def load_goals():
+    """Load goals from disk."""
+    if not GOALS_FILE.exists():
+        return []
+
+    with open(GOALS_FILE) as f:
+        return json.load(f)
+
+
+def save_goals(goals):
+    """Write goals to disk."""
+    GOALS_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(GOALS_FILE, "w") as f:
+ succeeded in 0ms:
+import json
+from pathlib import Path
+from datetime import date
+
+GOALS_FILE = Path("data/finis/goals.json")
+
+
+def load_goals():
+
+    if not GOALS_FILE.exists():
+        return []
+
+    with open(GOALS_FILE) as f:
+        return json.load(f)
+
+
+def save_goals(goals):
+
+    GOALS_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+exec
+/bin/bash -lc "sed -n '1,260p' azq/finis/fine.py" in /data/git/azqexec
+/bin/bash -lc "sed -n '1,120p' data/finis/goals.json" in /data/git/azq succeeded in 0ms:
+[
+  {
+    "goal_id": "FINIS_001",
+    "goal": "One of the goals that i have is that i would like to add the ability to look at all of the different audio files that i have and then skim through them somehow and make sure that i get rid of all the ones that i don't actually need",
+    "status": "active",
+    "derived_from": [
+      "2026-03-08_193337.json"
+    ]
+  },
+  {
+    "goal_id": "FINIS_002",
+    "goal": "I would like to add the goal to go through my repository and look for themes and or functions and or ideas that i'm currently using and then use those as research topics that i can go to google scholar and see if there's documentation about better ways to do things or go out to some of the stack exchanges or other programming forms and see if there's better ways to implement the things that i'm currently doing",
+    "status": "active",
+    "derived_from": [
+      "2026-03-08_195132.json"
+    ]
+  },
+  {
+    "goal_id": "FINIS_003",
+    "goal": "I would like to see the ability to go through my code and look at test coverage and check out a repository and see if there's good test coverage for the repository",
+ succeeded in 0ms:
+import json
+import difflib
+from pathlib import Path
+from datetime import date
+
+from .goals import load_goals, save_goals, next_goal_id
+
+SPARK_DIR = Path("data/scintilla/sparks")
+
+
+# ------------------------------------------------
+# Load sparks
+# ------------------------------------------------
+
+def load_sparks():
+    """Read all spark files."""
+
+    sparks = []
+
+    for file in sorted(SPARK_DIR.glob("*.json")):
+exec
+/bin/bash -lc "sed -n '55,95p' AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json" in /data/git/azq succeeded in 0ms:
+"suggested_commit_message": "add finis storage path constants and helpers"
+},
+{
+"task_id": "STAGE1-WAVEA-03",
+"title": "Define the canonical normalized goal schema",
+"goal": "Create a normalization function that converts legacy JSON-shaped goal records into the Stage 1 canonical schema.",
+"files_to_create": [],
+"files_to_modify": [
+"azq/finis/storage.py"
+],
+"depends_on": [
+"STAGE1-WAVEA-02"
+],
+"context": [
+"Canonical Stage 1 goal fields are: goal_id, title, status, created, description, derived_from.",
+"Legacy goal records use goal instead of title.",
+"Migration should preserve noisy historical values rather than cleaning them aggressively."
+],
+"requirements": [
+"Add a normalization helper that accepts a legacy goal dict and returns a canonical goal dict.",
+exec
+/bin/bash -lc "sed -n '55,80p' AZQ_CHECKS_STAGE_1_WAVE_A.json" in /data/git/azq succeeded in 0ms:
+      ]
+    },
+    "STAGE1-WAVEA-03": {
+      "description": "Define the canonical normalized goal schema.",
+      "checks": [
+        {
+          "name": "goal_normalization_schema",
+          "type": "python",
+          "required": true,
+          "description": "Verify a legacy-shaped goal normalizes into the canonical Stage 1 schema.",
+          "code": "from azq.finis import storage\nlegacy = {'goal_id': 'FINIS_001', 'goal': 'Test title', 'status': 'active'}\nfn = getattr(storage, 'normalize_goal_record', None) or getattr(storage, 'normalize_goal', None)\nassert fn is not None, 'normalization helper not found'\nresult = fn(legacy)\nfor field in ['goal_id', 'title', 'status', 'created', 'description', 'derived_from']:\n    assert field in result, f'missing field: {field}'\nassert result['title'] == 'Test title'"
+        }
+      ],
+      "human_checks": [
+        "Legacy goal -> title mapping is explicit.",
+        "Fallback behavior for missing fields is conservative, not destructive."
+      ]
+    },
+    "STAGE1-WAVEA-04": {
+      "description": "Implement markdown goal file serialization and parsing.",
+codex
+I have the shape now: legacy records are mostly `goal_id`, `goal`, `status`, optional `created`, optional `derived_from`, with some noisy historical strings. I’m editing only `azq/finis/storage.py` to add a small normalization helper that preserves those values, maps `goal` to `title`, and fills only the required missing fields conservatively.
+file update
+M /data/git/azq/azq/finis/storage.py
+@@ -4,4 +4,5 @@
+ ``data/finis/goals/`` while preserving ``data/finis/goals.json`` as a legacy
+-input during migration. This module currently owns only the shared path
+-decisions and basic filesystem helpers required for later tasks.
++input during migration. This module currently owns the shared path decisions,
++basic filesystem helpers, and legacy-to-canonical goal normalization used by
++later tasks.
+ """
+@@ -9,2 +10,3 @@
+ from pathlib import Path
++from typing import Any
+ 
+@@ -38,2 +40,30 @@
+ 
++def normalize_goal_record(legacy_goal: dict[str, Any]) -> dict[str, Any]:
++    """Convert a legacy JSON-shaped goal record into the Stage 1 schema.
++
++    Fallbacks are intentionally conservative so migration preserves historical
++    values instead of inventing cleaned replacements:
++    - ``title`` prefers an existing canonical value, then legacy ``goal``
++    - missing ``created`` and ``description`` become empty strings
++    - missing ``derived_from`` becomes an empty list
++    """
++
++    derived_from = legacy_goal.get("derived_from")
++    if derived_from is None:
++        canonical_derived_from: list[Any] = []
++    elif isinstance(derived_from, list):
++        canonical_derived_from = list(derived_from)
++    else:
++        canonical_derived_from = [derived_from]
++
++    return {
++        "goal_id": legacy_goal.get("goal_id", ""),
++        "title": legacy_goal.get("title", legacy_goal.get("goal", "")),
++        "status": legacy_goal.get("status", "active"),
++        "created": legacy_goal.get("created", ""),
++        "description": legacy_goal.get("description", ""),
++        "derived_from": canonical_derived_from,
++    }
++
++
+ __all__ = [
+@@ -49,2 +79,3 @@
+     "goal_file_path",
++    "normalize_goal_record",
+ ]
+apply_patch(auto_approved=true) exited 0 in 133ms:
+Success. Updated the following files:
+M /data/git/azq/azq/finis/storage.py
+file update:
+diff --git a/azq/finis/storage.py b/azq/finis/storage.py
+index 3bbe262354f707a2e34f757872f00508fa4de604..910a86d65b3fe966c9ab97f47959eb424b2da8f8
+--- a/azq/finis/storage.py
++++ b/azq/finis/storage.py
+@@ -2,11 +2,13 @@
+ 
+ Stage 1 moves Finis persistence toward one goal record per file under
+ ``data/finis/goals/`` while preserving ``data/finis/goals.json`` as a legacy
+-input during migration. This module currently owns only the shared path
+-decisions and basic filesystem helpers required for later tasks.
++input during migration. This module currently owns the shared path decisions,
++basic filesystem helpers, and legacy-to-canonical goal normalization used by
++later tasks.
+ """
+ 
+ from pathlib import Path
++from typing import Any
+ 
+ DATA_DIR = Path("data")
+ FINIS_DIR = DATA_DIR / "finis"
+@@ -36,6 +38,34 @@
+     return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
+ 
+ 
++def normalize_goal_record(legacy_goal: dict[str, Any]) -> dict[str, Any]:
++    """Convert a legacy JSON-shaped goal record into the Stage 1 schema.
++
++    Fallbacks are intentionally conservative so migration preserves historical
++    values instead of inventing cleaned replacements:
++    - ``title`` prefers an existing canonical value, then legacy ``goal``
++    - missing ``created`` and ``description`` become empty strings
++    - missing ``derived_from`` becomes an empty list
++    """
++
++    derived_from = legacy_goal.get("derived_from")
++    if derived_from is None:
++        canonical_derived_from: list[Any] = []
++    elif isinstance(derived_from, list):
++        canonical_derived_from = list(derived_from)
++    else:
++        canonical_derived_from = [derived_from]
++
++    return {
++        "goal_id": legacy_goal.get("goal_id", ""),
++        "title": legacy_goal.get("title", legacy_goal.get("goal", "")),
++        "status": legacy_goal.get("status", "active"),
++        "created": legacy_goal.get("created", ""),
++        "description": legacy_goal.get("description", ""),
++        "derived_from": canonical_derived_from,
++    }
++
++
+ __all__ = [
+     "DATA_DIR",
+     "FINIS_DIR",
+@@ -47,4 +77,5 @@
+     "ensure_goals_dir",
+     "list_goal_files",
+     "goal_file_path",
++    "normalize_goal_record",
+ ]
+
+file update:
+diff --git a/azq/finis/storage.py b/azq/finis/storage.py
+index 3bbe262354f707a2e34f757872f00508fa4de604..910a86d65b3fe966c9ab97f47959eb424b2da8f8
+--- a/azq/finis/storage.py
++++ b/azq/finis/storage.py
+@@ -2,11 +2,13 @@
+ 
+ Stage 1 moves Finis persistence toward one goal record per file under
+ ``data/finis/goals/`` while preserving ``data/finis/goals.json`` as a legacy
+-input during migration. This module currently owns only the shared path
+-decisions and basic filesystem helpers required for later tasks.
++input during migration. This module currently owns the shared path decisions,
++basic filesystem helpers, and legacy-to-canonical goal normalization used by
++later tasks.
+ """
+ 
+ from pathlib import Path
++from typing import Any
+ 
+ DATA_DIR = Path("data")
+ FINIS_DIR = DATA_DIR / "finis"
+@@ -36,6 +38,34 @@
+     return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
+ 
+ 
++def normalize_goal_record(legacy_goal: dict[str, Any]) -> dict[str, Any]:
++    """Convert a legacy JSON-shaped goal record into the Stage 1 schema.
++
++    Fallbacks are intentionally conservative so migration preserves historical
++    values instead of inventing cleaned replacements:
++    - ``title`` prefers an existing canonical value, then legacy ``goal``
++    - missing ``created`` and ``description`` become empty strings
++    - missing ``derived_from`` becomes an empty list
++    """
++
++    derived_from = legacy_goal.get("derived_from")
++    if derived_from is None:
++        canonical_derived_from: list[Any] = []
++    elif isinstance(derived_from, list):
++        canonical_derived_from = list(derived_from)
++    else:
++        canonical_derived_from = [derived_from]
++
++    return {
++        "goal_id": legacy_goal.get("goal_id", ""),
++        "title": legacy_goal.get("title", legacy_goal.get("goal", "")),
++        "status": legacy_goal.get("status", "active"),
++        "created": legacy_goal.get("created", ""),
++        "description": legacy_goal.get("description", ""),
++        "derived_from": canonical_derived_from,
++    }
++
++
+ __all__ = [
+     "DATA_DIR",
+     "FINIS_DIR",
+@@ -47,4 +77,5 @@
+     "ensure_goals_dir",
+     "list_goal_files",
+     "goal_file_path",
++    "normalize_goal_record",
+ ]
+
+codex
+The helper is in place. I’m running a minimal verification against the Stage 1 check shape to confirm the canonical keys are always present and the legacy `goal` field maps directly to `title`.
+exec
+/bin/bash -lc "sed -n '1,220p' azq/finis/storage.py" in /data/git/azq succeeded in 0ms:
+"""Filesystem scaffolding for canonical Finis goal storage.
+
+Stage 1 moves Finis persistence toward one goal record per file under
+``data/finis/goals/`` while preserving ``data/finis/goals.json`` as a legacy
+input during migration. This module currently owns the shared path decisions,
+basic filesystem helpers, and legacy-to-canonical goal normalization used by
+later tasks.
+"""
+
+from pathlib import Path
+from typing import Any
+
+DATA_DIR = Path("data")
+FINIS_DIR = DATA_DIR / "finis"
+GOALS_DIR = FINIS_DIR / "goals"
+LEGACY_GOALS_FILE = FINIS_DIR / "goals.json"
+GOAL_FILE_PREFIX = "FINIS_"
+GOAL_FILE_SUFFIX = ".md"
+GOAL_FILE_GLOB = f"{GOAL_FILE_PREFIX}*{GOAL_FILE_SUFFIX}"
+
+exec
+/bin/bash -lc "python - <<'PY'
+from azq.finis import storage
+legacy = {'goal_id': 'FINIS_001', 'goal': 'Test title', 'status': 'active'}
+result = storage.normalize_goal_record(legacy)
+for field in ['goal_id', 'title', 'status', 'created', 'description', 'derived_from']:
+    assert field in result, f'missing field: {field}'
+assert result['title'] == 'Test title'
+assert result['created'] == ''
+assert result['description'] == ''
+assert result['derived_from'] == []
+print('normalization check passed')
+PY" in /data/git/azq succeeded in 34ms:
+normalization check passed
+file update:
+diff --git a/azq/finis/storage.py b/azq/finis/storage.py
+index 3bbe262354f707a2e34f757872f00508fa4de604..910a86d65b3fe966c9ab97f47959eb424b2da8f8
+--- a/azq/finis/storage.py
++++ b/azq/finis/storage.py
+@@ -2,11 +2,13 @@
+ 
+ Stage 1 moves Finis persistence toward one goal record per file under
+ ``data/finis/goals/`` while preserving ``data/finis/goals.json`` as a legacy
+-input during migration. This module currently owns only the shared path
+-decisions and basic filesystem helpers required for later tasks.
++input during migration. This module currently owns the shared path decisions,
++basic filesystem helpers, and legacy-to-canonical goal normalization used by
++later tasks.
+ """
+ 
+ from pathlib import Path
++from typing import Any
+ 
+ DATA_DIR = Path("data")
+ FINIS_DIR = DATA_DIR / "finis"
+@@ -36,6 +38,34 @@
+     return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
+ 
+ 
++def normalize_goal_record(legacy_goal: dict[str, Any]) -> dict[str, Any]:
++    """Convert a legacy JSON-shaped goal record into the Stage 1 schema.
++
++    Fallbacks are intentionally conservative so migration preserves historical
++    values instead of inventing cleaned replacements:
++    - ``title`` prefers an existing canonical value, then legacy ``goal``
++    - missing ``created`` and ``description`` become empty strings
++    - missing ``derived_from`` becomes an empty list
++    """
++
++    derived_from = legacy_goal.get("derived_from")
++    if derived_from is None:
++        canonical_derived_from: list[Any] = []
++    elif isinstance(derived_from, list):
++        canonical_derived_from = list(derived_from)
++    else:
++        canonical_derived_from = [derived_from]
++
++    return {
++        "goal_id": legacy_goal.get("goal_id", ""),
++        "title": legacy_goal.get("title", legacy_goal.get("goal", "")),
++        "status": legacy_goal.get("status", "active"),
++        "created": legacy_goal.get("created", ""),
++        "description": legacy_goal.get("description", ""),
++        "derived_from": canonical_derived_from,
++    }
++
++
+ __all__ = [
+     "DATA_DIR",
+     "FINIS_DIR",
+@@ -47,4 +77,5 @@
+     "ensure_goals_dir",
+     "list_goal_files",
+     "goal_file_path",
++    "normalize_goal_record",
+ ]
+
+codex
+The task required a single helper in [azq/finis/storage.py](/data/git/azq/azq/finis/storage.py) that normalizes legacy JSON goal records into the Stage 1 canonical schema. I inspected the required architecture docs plus the live Finis modules and legacy `data/finis/goals.json`; the relevant dependency was `STAGE1-WAVEA-02`, which had already established the storage-path scaffolding in the same file.
+
+I changed only [azq/finis/storage.py](/data/git/azq/azq/finis/storage.py). The new `normalize_goal_record()` returns a complete canonical record with `goal_id`, `title`, `status`, `created`, `description`, and `derived_from`, maps legacy `goal` to `title`, preserves existing values when present, uses `""` for missing `created` and `description`, uses `[]` for missing `derived_from`, and wraps a non-list `derived_from` value in a one-item list so the backlink data is not discarded.
+
+The acceptance criteria are satisfied because one function now produces the complete canonical schema on every call, including required fallback fields, while preserving noisy historical values where available. I ran a Python check matching the Stage 1 validation shape and confirmed the canonical keys and legacy `goal -> title` mapping. Risk note: the fallback for missing `goal_id` is `""`, which is intentionally minimal for this task and leaves stricter validation to later tasks rather than broadening scope now.
+file update:
+diff --git a/azq/finis/storage.py b/azq/finis/storage.py
+index 3bbe262354f707a2e34f757872f00508fa4de604..910a86d65b3fe966c9ab97f47959eb424b2da8f8
+--- a/azq/finis/storage.py
++++ b/azq/finis/storage.py
+@@ -2,11 +2,13 @@
+ 
+ Stage 1 moves Finis persistence toward one goal record per file under
+ ``data/finis/goals/`` while preserving ``data/finis/goals.json`` as a legacy
+-input during migration. This module currently owns only the shared path
+-decisions and basic filesystem helpers required for later tasks.
++input during migration. This module currently owns the shared path decisions,
++basic filesystem helpers, and legacy-to-canonical goal normalization used by
++later tasks.
+ """
+ 
+ from pathlib import Path
++from typing import Any
+ 
+ DATA_DIR = Path("data")
+ FINIS_DIR = DATA_DIR / "finis"
+@@ -36,6 +38,34 @@
+     return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
+ 
+ 
++def normalize_goal_record(legacy_goal: dict[str, Any]) -> dict[str, Any]:
++    """Convert a legacy JSON-shaped goal record into the Stage 1 schema.
++
++    Fallbacks are intentionally conservative so migration preserves historical
++    values instead of inventing cleaned replacements:
++    - ``title`` prefers an existing canonical value, then legacy ``goal``
++    - missing ``created`` and ``description`` become empty strings
++    - missing ``derived_from`` becomes an empty list
++    """
++
++    derived_from = legacy_goal.get("derived_from")
++    if derived_from is None:
++        canonical_derived_from: list[Any] = []
++    elif isinstance(derived_from, list):
++        canonical_derived_from = list(derived_from)
++    else:
++        canonical_derived_from = [derived_from]
++
++    return {
++        "goal_id": legacy_goal.get("goal_id", ""),
++        "title": legacy_goal.get("title", legacy_goal.get("goal", "")),
++        "status": legacy_goal.get("status", "active"),
++        "created": legacy_goal.get("created", ""),
++        "description": legacy_goal.get("description", ""),
++        "derived_from": canonical_derived_from,
++    }
++
++
+ __all__ = [
+     "DATA_DIR",
+     "FINIS_DIR",
+@@ -47,4 +77,5 @@
+     "ensure_goals_dir",
+     "list_goal_files",
+     "goal_file_path",
++    "normalize_goal_record",
+ ]
+
+tokens used
+23,194
