@@ -7,6 +7,7 @@ basic filesystem helpers, and legacy-to-canonical goal normalization used by
 later tasks.
 """
 
+import json
 from pathlib import Path
 import re
 from typing import Any, Optional
@@ -20,6 +21,10 @@ GOAL_FILE_SUFFIX = ".md"
 GOAL_FILE_GLOB = f"{GOAL_FILE_PREFIX}*{GOAL_FILE_SUFFIX}"
 DESCRIPTION_HEADING = "## Description"
 GOAL_ID_PATTERN = re.compile(rf"^{GOAL_FILE_PREFIX}(\d+)$")
+
+
+class LegacyGoalsError(ValueError):
+    """Raised when legacy goals.json cannot be read as migration input."""
 
 
 def ensure_goals_dir() -> Path:
@@ -75,6 +80,50 @@ def normalize_goal_record(legacy_goal: dict[str, Any]) -> dict[str, Any]:
         "description": legacy_goal.get("description", ""),
         "derived_from": canonical_derived_from,
     }
+
+
+def parse_legacy_goals_json(
+    raw_text: str, *, source: Path = LEGACY_GOALS_FILE
+) -> list[dict[str, Any]]:
+    """Parse legacy goals.json text into normalized Stage 1 goal records."""
+    try:
+        parsed = json.loads(raw_text)
+    except json.JSONDecodeError as exc:
+        raise LegacyGoalsError(
+            f"Legacy goals JSON at {source} is malformed: {exc.msg} "
+            f"(line {exc.lineno}, column {exc.colno})."
+        ) from exc
+
+    if not isinstance(parsed, list):
+        raise LegacyGoalsError(
+            f"Legacy goals JSON at {source} must contain a top-level list."
+        )
+
+    normalized_goals: list[dict[str, Any]] = []
+    for index, item in enumerate(parsed):
+        if not isinstance(item, dict):
+            raise LegacyGoalsError(
+                f"Legacy goals JSON at {source} contains a non-object record at "
+                f"index {index}."
+            )
+        normalized_goals.append(normalize_goal_record(item))
+
+    return normalized_goals
+
+
+def load_legacy_goals() -> list[dict[str, Any]]:
+    """Load legacy goals.json as migration input only.
+
+    Missing legacy storage returns an empty list so callers can distinguish
+    "no legacy data present" from parse failures without treating JSON as the
+    canonical store.
+    """
+    if not LEGACY_GOALS_FILE.is_file():
+        return []
+
+    return parse_legacy_goals_json(
+        LEGACY_GOALS_FILE.read_text(encoding="utf-8"), source=LEGACY_GOALS_FILE
+    )
 
 
 def serialize_goal_markdown(goal_record: dict[str, Any]) -> str:
@@ -244,10 +293,13 @@ __all__ = [
     "GOAL_FILE_GLOB",
     "DESCRIPTION_HEADING",
     "GOAL_ID_PATTERN",
+    "LegacyGoalsError",
     "ensure_goals_dir",
     "list_goal_files",
     "goal_file_path",
     "normalize_goal_record",
+    "parse_legacy_goals_json",
+    "load_legacy_goals",
     "serialize_goal_record",
     "serialize_goal_markdown",
     "goal_to_markdown",
