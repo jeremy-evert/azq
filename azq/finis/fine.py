@@ -3,9 +3,10 @@ import difflib
 from pathlib import Path
 from datetime import date
 
-from .goals import load_goals, save_goals, next_goal_id
+from .storage import load_all_goals, next_goal_id, write_goal
 
 SPARK_DIR = Path("data/scintilla/sparks")
+TITLE_DEDUPE_THRESHOLD = 0.39
 
 
 # ------------------------------------------------
@@ -97,10 +98,10 @@ def get_used_sources(goals):
 
 def propose_goals(sparks):
 
-    existing_goals = load_goals()
+    existing_goals = load_all_goals(migrate_legacy=True)
 
     existing_text = [
-        g["goal"].lower()
+        g["title"].lower()
         for g in existing_goals
     ]
 
@@ -128,8 +129,10 @@ def propose_goals(sparks):
         duplicate = False
 
         for g in existing_text:
-
-            if similar(text_lower, g) > 0.75:
+            # Fine works with short candidate titles, so a lower threshold keeps
+            # obvious title-level duplicates from slipping through canonical
+            # storage as new goal files.
+            if similar(text_lower, g) >= TITLE_DEDUPE_THRESHOLD:
                 duplicate = True
                 break
 
@@ -137,7 +140,7 @@ def propose_goals(sparks):
             continue
 
         candidates.append({
-            "goal": text,
+            "title": text,
             "source": source
         })
 
@@ -159,7 +162,7 @@ def confirm_goals(candidates):
 
     for i, c in enumerate(candidates):
 
-        print(f"{i+1}. {c['goal']}")
+        print(f"{i+1}. {c['title']}")
 
         ans = input("Accept goal? [y/n] ")
 
@@ -191,20 +194,16 @@ def run_fine():
         print("No goals confirmed.")
         return
 
-    goals = load_goals()
-
     for c in confirmed:
-
-        goal_id = next_goal_id(goals)
-
-        goals.append({
+        goal_id = next_goal_id()
+        goal_record = {
             "goal_id": goal_id,
-            "goal": c["goal"],
+            "title": c["title"],
             "status": "active",
             "created": str(date.today()),
+            "description": "",
             "derived_from": [c["source"]]
-        })
+        }
+        write_goal(goal_record)
 
-    save_goals(goals)
-
-    print("\nGoals written to data/finis/goals.json")
+    print("\nGoals written to data/finis/goals/")
