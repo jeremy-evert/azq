@@ -1,0 +1,176 @@
+[
+  {
+    "task_id": "STAGE2-WAVEA-01",
+    "title": "Create Formam package and storage module scaffolding",
+    "goal": "Introduce a new package boundary that will own Formam path, schema, and persistence decisions.",
+    "files_to_create": [
+      "azq/formam/__init__.py",
+      "azq/formam/storage.py"
+    ],
+    "files_to_modify": [],
+    "depends_on": [],
+    "context": [
+      "Wave A corresponds to tasks 2-7 in AZQ_BUILD_TASKS_STAGE_2.md.",
+      "The live repository layout is under azq/, not src/azq/.",
+      "Stage 2 is about introducing deliverables and maps without leaking into Agenda task work."
+    ],
+    "requirements": [
+      "Create the azq/formam package.",
+      "Create azq/formam/storage.py.",
+      "Do not wire CLI commands yet.",
+      "Keep this commit limited to Formam scaffolding and import-safe module boundaries."
+    ],
+    "acceptance_criteria": [
+      "azq/formam/__init__.py exists.",
+      "azq/formam/storage.py exists.",
+      "The new Formam storage module can be imported without error."
+    ],
+    "suggested_commit_message": "add formam package scaffolding"
+  },
+  {
+    "task_id": "STAGE2-WAVEA-02",
+    "title": "Add canonical Formam path constants and directory helpers",
+    "goal": "Centralize path ownership for Formam deliverable and map persistence.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/formam/storage.py"
+    ],
+    "depends_on": [
+      "STAGE2-WAVEA-01"
+    ],
+    "context": [
+      "The canonical Stage 2 storage locations are data/form/deliverables/ and data/form/maps/.",
+      "One module should own all Formam path decisions.",
+      "Goal maps should use a deterministic filename convention keyed by goal_id."
+    ],
+    "requirements": [
+      "Define constants for the deliverables directory and maps directory.",
+      "Add helpers to ensure both directories exist.",
+      "Add a helper to map a deliverable_id like DELIV_001 to a markdown file path in data/form/deliverables/.",
+      "Add a helper to map a goal_id like FINIS_001 to a map file path such as GOAL_FINIS_001_MAP.md.",
+      "Add a helper to list deliverable files in deterministic order."
+    ],
+    "acceptance_criteria": [
+      "All Formam storage paths are defined in azq/formam/storage.py.",
+      "The Formam directories can be created on demand.",
+      "Deliverable and map path lookup is deterministic."
+    ],
+    "suggested_commit_message": "add formam storage path constants and helpers"
+  },
+  {
+    "task_id": "STAGE2-WAVEA-03",
+    "title": "Define the canonical normalized deliverable schema",
+    "goal": "Create a normalization function that converts partial deliverable-shaped data into the Stage 2 canonical schema.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/formam/storage.py"
+    ],
+    "depends_on": [
+      "STAGE2-WAVEA-02"
+    ],
+    "context": [
+      "Canonical Stage 2 deliverable fields are: deliverable_id, goal_id, title, artifact_description, dependencies, status, created.",
+      "Stage 2 starts with stub deliverables, so partial generated records are expected.",
+      "The schema must stay focused on artifact definition and boundaries of work rather than task lists."
+    ],
+    "requirements": [
+      "Add a normalization helper that accepts a partial deliverable dict and returns a canonical deliverable dict.",
+      "Provide conservative fallback values for missing artifact_description, dependencies, status, and created fields.",
+      "Preserve given values where possible rather than silently inventing structure.",
+      "Do not read or write files yet in this task beyond code changes."
+    ],
+    "acceptance_criteria": [
+      "One function returns a complete canonical deliverable record.",
+      "The canonical output always includes deliverable_id, goal_id, title, artifact_description, dependencies, status, and created.",
+      "Dependencies always normalize to a list."
+    ],
+    "suggested_commit_message": "add canonical formam deliverable normalization"
+  },
+  {
+    "task_id": "STAGE2-WAVEA-04",
+    "title": "Implement markdown deliverable file serialization and parsing",
+    "goal": "Make canonical deliverable records readable and writable as diff-friendly markdown files.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/formam/storage.py"
+    ],
+    "depends_on": [
+      "STAGE2-WAVEA-03"
+    ],
+    "context": [
+      "Stage 2 requires one deliverable per file named DELIV_###.md.",
+      "The file format should remain simple enough for later Agenda code to read without transitional glue.",
+      "Human readability matters because Formam is a planning surface, not hidden state."
+    ],
+    "requirements": [
+      "Choose and implement a markdown on-disk format for deliverable files.",
+      "Add serializer and parser helpers in azq/formam/storage.py.",
+      "Ensure all canonical fields are preserved round-trip.",
+      "Keep the format simple and explicit."
+    ],
+    "acceptance_criteria": [
+      "A canonical deliverable record can be serialized to markdown and parsed back without losing required fields.",
+      "The resulting file is human-readable and diff-friendly."
+    ],
+    "suggested_commit_message": "add markdown deliverable file read write format"
+  },
+  {
+    "task_id": "STAGE2-WAVEA-05",
+    "title": "Implement file-backed deliverable repository reads and id allocation",
+    "goal": "Allow deliverable storage alone to support listing, lookup, goal grouping, and next-id generation.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/formam/storage.py"
+    ],
+    "depends_on": [
+      "STAGE2-WAVEA-04"
+    ],
+    "context": [
+      "Later command work will depend on storage.py for all deliverable reads.",
+      "Lookup should be exact-match on deliverable_id and goal_id.",
+      "ID allocation must remain stable and deterministic."
+    ],
+    "requirements": [
+      "Add functions to load all deliverables from data/form/deliverables/.",
+      "Add a function to load one deliverable by exact deliverable_id.",
+      "Add a function to load deliverables for one exact goal_id.",
+      "Add a function to compute the next DELIV_### id from existing deliverable files.",
+      "Keep ordering deterministic."
+    ],
+    "acceptance_criteria": [
+      "File storage alone can list deliverables, load one deliverable, group deliverables by goal, and generate the next stable deliverable id.",
+      "Exact lookup by deliverable_id works.",
+      "Ordering is deterministic."
+    ],
+    "suggested_commit_message": "add file backed formam deliverable reads and id allocation"
+  },
+  {
+    "task_id": "STAGE2-WAVEA-06",
+    "title": "Add canonical goal-parent validation helpers",
+    "goal": "Ensure Formam can prove a deliverable descends from a real canonical goal before any deliverable file is written.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/formam/storage.py"
+    ],
+    "depends_on": [
+      "STAGE2-WAVEA-05"
+    ],
+    "context": [
+      "Stage 2 requires every deliverable to point back to exactly one goal initially.",
+      "Formam should not create deliverables for missing parent goals.",
+      "If active-only validation is enforced, that rule should be explicit and inspectable."
+    ],
+    "requirements": [
+      "Add a helper that validates a canonical goal by exact goal_id using the Stage 1 Finis storage layer.",
+      "Reject missing parent goals before any Formam write occurs.",
+      "Keep goal validation logic in the Formam storage boundary rather than scattering it across future command modules.",
+      "Return or raise enough information that a future command can print a readable error."
+    ],
+    "acceptance_criteria": [
+      "Formam exposes a goal validation helper.",
+      "The helper checks parent goals by exact goal_id.",
+      "A future build command can use the helper to stop invalid deliverable creation early."
+    ],
+    "suggested_commit_message": "add formam canonical goal validation helpers"
+  }
+]

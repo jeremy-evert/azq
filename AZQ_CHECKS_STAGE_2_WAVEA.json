@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "name": "AZQ Stage 2 Wave A Checks",
+  "purpose": "Define task-specific automated checks for Stage 2 Wave A so the Codex runner can evaluate Formam storage foundation patches without hardcoding all task logic.",
+  "defaults": {
+    "retry_cap": 3,
+    "baseline_checks": [
+      {
+        "name": "compileall",
+        "type": "shell",
+        "command": "python -m compileall azq",
+        "required": true,
+        "description": "Verify the azq package still compiles after the patch."
+      },
+      {
+        "name": "formam_storage_import",
+        "type": "shell",
+        "command": "python -c \"import azq.formam.storage\"",
+        "required": true,
+        "description": "Verify the new Formam storage module imports cleanly."
+      }
+    ]
+  },
+  "tasks": {
+    "STAGE2-WAVEA-01": {
+      "description": "Create Formam package and storage module scaffolding.",
+      "checks": [
+        {
+          "name": "formam_storage_files_exist",
+          "type": "shell",
+          "command": "test -f azq/formam/__init__.py && test -f azq/formam/storage.py",
+          "required": true,
+          "description": "Verify the new Formam package and storage module exist."
+        }
+      ],
+      "human_checks": [
+        "No CLI wiring or command behavior changes were introduced yet.",
+        "The patch is limited to Formam scaffolding and tiny import-safe changes only."
+      ]
+    },
+    "STAGE2-WAVEA-02": {
+      "description": "Add canonical Formam path constants and directory helpers.",
+      "checks": [
+        {
+          "name": "formam_path_helpers_smoke",
+          "type": "python",
+          "required": true,
+          "description": "Verify Formam path helpers exist and return stable-looking paths.",
+          "code": "from azq.formam import storage\nassert any(hasattr(storage, name) for name in ['FORM_DIR', 'DATA_FORM_DIR'])\nassert any(hasattr(storage, name) for name in ['DELIVERABLES_DIR', 'FORM_DELIVERABLES_DIR'])\nassert any(hasattr(storage, name) for name in ['MAPS_DIR', 'FORM_MAPS_DIR'])\nassert any(hasattr(storage, name) for name in ['deliverable_file_path', 'get_deliverable_path'])\nassert any(hasattr(storage, name) for name in ['goal_map_path', 'map_file_path', 'get_goal_map_path'])"
+        }
+      ],
+      "human_checks": [
+        "All Formam path ownership now lives in azq/formam/storage.py.",
+        "Directory helper behavior is deterministic and readable."
+      ]
+    },
+    "STAGE2-WAVEA-03": {
+      "description": "Define the canonical normalized deliverable schema.",
+      "checks": [
+        {
+          "name": "deliverable_normalization_schema",
+          "type": "python",
+          "required": true,
+          "description": "Verify a partial deliverable record normalizes into the canonical Stage 2 schema.",
+          "code": "from azq.formam import storage\npartial = {'deliverable_id': 'DELIV_001', 'goal_id': 'FINIS_001', 'title': 'Test deliverable'}\nfn = getattr(storage, 'normalize_deliverable_record', None) or getattr(storage, 'normalize_deliverable', None)\nassert fn is not None, 'normalization helper not found'\nresult = fn(partial)\nfor field in ['deliverable_id', 'goal_id', 'title', 'artifact_description', 'dependencies', 'status', 'created']:\n    assert field in result, f'missing field: {field}'\nassert result['deliverable_id'] == 'DELIV_001'\nassert result['goal_id'] == 'FINIS_001'\nassert result['title'] == 'Test deliverable'\nassert isinstance(result['dependencies'], list)"
+        }
+      ],
+      "human_checks": [
+        "Fallback behavior for missing fields is conservative and explicit.",
+        "The normalized schema describes artifact structure, not task work."
+      ]
+    },
+    "STAGE2-WAVEA-04": {
+      "description": "Implement markdown deliverable file serialization and parsing.",
+      "checks": [
+        {
+          "name": "deliverable_round_trip",
+          "type": "python",
+          "required": true,
+          "description": "Verify a canonical deliverable record can round-trip through markdown serialization and parsing.",
+          "code": "from azq.formam import storage\nrecord = {\n    'deliverable_id': 'DELIV_001',\n    'goal_id': 'FINIS_001',\n    'title': 'Round trip test',\n    'artifact_description': 'Produce a visible artifact',\n    'dependencies': ['DELIV_000'],\n    'status': 'drafted',\n    'created': '2026-03-17T00:00:00'\n}\nserializer = getattr(storage, 'serialize_deliverable_record', None) or getattr(storage, 'deliverable_to_markdown', None)\nparser = getattr(storage, 'parse_deliverable_record', None) or getattr(storage, 'deliverable_from_markdown', None)\nassert serializer is not None, 'serializer not found'\nassert parser is not None, 'parser not found'\ntext = serializer(record)\nparsed = parser(text)\nfor field in ['deliverable_id', 'goal_id', 'title', 'artifact_description', 'dependencies', 'status', 'created']:\n    assert parsed[field] == record[field], f'round-trip mismatch: {field}'"
+        }
+      ],
+      "human_checks": [
+        "The markdown format is human-readable and diff-friendly.",
+        "The file format is simple enough for later Agenda code to consume."
+      ]
+    },
+    "STAGE2-WAVEA-05": {
+      "description": "Implement file-backed deliverable repository reads and id allocation.",
+      "checks": [
+        {
+          "name": "deliverable_repository_helpers_exist",
+          "type": "python",
+          "required": true,
+          "description": "Verify file-backed read helpers and next-id allocation helpers exist.",
+          "code": "from azq.formam import storage\nassert any(hasattr(storage, name) for name in ['load_deliverable', 'load_deliverable_by_id']), 'missing single-deliverable loader'\nassert any(hasattr(storage, name) for name in ['load_all_deliverables', 'load_deliverables']), 'missing all-deliverables loader'\nassert any(hasattr(storage, name) for name in ['load_deliverables_for_goal', 'load_goal_deliverables']), 'missing goal deliverables loader'\nassert any(hasattr(storage, name) for name in ['next_deliverable_id', 'get_next_deliverable_id']), 'missing next-id helper'"
+        }
+      ],
+      "human_checks": [
+        "Exact lookup uses exact deliverable_id and goal_id matching.",
+        "Deliverable ordering is deterministic."
+      ]
+    },
+    "STAGE2-WAVEA-06": {
+      "description": "Add canonical goal-parent validation helpers.",
+      "checks": [
+        {
+          "name": "goal_validation_helper_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify Formam exposes a dedicated goal validation helper.",
+          "code": "from azq.formam import storage\nassert any(hasattr(storage, name) for name in ['validate_goal_id', 'validate_parent_goal', 'require_goal']), 'missing goal validation helper'"
+        },
+        {
+          "name": "goal_validation_checks_exact_goal_id",
+          "type": "python",
+          "required": true,
+          "description": "Verify the goal validation helper can be driven with an exact canonical goal id.",
+          "code": "from unittest.mock import patch\nfrom azq.formam import storage\nvalidator = getattr(storage, 'validate_goal_id', None) or getattr(storage, 'validate_parent_goal', None) or getattr(storage, 'require_goal', None)\nassert validator is not None\nwith patch('azq.finis.storage.load_goal', return_value={'goal_id': 'FINIS_001', 'title': 'Parent goal', 'status': 'active', 'created': '', 'description': '', 'derived_from': []}):\n    result = validator('FINIS_001')\nassert result is not None"
+        }
+      ],
+      "human_checks": [
+        "Goal validation is clearly separated from future command-layer presentation.",
+        "The helper makes missing-parent failures inspectable rather than silent."
+      ]
+    }
+  }
+}

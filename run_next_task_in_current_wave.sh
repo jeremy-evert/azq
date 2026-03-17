@@ -134,18 +134,18 @@ CURRENT_WAVE=$(select_current_wave)
 RUN_STATUS=0
 
 if [[ "$CURRENT_WAVE" == "stage1_complete" ]]; then
+  print_report
+  echo
   echo "No remaining Stage 1 tasks."
   echo "Stage 1 Complete."
 else
   echo "running next task in current wave: $CURRENT_WAVE"
-  if ! python "$RUNNER" run --wave "$CURRENT_WAVE" --workspace "$WORKSPACE"; then
-    RUN_STATUS=$?
-  fi
-fi
+  set +e
+  python "$RUNNER" run --wave "$CURRENT_WAVE" --workspace "$WORKSPACE"
+  RUN_STATUS=$?
+  set -e
 
-print_report
-
-if [[ "$CURRENT_WAVE" != "stage1_complete" ]]; then
+  print_report
   print_wave_snapshot "$CURRENT_WAVE"
   print_suggested_commit_message "$CURRENT_WAVE"
 fi

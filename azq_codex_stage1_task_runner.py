@@ -554,6 +554,15 @@ def render_markdown_report(summaries: List[WaveSummary], workspace: Path) -> str
     return "\n".join(lines)
 
 
+def write_status_report(workspace: Path, output: str) -> Path:
+    report_path = (workspace / output).resolve()
+    summaries = [summarize_wave(paths, workspace) for paths in discover_stage1_waves(workspace)]
+    markdown = render_markdown_report(summaries, workspace)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(markdown, encoding="utf-8")
+    return report_path
+
+
 def resolve_run_paths(args: argparse.Namespace) -> tuple[WavePaths, Path, Path, Path, Optional[Path], Path, Path, List[str]]:
     workspace = Path(args.workspace).resolve()
     wave_paths = derive_wave_paths(args.wave)
@@ -584,7 +593,9 @@ def run_mode(args: argparse.Namespace) -> int:
     except ValueError as exc:
         if str(exc) != "No remaining tasks found.":
             raise
+        report_path = write_status_report(workspace, DEFAULT_REPORT_FILE)
         print(f"No remaining tasks found in {args.wave}.")
+        print(f"Wrote report: {report_path}")
         print("Stage 1 Complete.")
         return 0
     task_id = task["task_id"]
@@ -676,11 +687,7 @@ def run_mode(args: argparse.Namespace) -> int:
 
 def report_mode(args: argparse.Namespace) -> int:
     workspace = Path(args.workspace).resolve()
-    report_path = (workspace / args.output).resolve()
-    summaries = [summarize_wave(paths, workspace) for paths in discover_stage1_waves(workspace)]
-    markdown = render_markdown_report(summaries, workspace)
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(markdown, encoding="utf-8")
+    report_path = write_status_report(workspace, args.output)
     print(f"Wrote report: {report_path}")
     return 0
 
