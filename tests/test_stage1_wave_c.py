@@ -164,6 +164,7 @@ class Stage1WaveCRegressionTests(unittest.TestCase):
                     },
                 )
                 self.assertIn("Goal created", output.getvalue())
+                self.assertFalse(storage.LEGACY_GOALS_FILE.exists())
 
     def test_goal_close_updates_status_in_place(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -243,6 +244,45 @@ class Stage1WaveCRegressionTests(unittest.TestCase):
                 self.assertEqual(
                     storage.load_goal("FINIS_005")["derived_from"], ["spark-5"]
                 )
+
+    def test_fine_writes_canonical_goal_with_derived_from_backlink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            with working_directory(repo_root):
+                spark_dir = Path("data/scintilla/sparks")
+                spark_dir.mkdir(parents=True, exist_ok=True)
+                spark_dir.joinpath("2026-03-17_0900.json").write_text(
+                    json.dumps(
+                        [
+                            {
+                                "spark": "I want to lock the Stage 1 baseline with regression tests"
+                            }
+                        ]
+                    ),
+                    encoding="utf-8",
+                )
+                output = io.StringIO()
+
+                with mock.patch("azq.finis.fine.date", FixedDate), mock.patch(
+                    "builtins.input", side_effect=["y"]
+                ), mock.patch("sys.argv", ["azq", "fine"]), contextlib.redirect_stdout(
+                    output
+                ):
+                    cli.main()
+
+                self.assertEqual(
+                    storage.load_goal("FINIS_001"),
+                    {
+                        "goal_id": "FINIS_001",
+                        "title": "Lock the Stage 1 baseline with regression tests",
+                        "status": "active",
+                        "created": "2026-03-17",
+                        "description": "",
+                        "derived_from": ["2026-03-17_0900"],
+                    },
+                )
+                self.assertIn("Goals written to data/finis/goals/", output.getvalue())
+                self.assertFalse(storage.LEGACY_GOALS_FILE.exists())
 
 
 if __name__ == "__main__":
