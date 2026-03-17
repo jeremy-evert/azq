@@ -10,15 +10,17 @@
     "files_to_modify": [],
     "depends_on": [],
     "context": [
-      "Wave A corresponds to tasks 2-7 in AZQ_BUILD_TASKS_STAGE_2.md.",
+      "Wave A is the storage foundation for Stage 2 Formam.",
       "The live repository layout is under azq/, not src/azq/.",
-      "Stage 2 is about introducing deliverables and maps without leaking into Agenda task work."
+      "Stage 2 is about introducing deliverables and maps without leaking into Agenda task work.",
+      "Wave A should establish canonical artifact storage before CLI commands are wired."
     ],
     "requirements": [
       "Create the azq/formam package.",
       "Create azq/formam/storage.py.",
+      "Keep the initial module import-safe and small.",
       "Do not wire CLI commands yet.",
-      "Keep this commit limited to Formam scaffolding and import-safe module boundaries."
+      "Do not introduce build, list, show, or map command handling in this task."
     ],
     "acceptance_criteria": [
       "azq/formam/__init__.py exists.",
@@ -41,14 +43,16 @@
     "context": [
       "The canonical Stage 2 storage locations are data/form/deliverables/ and data/form/maps/.",
       "One module should own all Formam path decisions.",
-      "Goal maps should use a deterministic filename convention keyed by goal_id."
+      "Goal maps should use a deterministic filename convention keyed by goal_id.",
+      "Deliverable listing should be deterministic so later CLI output remains stable."
     ],
     "requirements": [
       "Define constants for the deliverables directory and maps directory.",
       "Add helpers to ensure both directories exist.",
       "Add a helper to map a deliverable_id like DELIV_001 to a markdown file path in data/form/deliverables/.",
       "Add a helper to map a goal_id like FINIS_001 to a map file path such as GOAL_FINIS_001_MAP.md.",
-      "Add a helper to list deliverable files in deterministic order."
+      "Add helpers to list deliverable files in deterministic order.",
+      "Add helpers to list map files in deterministic order if map listing support is useful at this stage."
     ],
     "acceptance_criteria": [
       "All Formam storage paths are defined in azq/formam/storage.py.",
@@ -71,13 +75,15 @@
     "context": [
       "Canonical Stage 2 deliverable fields are: deliverable_id, goal_id, title, artifact_description, dependencies, status, created.",
       "Stage 2 starts with stub deliverables, so partial generated records are expected.",
-      "The schema must stay focused on artifact definition and boundaries of work rather than task lists."
+      "The schema must stay focused on artifact definition and boundaries of work rather than task lists.",
+      "Dependencies should remain a list even when no dependencies exist yet."
     ],
     "requirements": [
       "Add a normalization helper that accepts a partial deliverable dict and returns a canonical deliverable dict.",
       "Provide conservative fallback values for missing artifact_description, dependencies, status, and created fields.",
+      "Normalize dependencies into a list.",
       "Preserve given values where possible rather than silently inventing structure.",
-      "Do not read or write files yet in this task beyond code changes."
+      "Keep status defaults simple and explicit."
     ],
     "acceptance_criteria": [
       "One function returns a complete canonical deliverable record.",
@@ -106,7 +112,7 @@
       "Choose and implement a markdown on-disk format for deliverable files.",
       "Add serializer and parser helpers in azq/formam/storage.py.",
       "Ensure all canonical fields are preserved round-trip.",
-      "Keep the format simple and explicit."
+      "Keep the format simple, inspectable, and explicit."
     ],
     "acceptance_criteria": [
       "A canonical deliverable record can be serialized to markdown and parsed back without losing required fields.",
@@ -158,6 +164,7 @@
     "context": [
       "Stage 2 requires every deliverable to point back to exactly one goal initially.",
       "Formam should not create deliverables for missing parent goals.",
+      "The parent goal should be validated against the canonical Stage 1 Finis storage layer.",
       "If active-only validation is enforced, that rule should be explicit and inspectable."
     ],
     "requirements": [
@@ -172,5 +179,92 @@
       "A future build command can use the helper to stop invalid deliverable creation early."
     ],
     "suggested_commit_message": "add formam canonical goal validation helpers"
+  },
+  {
+    "task_id": "STAGE2-WAVEA-07",
+    "title": "Define the canonical normalized goal-map schema",
+    "goal": "Create a normalization function that converts partial goal-map data into the Stage 2 canonical map schema.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/formam/storage.py"
+    ],
+    "depends_on": [
+      "STAGE2-WAVEA-06"
+    ],
+    "context": [
+      "Canonical Stage 2 map fields are: goal_id, deliverable_ids, dependency_edges, status, created, notes.",
+      "A goal map must remain useful and inspectable even when dependency data is still sparse.",
+      "Map artifacts are part of the visible structure layer, not hidden planning state."
+    ],
+    "requirements": [
+      "Add a normalization helper that accepts partial map-shaped data and returns a canonical map record.",
+      "Provide conservative fallback values for missing deliverable_ids, dependency_edges, status, created, and notes.",
+      "Normalize deliverable_ids into a list.",
+      "Normalize dependency_edges into a list.",
+      "Keep status defaults simple and explicit."
+    ],
+    "acceptance_criteria": [
+      "One function returns a complete canonical goal map record.",
+      "The canonical output always includes goal_id, deliverable_ids, dependency_edges, status, created, and notes.",
+      "deliverable_ids and dependency_edges always normalize to lists."
+    ],
+    "suggested_commit_message": "add canonical formam goal map normalization"
+  },
+  {
+    "task_id": "STAGE2-WAVEA-08",
+    "title": "Implement markdown goal-map file serialization and parsing",
+    "goal": "Make canonical goal maps readable and writable as diff-friendly markdown files.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/formam/storage.py"
+    ],
+    "depends_on": [
+      "STAGE2-WAVEA-07"
+    ],
+    "context": [
+      "Stage 2 requires one map artifact per goal.",
+      "The first implementation may have sparse dependency sections, but the map file still needs to be human-readable.",
+      "Later command work will rely on this map format rather than inventing a second representation."
+    ],
+    "requirements": [
+      "Choose and implement a markdown on-disk format for goal map files.",
+      "Add serializer and parser helpers in azq/formam/storage.py.",
+      "Preserve all canonical map fields round-trip.",
+      "Keep dependency sections readable and conservative."
+    ],
+    "acceptance_criteria": [
+      "A canonical goal map record can be serialized to markdown and parsed back without losing required fields.",
+      "The resulting file is human-readable and diff-friendly."
+    ],
+    "suggested_commit_message": "add markdown goal map file read write format"
+  },
+  {
+    "task_id": "STAGE2-WAVEA-09",
+    "title": "Add canonical Formam write helpers for deliverables and maps",
+    "goal": "Establish storage.py as the sole write-side boundary for canonical Formam artifacts.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/formam/storage.py"
+    ],
+    "depends_on": [
+      "STAGE2-WAVEA-08"
+    ],
+    "context": [
+      "Wave B should be able to build commands on top of stable write-side helpers rather than inventing file writes in command modules.",
+      "Deliverables and maps are both first-class Stage 2 artifacts.",
+      "Formam persistence should live in one storage authority from the beginning."
+    ],
+    "requirements": [
+      "Add a canonical single-record write helper for deliverables.",
+      "Add a canonical single-record write helper for goal maps.",
+      "Ensure each helper writes exactly one canonical file in the correct directory.",
+      "Keep write-side storage ownership in azq/formam/storage.py."
+    ],
+    "acceptance_criteria": [
+      "A caller can persist one normalized deliverable without making path or format decisions elsewhere.",
+      "A caller can persist one normalized goal map without making path or format decisions elsewhere.",
+      "The resulting files are canonical markdown artifacts in the correct directories."
+    ],
+    "suggested_commit_message": "add canonical formam write helpers"
   }
 ]
