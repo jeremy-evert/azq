@@ -45,6 +45,27 @@ def capture_loop():
 # CLI entry
 # ------------------------------------------------
 
+
+def ensure_finis_storage_ready():
+    """Run the Stage 1 Finis migration trigger before active goal commands."""
+    from azq.finis.storage import LegacyGoalsError, ensure_canonical_goals_migrated
+
+    try:
+        migration = ensure_canonical_goals_migrated()
+    except LegacyGoalsError as exc:
+        print(f"Finis migration failed: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+
+    if migration["triggered"]:
+        print("Finis migration: data/finis/goals.json -> data/finis/goals/")
+        print(
+            "Migrated "
+            f"{migration['migrated']} goal(s); "
+            f"{migration['skipped']} already had canonical files."
+        )
+        print()
+
+
 def main():
 
     if len(sys.argv) < 2:
@@ -122,6 +143,7 @@ def main():
     # ---------------------------------------------
 
     elif cmd == "fine":
+        ensure_finis_storage_ready()
 
         from azq.finis.fine import run_fine
         run_fine()
@@ -131,6 +153,7 @@ def main():
     # ---------------------------------------------
 
     elif cmd == "goals":
+        ensure_finis_storage_ready()
 
         from azq.finis.goals import show_goals
         show_goals()
@@ -144,6 +167,8 @@ def main():
         if len(sys.argv) < 3:
             print("Usage: azq goal [add|close|archive]")
             return
+
+        ensure_finis_storage_ready()
 
         sub = sys.argv[2]
 

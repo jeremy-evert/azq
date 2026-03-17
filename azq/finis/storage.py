@@ -334,6 +334,47 @@ def migrate_legacy_goals() -> dict[str, int]:
     }
 
 
+def ensure_canonical_goals_migrated() -> dict[str, Any]:
+    """Run the one canonical legacy-to-files migration path when needed.
+
+    This is the Stage 1 automatic trigger used before active Finis commands.
+    It remains inspectable by returning a summary with an explicit ``triggered``
+    flag instead of silently mutating storage state.
+    """
+
+    legacy_goals = load_legacy_goals()
+    if not legacy_goals:
+        return {
+            "triggered": False,
+            "legacy_records": 0,
+            "migrated": 0,
+            "skipped": 0,
+        }
+
+    missing_goal_ids: list[str] = []
+    for legacy_goal in legacy_goals:
+        normalized_goal = normalize_goal_record(legacy_goal)
+        goal_id = str(normalized_goal["goal_id"]).strip()
+        if not GOAL_ID_PATTERN.fullmatch(goal_id):
+            raise LegacyGoalsError(
+                f"Legacy goal record is missing a valid canonical goal_id: {goal_id!r}."
+            )
+        if not goal_file_path(goal_id).exists():
+            missing_goal_ids.append(goal_id)
+
+    if not missing_goal_ids:
+        return {
+            "triggered": False,
+            "legacy_records": len(legacy_goals),
+            "migrated": 0,
+            "skipped": len(legacy_goals),
+        }
+
+    migration_result = migrate_legacy_goals()
+    migration_result["triggered"] = True
+    return migration_result
+
+
 __all__ = [
     "DATA_DIR",
     "FINIS_DIR",
@@ -361,4 +402,5 @@ __all__ = [
     "load_all_goals",
     "next_goal_id",
     "migrate_legacy_goals",
+    "ensure_canonical_goals_migrated",
 ]
