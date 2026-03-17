@@ -341,7 +341,10 @@ def main() -> int:
 
     last_checks: List[CheckResult] = []
     for attempt in range(1, max_attempts + 1):
-        attempt_dir = task_runs_dir / f"attempt_{attempt:02d}"
+        if args.dry_run:
+            attempt_dir = task_runs_dir / f"dry_run_{attempt:02d}"
+        else:
+            attempt_dir = task_runs_dir / f"attempt_{attempt:02d}"
         update_task_state(state, task_id, "codex_submitted", note=f"attempt {attempt}")
         save_state(state_file, state)
 

@@ -44,9 +44,6 @@ After coding:
 If the task is underspecified, make the smallest reasonable choice and explain it briefly.
 If the task cannot be completed cleanly without violating the rules, stop and explain the blocker rather than broadening scope.
 
-Task object:
-[paste one JSON task here]
-
 Do not "help" by beginning the next task.
 
 Task object:

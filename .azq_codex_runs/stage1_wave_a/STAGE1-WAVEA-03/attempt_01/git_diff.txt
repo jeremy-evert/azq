@@ -1,100 +1,54 @@
 diff --git a/.azq_codex_progress_stage1_wave_a.json b/.azq_codex_progress_stage1_wave_a.json
-index 39dfa80..7c91f21 100644
+index c29a64c..d4f078b 100644
 --- a/.azq_codex_progress_stage1_wave_a.json
 +++ b/.azq_codex_progress_stage1_wave_a.json
-@@ -9,6 +9,11 @@
-       "status": "passed_checks",
-       "updated_at": "2026-03-16T23:37:20-05:00",
+@@ -11,8 +11,8 @@
        "note": "attempt 1"
-+    },
-+    "STAGE1-WAVEA-03": {
+     },
+     "STAGE1-WAVEA-03": {
+-      "status": "passed_checks",
+-      "updated_at": "2026-03-16T23:49:15-05:00",
 +      "status": "codex_submitted",
-+      "updated_at": "2026-03-16T23:49:15-05:00",
-+      "note": "attempt 1"
++      "updated_at": "2026-03-17T12:03:44-05:00",
+       "note": "attempt 1"
      }
    },
-   "history": [
-@@ -33,6 +38,22 @@
-       "task_id": "STAGE1-WAVEA-02",
+@@ -60,6 +60,11 @@
+       "task_id": "STAGE1-WAVEA-03",
        "attempt": 1,
-       "at": "2026-03-16T23:37:20-05:00"
+       "at": "2026-03-16T23:49:15-05:00"
 +    },
 +    {
 +      "event": "start_task",
 +      "task_id": "STAGE1-WAVEA-03",
-+      "at": "2026-03-16T23:46:45-05:00"
-+    },
-+    {
-+      "event": "passed_checks",
-+      "task_id": "STAGE1-WAVEA-03",
-+      "attempt": 1,
-+      "at": "2026-03-16T23:47:52-05:00"
-+    },
-+    {
-+      "event": "start_task",
-+      "task_id": "STAGE1-WAVEA-03",
-+      "at": "2026-03-16T23:49:15-05:00"
++      "at": "2026-03-17T12:03:44-05:00"
      }
    ]
  }
-diff --git a/azq/finis/storage.py b/azq/finis/storage.py
-index 3bbe262..910a86d 100644
---- a/azq/finis/storage.py
-+++ b/azq/finis/storage.py
-@@ -2,11 +2,13 @@
+diff --git a/.azq_codex_runs/stage1_wave_a/STAGE1-WAVEA-03/attempt_01/metadata.json b/.azq_codex_runs/stage1_wave_a/STAGE1-WAVEA-03/attempt_01/metadata.json
+index 856c74d..d6f01d5 100644
+--- a/.azq_codex_runs/stage1_wave_a/STAGE1-WAVEA-03/attempt_01/metadata.json
++++ b/.azq_codex_runs/stage1_wave_a/STAGE1-WAVEA-03/attempt_01/metadata.json
+@@ -1,7 +1,7 @@
+ {
+   "task_id": "STAGE1-WAVEA-03",
+   "attempt": 1,
+-  "started_at": "2026-03-16T23:49:15-05:00",
++  "started_at": "2026-03-17T12:03:44-05:00",
+   "dry_run": true,
+   "checks_file": "/data/git/azq/AZQ_CHECKS_STAGE_1_WAVE_A.json",
+   "codex_command": null
+diff --git a/.azq_codex_runs/stage1_wave_a/STAGE1-WAVEA-03/attempt_01/prompt.txt b/.azq_codex_runs/stage1_wave_a/STAGE1-WAVEA-03/attempt_01/prompt.txt
+index 7cd3aed..bf12822 100644
+--- a/.azq_codex_runs/stage1_wave_a/STAGE1-WAVEA-03/attempt_01/prompt.txt
++++ b/.azq_codex_runs/stage1_wave_a/STAGE1-WAVEA-03/attempt_01/prompt.txt
+@@ -44,9 +44,6 @@ After coding:
+ If the task is underspecified, make the smallest reasonable choice and explain it briefly.
+ If the task cannot be completed cleanly without violating the rules, stop and explain the blocker rather than broadening scope.
  
- Stage 1 moves Finis persistence toward one goal record per file under
- ``data/finis/goals/`` while preserving ``data/finis/goals.json`` as a legacy
--input during migration. This module currently owns only the shared path
--decisions and basic filesystem helpers required for later tasks.
-+input during migration. This module currently owns the shared path decisions,
-+basic filesystem helpers, and legacy-to-canonical goal normalization used by
-+later tasks.
- """
+-Task object:
+-[paste one JSON task here]
+-
+ Do not "help" by beginning the next task.
  
- from pathlib import Path
-+from typing import Any
- 
- DATA_DIR = Path("data")
- FINIS_DIR = DATA_DIR / "finis"
-@@ -36,6 +38,34 @@ def goal_file_path(goal_id: str) -> Path:
-     return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
- 
- 
-+def normalize_goal_record(legacy_goal: dict[str, Any]) -> dict[str, Any]:
-+    """Convert a legacy JSON-shaped goal record into the Stage 1 schema.
-+
-+    Fallbacks are intentionally conservative so migration preserves historical
-+    values instead of inventing cleaned replacements:
-+    - ``title`` prefers an existing canonical value, then legacy ``goal``
-+    - missing ``created`` and ``description`` become empty strings
-+    - missing ``derived_from`` becomes an empty list
-+    """
-+
-+    derived_from = legacy_goal.get("derived_from")
-+    if derived_from is None:
-+        canonical_derived_from: list[Any] = []
-+    elif isinstance(derived_from, list):
-+        canonical_derived_from = list(derived_from)
-+    else:
-+        canonical_derived_from = [derived_from]
-+
-+    return {
-+        "goal_id": legacy_goal.get("goal_id", ""),
-+        "title": legacy_goal.get("title", legacy_goal.get("goal", "")),
-+        "status": legacy_goal.get("status", "active"),
-+        "created": legacy_goal.get("created", ""),
-+        "description": legacy_goal.get("description", ""),
-+        "derived_from": canonical_derived_from,
-+    }
-+
-+
- __all__ = [
-     "DATA_DIR",
-     "FINIS_DIR",
-@@ -47,4 +77,5 @@ __all__ = [
-     "ensure_goals_dir",
-     "list_goal_files",
-     "goal_file_path",
-+    "normalize_goal_record",
- ]
+ Task object:

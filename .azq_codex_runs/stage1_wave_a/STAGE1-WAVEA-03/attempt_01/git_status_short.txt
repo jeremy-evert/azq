@@ -1,5 +1,3 @@
  M .azq_codex_progress_stage1_wave_a.json
- M azq/finis/storage.py
-?? .azq_codex_runs/stage1_wave_a/STAGE1-WAVEA-03/
-?? AZQ_CHECKS_STAGE_1_WAVE_A.json
-?? azq_codex_stage1_wave_a_runner_v2.py
+ M .azq_codex_runs/stage1_wave_a/STAGE1-WAVEA-03/attempt_01/metadata.json
+ M .azq_codex_runs/stage1_wave_a/STAGE1-WAVEA-03/attempt_01/prompt.txt
