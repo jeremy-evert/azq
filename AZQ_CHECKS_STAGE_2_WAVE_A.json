@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "AZQ Stage 2 Wave A Checks",
-  "purpose": "Define task-specific automated checks for Stage 2 Wave A so the Codex runner can evaluate the full Formam storage-foundation wave, including deliverable models, goal-map models, and canonical write helpers, without hardcoding all task logic.",
+  "purpose": "Define task-specific automated checks for Stage 2 Wave A so the Codex runner can evaluate the current Formam storage-foundation tasks without hardcoding all task logic.",
   "defaults": {
     "retry_cap": 3,
     "baseline_checks": [
@@ -45,8 +45,8 @@
           "name": "formam_path_helpers_smoke",
           "type": "python",
           "required": true,
-          "description": "Verify Formam path helpers exist and return stable-looking paths.",
-          "code": "from azq.formam import storage\nassert any(hasattr(storage, name) for name in ['FORM_DIR', 'DATA_FORM_DIR'])\nassert any(hasattr(storage, name) for name in ['DELIVERABLES_DIR', 'FORM_DELIVERABLES_DIR'])\nassert any(hasattr(storage, name) for name in ['MAPS_DIR', 'FORM_MAPS_DIR'])\nassert any(hasattr(storage, name) for name in ['deliverable_file_path', 'get_deliverable_path'])\nassert any(hasattr(storage, name) for name in ['goal_map_path', 'map_file_path', 'get_goal_map_path'])"
+          "description": "Verify Formam path and directory helpers exist for canonical deliverable and goal-map storage.",
+          "code": "from azq.formam import storage\nassert any(hasattr(storage, name) for name in ['FORM_DIR', 'DATA_FORM_DIR'])\nassert any(hasattr(storage, name) for name in ['DELIVERABLES_DIR', 'FORM_DELIVERABLES_DIR'])\nassert any(hasattr(storage, name) for name in ['MAPS_DIR', 'FORM_MAPS_DIR'])\nassert any(hasattr(storage, name) for name in ['deliverable_file_path', 'get_deliverable_path'])\nassert any(hasattr(storage, name) for name in ['goal_map_path', 'map_file_path', 'get_goal_map_path'])\nassert any(hasattr(storage, name) for name in ['list_deliverable_files', 'list_form_files', 'list_deliverables'])\nassert any(hasattr(storage, name) for name in ['ensure_form_dirs', 'ensure_formam_dirs', 'ensure_deliverables_dir', 'ensure_maps_dir'])"
         }
       ],
       "human_checks": [
@@ -95,6 +95,13 @@
           "required": true,
           "description": "Verify file-backed read helpers and next-id allocation helpers exist.",
           "code": "from azq.formam import storage\nassert any(hasattr(storage, name) for name in ['load_deliverable', 'load_deliverable_by_id']), 'missing single-deliverable loader'\nassert any(hasattr(storage, name) for name in ['load_all_deliverables', 'load_deliverables']), 'missing all-deliverables loader'\nassert any(hasattr(storage, name) for name in ['load_deliverables_for_goal', 'load_goal_deliverables']), 'missing goal deliverables loader'\nassert any(hasattr(storage, name) for name in ['next_deliverable_id', 'get_next_deliverable_id']), 'missing next-id helper'"
+        },
+        {
+          "name": "deliverable_repository_helpers_behave_deterministically",
+          "type": "python",
+          "required": true,
+          "description": "Verify deliverable repository helpers can load records and compute the next id from canonical files.",
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.formam import storage\nserializer = getattr(storage, 'serialize_deliverable_record', None) or getattr(storage, 'deliverable_to_markdown', None)\npath_for = getattr(storage, 'deliverable_file_path', None) or getattr(storage, 'get_deliverable_path', None)\nload_one = getattr(storage, 'load_deliverable', None) or getattr(storage, 'load_deliverable_by_id', None)\nload_all = getattr(storage, 'load_all_deliverables', None) or getattr(storage, 'load_deliverables', None)\nload_for_goal = getattr(storage, 'load_deliverables_for_goal', None) or getattr(storage, 'load_goal_deliverables', None)\nnext_id = getattr(storage, 'next_deliverable_id', None) or getattr(storage, 'get_next_deliverable_id', None)\nassert serializer is not None and path_for is not None\nassert load_one is not None and load_all is not None and load_for_goal is not None and next_id is not None\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    deliverables_attr = 'DELIVERABLES_DIR' if hasattr(storage, 'DELIVERABLES_DIR') else 'FORM_DELIVERABLES_DIR'\n    setattr(storage, deliverables_attr, tmp_path / 'deliverables')\n    getattr(storage, deliverables_attr).mkdir(parents=True, exist_ok=True)\n    records = [\n        {\n            'deliverable_id': 'DELIV_001',\n            'goal_id': 'FINIS_001',\n            'title': 'First deliverable',\n            'artifact_description': 'desc 1',\n            'dependencies': [],\n            'status': 'drafted',\n            'created': '2026-03-17'\n        },\n        {\n            'deliverable_id': 'DELIV_002',\n            'goal_id': 'FINIS_001',\n            'title': 'Second deliverable',\n            'artifact_description': 'desc 2',\n            'dependencies': ['DELIV_001'],\n            'status': 'drafted',\n            'created': '2026-03-17'\n        }\n    ]\n    for record in records:\n        path_for(record['deliverable_id']).write_text(serializer(record), encoding='utf-8')\n    assert load_one('DELIV_001')['title'] == 'First deliverable'\n    assert [item['deliverable_id'] for item in load_all()] == ['DELIV_001', 'DELIV_002']\n    assert [item['deliverable_id'] for item in load_for_goal('FINIS_001')] == ['DELIV_001', 'DELIV_002']\n    assert next_id() == 'DELIV_003'"
         }
       ],
       "human_checks": [
@@ -126,7 +133,7 @@
       ]
     },
     "STAGE2-WAVEA-07": {
-      "description": "Define the canonical goal-map model.",
+      "description": "Define the canonical normalized goal-map schema.",
       "checks": [
         {
           "name": "goal_map_normalization_schema",
@@ -158,7 +165,7 @@
       ]
     },
     "STAGE2-WAVEA-09": {
-      "description": "Add canonical Formam write helpers.",
+      "description": "Add canonical Formam write helpers for deliverables and maps.",
       "checks": [
         {
           "name": "formam_write_helpers_exist",
