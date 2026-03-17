@@ -3,7 +3,7 @@ import difflib
 from pathlib import Path
 from datetime import date
 
-from .storage import load_all_goals, next_goal_id, write_goal
+from . import storage
 
 SPARK_DIR = Path("data/scintilla/sparks")
 TITLE_DEDUPE_THRESHOLD = 0.39
@@ -98,7 +98,7 @@ def get_used_sources(goals):
 
 def propose_goals(sparks):
 
-    existing_goals = load_all_goals(migrate_legacy=True)
+    existing_goals = storage.load_all_goals(migrate_legacy=True)
 
     existing_text = [
         g["title"].lower()
@@ -195,7 +195,7 @@ def run_fine():
         return
 
     for c in confirmed:
-        goal_id = next_goal_id()
+        goal_id = storage.next_goal_id()
         goal_record = {
             "goal_id": goal_id,
             "title": c["title"],
@@ -204,6 +204,6 @@ def run_fine():
             "description": "",
             "derived_from": [c["source"]]
         }
-        write_goal(goal_record)
+        storage.write_goal(goal_record)
 
     print("\nGoals written to data/finis/goals/")
