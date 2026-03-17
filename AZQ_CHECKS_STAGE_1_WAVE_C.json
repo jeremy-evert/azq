@@ -66,7 +66,7 @@
     "files_to_create": [],
     "files_to_modify": [
       "azq_codex_stage1_task_runner.py",
-      "run_wave_b_step.sh"
+      "run_next_task_in_current_wave.sh"
     ],
     "depends_on": [
       "STAGE1-WAVEC-02"
@@ -80,7 +80,7 @@
       "Add a graceful no-tasks-remaining branch to the Stage 1 task runner.",
       "When no tasks remain, emit the task status report instead of returning a non-zero exit code.",
       "Print an explicit Stage 1 Complete message when the backlog is exhausted.",
-      "Update run_wave_b_step.sh so the ritual still prints the report and completion signal cleanly.",
+      "Update run_next_task_in_current_wave.sh so the ritual still prints the report and completion signal cleanly.",
       "Keep the change focused on runner resilience and closeout polish only."
     ],
     "acceptance_criteria": [
