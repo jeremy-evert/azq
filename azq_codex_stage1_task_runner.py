@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""AZQ Stage 1 Codex task runner and reporter."""
 from __future__ import annotations
 
 import argparse
@@ -6,18 +7,18 @@ import json
 import re
 import subprocess
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
-DEFAULT_STATE_FILE = ".azq_codex_progress_stage1_wave_a.json"
-DEFAULT_RUNS_DIR = ".azq_codex_runs/stage1_wave_a"
-DEFAULT_TASKS_FILE = "AZQ_BUILD_TASKS_STAGE_1_WAVE_A.json"
+DEFAULT_WAVE = "wave_a"
 DEFAULT_TEMPLATE_FILE = "AZQ_CODEX_PROMPT_TEMPLATE_STAGE_1.md"
-DEFAULT_CHECKS_FILE = "AZQ_CHECKS_STAGE_1_WAVE_A.json"
+DEFAULT_REPORT_FILE = "codex_reports/codex_azq_task_status_report.md"
 DEFAULT_MAX_ATTEMPTS = 3
+TASKS_FILE_GLOB = "AZQ_BUILD_TASKS_STAGE_1_WAVE_*.json"
+TASKS_FILE_PATTERN = re.compile(r"^AZQ_BUILD_TASKS_STAGE_1_(WAVE_[A-Z0-9_]+)\.json$")
 
 
 @dataclass
@@ -34,6 +35,38 @@ class CheckResult:
     @property
     def passed(self) -> bool:
         return self.returncode == 0
+
+
+@dataclass
+class WavePaths:
+    wave: str
+    tasks_file: str
+    checks_file: str
+    state_file: str
+    runs_dir: str
+
+
+@dataclass
+class TaskSummary:
+    task_id: str
+    title: str
+    raw_status: str
+    normalized_status: str
+    updated_at: str
+    note: str
+
+
+@dataclass
+class WaveSummary:
+    wave: str
+    tasks_file: str
+    state_file: str
+    checks_file: str
+    runs_dir: str
+    tasks_present: int
+    counts: Dict[str, int]
+    tasks: List[TaskSummary]
+    warnings: List[str]
 
 
 def now_iso() -> str:
@@ -69,6 +102,13 @@ def save_state(state_file: Path, state: Dict[str, Any]) -> None:
     write_json(state_file, state)
 
 
+def load_checks_recipe(checks_file: Path) -> Dict[str, Any]:
+    data = read_json(checks_file)
+    if not isinstance(data, dict):
+        raise ValueError(f"Checks file must contain a JSON object: {checks_file}")
+    return data
+
+
 def extract_text_code_block(markdown: str) -> str:
     match = re.search(r"```text\n(.*?)```", markdown, flags=re.DOTALL)
     if match:
@@ -82,12 +122,11 @@ def extract_text_code_block(markdown: str) -> str:
 def build_original_prompt(template_file: Path, task: Dict[str, Any], add_conservative_line: bool = True) -> str:
     template_md = template_file.read_text(encoding="utf-8")
     template = extract_text_code_block(template_md)
-    conservative = '\nDo not "help" by beginning the next task.\n' if add_conservative_line else ""
     task_json = json.dumps(task, indent=2, ensure_ascii=False)
 
     filled = template.replace(
         "Task object:\n[paste one JSON task here]",
-        f'Task object:\n{task_json}'
+        f"Task object:\n{task_json}",
     )
 
     if add_conservative_line:
@@ -153,13 +192,6 @@ def gather_git_snapshot(workspace: Path) -> Dict[str, str]:
         except Exception as exc:
             snapshots[filename] = f"ERROR: {exc}\n"
     return snapshots
-
-
-def load_checks_recipe(checks_file: Path) -> Dict[str, Any]:
-    data = read_json(checks_file)
-    if not isinstance(data, dict):
-        raise ValueError(f"Checks file must contain a JSON object: {checks_file}")
-    return data
 
 
 def merged_checks_for_task(recipe: Dict[str, Any], task_id: str) -> tuple[list[dict[str, Any]], list[str]]:
@@ -255,7 +287,10 @@ def write_attempt_artifacts(
     attempt_dir.mkdir(parents=True, exist_ok=True)
     (attempt_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
     write_json(attempt_dir / "metadata.json", metadata)
-    write_json(attempt_dir / "checks_recipe_snapshot.json", {"checks_file": str(checks_file), "checks": check_specs, "human_checks": human_checks})
+    write_json(
+        attempt_dir / "checks_recipe_snapshot.json",
+        {"checks_file": str(checks_file), "checks": check_specs, "human_checks": human_checks},
+    )
 
     if response is not None:
         (attempt_dir / "codex_stdout.txt").write_text(response.stdout, encoding="utf-8")
@@ -298,30 +333,195 @@ def has_required_failures(checks: List[CheckResult]) -> bool:
     return any((not c.passed) and c.required for c in checks)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Run AZQ Stage 1 Wave A Codex tasks with a bounded repair loop.")
-    parser.add_argument("--workspace", default=".", help="Repository root to run inside.")
-    parser.add_argument("--task-id", help="Specific task_id to run. Defaults to first unfinished task.")
-    parser.add_argument("--tasks-file", default=DEFAULT_TASKS_FILE)
-    parser.add_argument("--prompt-template", default=DEFAULT_TEMPLATE_FILE)
-    parser.add_argument("--checks-file", default=DEFAULT_CHECKS_FILE)
-    parser.add_argument("--state-file", default=DEFAULT_STATE_FILE)
-    parser.add_argument("--runs-dir", default=DEFAULT_RUNS_DIR)
-    parser.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
-    parser.add_argument("--codex-bin", default="codex")
-    parser.add_argument("--codex-extra", action="append", default=[], help="Extra argument to pass to `codex exec`. Repeat as needed.")
-    parser.add_argument("--dry-run", action="store_true", help="Write prompt artifacts without invoking Codex.")
-    args = parser.parse_args()
+def normalize_wave_name(raw_wave: str) -> str:
+    wave = raw_wave.strip().lower().replace("-", "_")
+    if not wave.startswith("wave_"):
+        raise ValueError(f"Wave must look like wave_a, wave_b, etc.: {raw_wave}")
+    if not re.fullmatch(r"wave_[a-z0-9_]+", wave):
+        raise ValueError(f"Unsupported wave format: {raw_wave}")
+    return wave
 
+
+def wave_upper_token(wave: str) -> str:
+    return normalize_wave_name(wave).upper()
+
+
+def derive_wave_paths(wave: str) -> WavePaths:
+    normalized = normalize_wave_name(wave)
+    upper = wave_upper_token(normalized)
+    return WavePaths(
+        wave=normalized,
+        tasks_file=f"AZQ_BUILD_TASKS_STAGE_1_{upper}.json",
+        checks_file=f"AZQ_CHECKS_STAGE_1_{upper}.json",
+        state_file=f".azq_codex_progress_stage1_{normalized}.json",
+        runs_dir=f".azq_codex_runs/stage1_{normalized}",
+    )
+
+
+def normalize_task_status(raw_status: Optional[str]) -> str:
+    if raw_status in {None, "", "todo"}:
+        return "pending"
+    if raw_status in {"passed_checks", "committed"}:
+        return "done"
+    if raw_status == "blocked":
+        return "failed"
+    if raw_status in {"in_progress", "codex_submitted", "repair_loop"}:
+        return "active"
+    return "unknown"
+
+
+def discover_stage1_waves(workspace: Path) -> List[WavePaths]:
+    discovered: List[WavePaths] = []
+    for tasks_file in sorted(workspace.glob(TASKS_FILE_GLOB)):
+        match = TASKS_FILE_PATTERN.match(tasks_file.name)
+        if not match:
+            continue
+        discovered.append(derive_wave_paths(match.group(1).lower()))
+    return discovered
+
+
+def summarize_wave(paths: WavePaths, workspace: Path) -> WaveSummary:
+    tasks_path = workspace / paths.tasks_file
+    state_path = workspace / paths.state_file
+    checks_path = workspace / paths.checks_file
+
+    warnings: List[str] = []
+    tasks = load_tasks(tasks_path)
+    state = load_state(state_path)
+    task_state = state.get("tasks", {})
+
+    if not state_path.exists():
+        warnings.append(f"Missing state file: {state_path.name}; tasks without entries are treated as pending.")
+    if not checks_path.exists():
+        warnings.append(f"Missing checks file: {checks_path.name}.")
+
+    counts = {"done": 0, "pending": 0, "failed": 0, "active": 0, "unknown": 0}
+    task_summaries: List[TaskSummary] = []
+    for task in tasks:
+        task_id = str(task.get("task_id", ""))
+        entry = task_state.get(task_id, {})
+        raw_status = str(entry.get("status", "todo")) if entry else "todo"
+        normalized_status = normalize_task_status(raw_status)
+        counts[normalized_status] += 1
+        task_summaries.append(
+            TaskSummary(
+                task_id=task_id,
+                title=str(task.get("title", "")),
+                raw_status=raw_status,
+                normalized_status=normalized_status,
+                updated_at=str(entry.get("updated_at", "")),
+                note=str(entry.get("note", "")),
+            )
+        )
+
+    return WaveSummary(
+        wave=paths.wave,
+        tasks_file=paths.tasks_file,
+        state_file=paths.state_file,
+        checks_file=paths.checks_file,
+        runs_dir=paths.runs_dir,
+        tasks_present=len(tasks),
+        counts=counts,
+        tasks=task_summaries,
+        warnings=warnings,
+    )
+
+
+def render_markdown_report(summaries: List[WaveSummary], workspace: Path) -> str:
+    generated_at = now_iso()
+    combined = {"done": 0, "pending": 0, "failed": 0, "active": 0, "unknown": 0}
+    total_tasks = 0
+
+    for summary in summaries:
+        total_tasks += summary.tasks_present
+        for key in combined:
+            combined[key] += summary.counts[key]
+
+    lines: List[str] = [
+        "# AZQ Stage 1 Task Status Report",
+        "",
+        f"Generated: {generated_at}",
+        f"Workspace: `{workspace}`",
+        "",
+        "## Combined counts",
+        "",
+        f"- Done: {combined['done']}",
+        f"- Pending: {combined['pending']}",
+        f"- Failed: {combined['failed']}",
+        f"- Active: {combined['active']}",
+        f"- Unknown: {combined['unknown']}",
+        f"- Total: {total_tasks}",
+        "",
+        "## Per-wave summary",
+        "",
+        "| Wave | Done | Pending | Failed | Active | Unknown | Total |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+
+    for summary in summaries:
+        lines.append(
+            f"| `{summary.wave}` | {summary.counts['done']} | {summary.counts['pending']} | "
+            f"{summary.counts['failed']} | {summary.counts['active']} | {summary.counts['unknown']} | {summary.tasks_present} |"
+        )
+
+    for summary in summaries:
+        lines.extend(
+            [
+                "",
+                f"## {summary.wave}",
+                "",
+                f"- Tasks file: `{summary.tasks_file}`",
+                f"- State file: `{summary.state_file}`",
+                f"- Checks file: `{summary.checks_file}`",
+                f"- Runs dir: `{summary.runs_dir}`",
+                f"- Counts: done={summary.counts['done']}, pending={summary.counts['pending']}, failed={summary.counts['failed']}, active={summary.counts['active']}, unknown={summary.counts['unknown']}",
+            ]
+        )
+        if summary.warnings:
+            lines.append("- Warnings:")
+            for warning in summary.warnings:
+                lines.append(f"  - {warning}")
+        lines.extend(
+            [
+                "",
+                "| Task ID | Status | Raw status | Updated | Note | Title |",
+                "| --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for task in summary.tasks:
+            updated = task.updated_at or "-"
+            note = task.note or "-"
+            title = task.title.replace("|", "\\|")
+            lines.append(
+                f"| `{task.task_id}` | `{task.normalized_status}` | `{task.raw_status}` | {updated} | {note} | {title} |"
+            )
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def resolve_run_paths(args: argparse.Namespace) -> tuple[WavePaths, Path, Path, Path, Path, Path]:
     workspace = Path(args.workspace).resolve()
-    tasks_file = (workspace / args.tasks_file).resolve()
+    wave_paths = derive_wave_paths(args.wave)
+    tasks_file = (workspace / (args.tasks_file or wave_paths.tasks_file)).resolve()
     template_file = (workspace / args.prompt_template).resolve()
-    checks_file = (workspace / args.checks_file).resolve()
-    state_file = (workspace / args.state_file).resolve()
-    runs_dir = (workspace / args.runs_dir).resolve()
+    checks_file = (workspace / (args.checks_file or wave_paths.checks_file)).resolve()
+    state_file = (workspace / (args.state_file or wave_paths.state_file)).resolve()
+    runs_dir = (workspace / (args.runs_dir or wave_paths.runs_dir)).resolve()
+    return wave_paths, workspace, tasks_file, template_file, checks_file, state_file, runs_dir
+
+
+def run_mode(args: argparse.Namespace) -> int:
+    _, workspace, tasks_file, template_file, checks_file, state_file, runs_dir = resolve_run_paths(args)
+    persist_state = not args.dry_run
 
     tasks = load_tasks(tasks_file)
-    checks_recipe = load_checks_recipe(checks_file)
+    checks_recipe: Dict[str, Any] = {}
+    if checks_file.exists():
+        checks_recipe = load_checks_recipe(checks_file)
+    else:
+        print(f"Warning: checks file not found, continuing with no automated checks: {checks_file}", file=sys.stderr)
+
     state = load_state(state_file)
     task = choose_next_task(tasks, state, args.task_id)
     task_id = task["task_id"]
@@ -330,9 +530,10 @@ def main() -> int:
     recipe_retry_cap = checks_recipe.get("defaults", {}).get("retry_cap")
     max_attempts = int(recipe_retry_cap) if recipe_retry_cap is not None else int(args.max_attempts)
 
-    update_task_state(state, task_id, "in_progress")
-    state.setdefault("history", []).append({"event": "start_task", "task_id": task_id, "at": now_iso()})
-    save_state(state_file, state)
+    if persist_state:
+        update_task_state(state, task_id, "in_progress")
+        state.setdefault("history", []).append({"event": "start_task", "task_id": task_id, "at": now_iso()})
+        save_state(state_file, state)
 
     original_prompt = build_original_prompt(template_file, task)
     prompt = original_prompt
@@ -341,12 +542,11 @@ def main() -> int:
 
     last_checks: List[CheckResult] = []
     for attempt in range(1, max_attempts + 1):
-        if args.dry_run:
-            attempt_dir = task_runs_dir / f"dry_run_{attempt:02d}"
-        else:
-            attempt_dir = task_runs_dir / f"attempt_{attempt:02d}"
-        update_task_state(state, task_id, "codex_submitted", note=f"attempt {attempt}")
-        save_state(state_file, state)
+        attempt_prefix = "dry_run" if args.dry_run else "attempt"
+        attempt_dir = task_runs_dir / f"{attempt_prefix}_{attempt:02d}"
+        if persist_state:
+            update_task_state(state, task_id, "codex_submitted", note=f"attempt {attempt}")
+            save_state(state_file, state)
 
         response = codex_exec(prompt, workspace, args.codex_bin, args.codex_extra, args.dry_run)
         checks, human_checks, check_specs = run_recipe_checks(task_id, workspace, checks_recipe)
@@ -357,6 +557,7 @@ def main() -> int:
             "attempt": attempt,
             "started_at": now_iso(),
             "dry_run": args.dry_run,
+            "wave": args.wave,
             "checks_file": str(checks_file),
             "codex_command": None if args.dry_run else [args.codex_bin, "exec", *args.codex_extra, "<prompt elided>"],
         }
@@ -373,9 +574,10 @@ def main() -> int:
         )
 
         if not has_required_failures(checks):
-            update_task_state(state, task_id, "passed_checks", note=f"attempt {attempt}")
-            state.setdefault("history", []).append({"event": "passed_checks", "task_id": task_id, "attempt": attempt, "at": now_iso()})
-            save_state(state_file, state)
+            if persist_state:
+                update_task_state(state, task_id, "passed_checks", note=f"attempt {attempt}")
+                state.setdefault("history", []).append({"event": "passed_checks", "task_id": task_id, "attempt": attempt, "at": now_iso()})
+                save_state(state_file, state)
             print(f"Task {task_id} passed checks on attempt {attempt}.")
             print(f"Artifacts saved under: {attempt_dir}")
             if human_checks:
@@ -385,15 +587,17 @@ def main() -> int:
             return 0
 
         if attempt < max_attempts:
-            update_task_state(state, task_id, "repair_loop", note=f"attempt {attempt} failed")
-            state.setdefault("history", []).append({"event": "repair_loop", "task_id": task_id, "attempt": attempt, "at": now_iso()})
-            save_state(state_file, state)
+            if persist_state:
+                update_task_state(state, task_id, "repair_loop", note=f"attempt {attempt} failed")
+                state.setdefault("history", []).append({"event": "repair_loop", "task_id": task_id, "attempt": attempt, "at": now_iso()})
+                save_state(state_file, state)
             prompt = build_repair_prompt(original_prompt, failed_checks_text(checks))
             continue
 
-        update_task_state(state, task_id, "blocked", note=f"failed after {attempt} attempts")
-        state.setdefault("history", []).append({"event": "blocked", "task_id": task_id, "attempt": attempt, "at": now_iso()})
-        save_state(state_file, state)
+        if persist_state:
+            update_task_state(state, task_id, "blocked", note=f"failed after {attempt} attempts")
+            state.setdefault("history", []).append({"event": "blocked", "task_id": task_id, "attempt": attempt, "at": now_iso()})
+            save_state(state_file, state)
         print(f"Task {task_id} failed checks after {attempt} attempts.")
         print(f"Inspect artifacts under: {attempt_dir}")
         print("\nFailed required checks:\n")
@@ -405,6 +609,50 @@ def main() -> int:
         return 1
 
     return 1
+
+
+def report_mode(args: argparse.Namespace) -> int:
+    workspace = Path(args.workspace).resolve()
+    report_path = (workspace / args.output).resolve()
+    summaries = [summarize_wave(paths, workspace) for paths in discover_stage1_waves(workspace)]
+    markdown = render_markdown_report(summaries, workspace)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(markdown, encoding="utf-8")
+    print(f"Wrote report: {report_path}")
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Run and report AZQ Stage 1 Codex task waves.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    run_parser = subparsers.add_parser("run", help="Run one Stage 1 task from the selected wave.")
+    run_parser.add_argument("--workspace", default=".", help="Repository root to run inside.")
+    run_parser.add_argument("--wave", default=DEFAULT_WAVE, help="Task wave to run, for example wave_a or wave_b.")
+    run_parser.add_argument("--task-id", help="Specific task_id to run. Defaults to the first unfinished task in the selected wave.")
+    run_parser.add_argument("--tasks-file", help="Override the derived tasks file for the selected wave.")
+    run_parser.add_argument("--prompt-template", default=DEFAULT_TEMPLATE_FILE)
+    run_parser.add_argument("--checks-file", help="Override the derived checks file for the selected wave.")
+    run_parser.add_argument("--state-file", help="Override the derived state file for the selected wave.")
+    run_parser.add_argument("--runs-dir", help="Override the derived runs directory for the selected wave.")
+    run_parser.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
+    run_parser.add_argument("--codex-bin", default="codex")
+    run_parser.add_argument("--codex-extra", action="append", default=[], help="Extra argument to pass to `codex exec`. Repeat as needed.")
+    run_parser.add_argument("--dry-run", action="store_true", help="Write prompt artifacts without invoking Codex.")
+    run_parser.set_defaults(func=run_mode)
+
+    report_parser = subparsers.add_parser("report", help="Scan Stage 1 wave manifests and write a markdown task status report.")
+    report_parser.add_argument("--workspace", default=".", help="Repository root to inspect.")
+    report_parser.add_argument("--output", default=DEFAULT_REPORT_FILE, help="Report path relative to the workspace root.")
+    report_parser.set_defaults(func=report_mode)
+
+    return parser
+
+
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
+    return args.func(args)
 
 
 if __name__ == "__main__":
