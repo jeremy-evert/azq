@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "AZQ Stage 2 Wave A Checks",
-  "purpose": "Define task-specific automated checks for Stage 2 Wave A so the Codex runner can evaluate Formam storage foundation patches without hardcoding all task logic.",
+  "purpose": "Define task-specific automated checks for Stage 2 Wave A so the Codex runner can evaluate the full Formam storage-foundation wave, including deliverable models, goal-map models, and canonical write helpers, without hardcoding all task logic.",
   "defaults": {
     "retry_cap": 3,
     "baseline_checks": [
@@ -123,6 +123,61 @@
       "human_checks": [
         "Goal validation is clearly separated from future command-layer presentation.",
         "The helper makes missing-parent failures inspectable rather than silent."
+      ]
+    },
+    "STAGE2-WAVEA-07": {
+      "description": "Define the canonical goal-map model.",
+      "checks": [
+        {
+          "name": "goal_map_normalization_schema",
+          "type": "python",
+          "required": true,
+          "description": "Verify a partial goal-map record normalizes into the canonical Stage 2 map schema.",
+          "code": "from azq.formam import storage\npartial = {'goal_id': 'FINIS_001', 'deliverable_ids': ['DELIV_001']}\nfn = getattr(storage, 'normalize_goal_map_record', None) or getattr(storage, 'normalize_goal_map', None)\nassert fn is not None, 'goal map normalization helper not found'\nresult = fn(partial)\nfor field in ['goal_id', 'deliverable_ids', 'dependency_edges', 'status', 'created', 'notes']:\n    assert field in result, f'missing field: {field}'\nassert result['goal_id'] == 'FINIS_001'\nassert isinstance(result['deliverable_ids'], list)\nassert isinstance(result['dependency_edges'], list)"
+        }
+      ],
+      "human_checks": [
+        "The goal-map schema remains human-readable and goal-centered.",
+        "Map normalization does not invent fake dependency structure beyond safe defaults."
+      ]
+    },
+    "STAGE2-WAVEA-08": {
+      "description": "Implement goal-map file read/write format.",
+      "checks": [
+        {
+          "name": "goal_map_round_trip",
+          "type": "python",
+          "required": true,
+          "description": "Verify a canonical goal-map record can round-trip through markdown serialization and parsing.",
+          "code": "from azq.formam import storage\nrecord = {\n    'goal_id': 'FINIS_001',\n    'deliverable_ids': ['DELIV_001', 'DELIV_002'],\n    'dependency_edges': ['DELIV_001 -> DELIV_002'],\n    'status': 'mapped',\n    'created': '2026-03-17T00:00:00',\n    'notes': 'Initial dependency sketch'\n}\nserializer = getattr(storage, 'serialize_goal_map_record', None) or getattr(storage, 'goal_map_to_markdown', None)\nparser = getattr(storage, 'parse_goal_map_record', None) or getattr(storage, 'goal_map_from_markdown', None)\nassert serializer is not None, 'goal map serializer not found'\nassert parser is not None, 'goal map parser not found'\ntext = serializer(record)\nparsed = parser(text)\nfor field in ['goal_id', 'deliverable_ids', 'dependency_edges', 'status', 'created', 'notes']:\n    assert parsed[field] == record[field], f'round-trip mismatch: {field}'"
+        }
+      ],
+      "human_checks": [
+        "The map markdown format is inspectable by a human without tool-specific knowledge.",
+        "Dependency sections remain readable even if they are sparse."
+      ]
+    },
+    "STAGE2-WAVEA-09": {
+      "description": "Add canonical Formam write helpers.",
+      "checks": [
+        {
+          "name": "formam_write_helpers_exist",
+          "type": "python",
+          "required": true,
+          "description": "Verify storage.py exposes canonical write helpers for both deliverables and goal maps.",
+          "code": "from azq.formam import storage\nassert any(hasattr(storage, name) for name in ['write_deliverable', 'save_deliverable', 'upsert_deliverable']), 'missing deliverable write helper'\nassert any(hasattr(storage, name) for name in ['write_goal_map', 'save_goal_map', 'upsert_goal_map']), 'missing goal map write helper'"
+        },
+        {
+          "name": "formam_write_helpers_write_canonical_files",
+          "type": "python",
+          "required": true,
+          "description": "Verify one normalized deliverable and one normalized goal map can be persisted as canonical Formam files.",
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.formam import storage\nwrite_deliverable = getattr(storage, 'write_deliverable', None) or getattr(storage, 'save_deliverable', None) or getattr(storage, 'upsert_deliverable', None)\nwrite_goal_map = getattr(storage, 'write_goal_map', None) or getattr(storage, 'save_goal_map', None) or getattr(storage, 'upsert_goal_map', None)\nassert write_deliverable is not None, 'deliverable write helper not found'\nassert write_goal_map is not None, 'goal map write helper not found'\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    deliverables_attr = 'DELIVERABLES_DIR' if hasattr(storage, 'DELIVERABLES_DIR') else 'FORM_DELIVERABLES_DIR'\n    maps_attr = 'MAPS_DIR' if hasattr(storage, 'MAPS_DIR') else 'FORM_MAPS_DIR'\n    setattr(storage, deliverables_attr, tmp_path / 'deliverables')\n    setattr(storage, maps_attr, tmp_path / 'maps')\n    deliverable_record = {\n        'deliverable_id': 'DELIV_123',\n        'goal_id': 'FINIS_001',\n        'title': 'Write helper test',\n        'artifact_description': 'Produce a stable artifact',\n        'dependencies': [],\n        'status': 'drafted',\n        'created': '2026-03-17'\n    }\n    goal_map_record = {\n        'goal_id': 'FINIS_001',\n        'deliverable_ids': ['DELIV_123'],\n        'dependency_edges': [],\n        'status': 'mapped',\n        'created': '2026-03-17',\n        'notes': ''\n    }\n    deliverable_path = write_deliverable(deliverable_record)\n    goal_map_path = write_goal_map(goal_map_record)\n    assert deliverable_path.is_file(), 'canonical deliverable file was not written'\n    assert goal_map_path.is_file(), 'canonical goal map file was not written'\n    assert deliverable_path.name == 'DELIV_123.md'\n    assert goal_map_path.name == 'GOAL_FINIS_001_MAP.md'"
+        }
+      ],
+      "human_checks": [
+        "The write-side storage boundary remains in azq/formam/storage.py.",
+        "Each write helper rewrites exactly one canonical file in the correct Formam directory."
       ]
     }
   }
