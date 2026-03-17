@@ -1,4 +1,0 @@
- .azq_codex_progress_stage1_wave_a.json                           | 9 +++++++--
- .../stage1_wave_a/STAGE1-WAVEA-03/attempt_01/metadata.json       | 2 +-
- .../stage1_wave_a/STAGE1-WAVEA-03/attempt_01/prompt.txt          | 3 ---
- 3 files changed, 8 insertions(+), 6 deletions(-)

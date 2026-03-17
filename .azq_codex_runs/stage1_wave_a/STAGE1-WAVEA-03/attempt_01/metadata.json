@@ -1,8 +1,0 @@
-{
-  "task_id": "STAGE1-WAVEA-03",
-  "attempt": 1,
-  "started_at": "2026-03-17T12:03:44-05:00",
-  "dry_run": true,
-  "checks_file": "/data/git/azq/AZQ_CHECKS_STAGE_1_WAVE_A.json",
-  "codex_command": null
-}

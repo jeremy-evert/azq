@@ -1,5 +1,0 @@
-?? .azq_codex_progress_stage1_wave_a.json
-?? .azq_codex_runs/
-?? AZQ_CODEX_RUNBOOK_STAGE_1_WAVE_A.md
-?? azq/finis/storage.py
-?? azq_codex_stage1_wave_a_runner.py
