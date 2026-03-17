@@ -1,0 +1,202 @@
+[
+  {
+    "task_id": "STAGE1-WAVEB-01",
+    "title": "Add canonical goal write helpers to storage",
+    "goal": "Make azq/finis/storage.py capable of writing one canonical goal record per file so other Finis modules can stop writing goals.json directly.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/finis/storage.py"
+    ],
+    "depends_on": [],
+    "context": [
+      "Wave A established the storage foundation, but storage.py still lacks write-side primitives.",
+      "The storage inspection report says storage.py feels like the right emerging authority but is not yet canonical because live code still bypasses it.",
+      "Wave B should make storage.py the real persistence boundary before refactoring the command modules."
+    ],
+    "requirements": [
+      "Add a canonical single-record write helper such as save_goal() or upsert_goal().",
+      "Ensure the helper writes exactly one FINIS_###.md file under data/finis/goals/.",
+      "Ensure the helper uses the canonical normalized schema.",
+      "Keep the implementation small and readable."
+    ],
+    "acceptance_criteria": [
+      "storage.py exposes a write-side API for one canonical goal record.",
+      "A caller can persist one normalized goal without touching goals.json.",
+      "The resulting goal file is canonical markdown under data/finis/goals/."
+    ],
+    "suggested_commit_message": "add canonical finis goal write helper"
+  },
+  {
+    "task_id": "STAGE1-WAVEB-02",
+    "title": "Implement one-way legacy migration into canonical goal files",
+    "goal": "Convert legacy goals.json records into canonical FINIS_###.md files without changing goal ids.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/finis/storage.py"
+    ],
+    "depends_on": [
+      "STAGE1-WAVEB-01"
+    ],
+    "context": [
+      "Stage 1 requires goals.json to become legacy migration input only.",
+      "The current data layer still has live goal data in goals.json and an empty data/finis/goals/ directory.",
+      "Migration should be additive and conservative."
+    ],
+    "requirements": [
+      "Add a one-way migration function that reads goals.json through the legacy reader.",
+      "Normalize each record and write one FINIS_###.md file per goal.",
+      "Preserve existing goal_id values exactly.",
+      "Make migration idempotent enough to avoid duplicating already migrated files."
+    ],
+    "acceptance_criteria": [
+      "Legacy JSON can be converted into canonical goal files.",
+      "Existing goal ids remain stable.",
+      "Repeated migration does not create duplicate goal files."
+    ],
+    "suggested_commit_message": "add finis legacy to canonical goal migration"
+  },
+  {
+    "task_id": "STAGE1-WAVEB-03",
+    "title": "Choose and wire the migration trigger",
+    "goal": "Make the system enter the canonical file-backed world deterministically before active Finis reads and writes continue.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/finis/storage.py",
+      "azq/cli.py"
+    ],
+    "depends_on": [
+      "STAGE1-WAVEB-02"
+    ],
+    "context": [
+      "The Stage 1 plan recommends one clear migration trigger, preferably automatic migration on first Finis read/write if it stays inspectable.",
+      "The active system must not silently continue writing only to goals.json."
+    ],
+    "requirements": [
+      "Pick one migration trigger strategy and implement it cleanly.",
+      "Prefer the smallest approach that makes Stage 1 usable immediately.",
+      "If automatic, make the migration behavior explicit and inspectable.",
+      "Do not broaden into full command refactors yet."
+    ],
+    "acceptance_criteria": [
+      "There is one deterministic migration path from legacy JSON to canonical goal files.",
+      "The chosen trigger runs before active Finis flows continue using legacy-only storage.",
+      "The trigger is inspectable and not magical."
+    ],
+    "suggested_commit_message": "wire finis canonical storage migration trigger"
+  },
+  {
+    "task_id": "STAGE1-WAVEB-04",
+    "title": "Refactor azq goals into a thin presentation layer",
+    "goal": "Turn azq/finis/goals.py into a read-only display module over the shared storage layer.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/finis/goals.py"
+    ],
+    "depends_on": [
+      "STAGE1-WAVEB-03"
+    ],
+    "context": [
+      "The goals.py inspection report recommends removing load_goals(), save_goals(), and next_goal_id() from goals.py.",
+      "show_goals() should remain, but it should read canonical goal records and display title instead of legacy goal."
+    ],
+    "requirements": [
+      "Remove JSON-era storage ownership from goals.py.",
+      "Rewrite show_goals() to use azq.finis.storage.load_all_goals().",
+      "Display canonical title instead of legacy goal.",
+      "Preserve the distinction between 'no goals exist' and 'no active goals'."
+    ],
+    "acceptance_criteria": [
+      "goals.py no longer owns storage helpers.",
+      "azq goals reads canonical records through storage.py.",
+      "show_goals() prints title and filters active goals only."
+    ],
+    "suggested_commit_message": "refactor azq goals onto canonical storage layer"
+  },
+  {
+    "task_id": "STAGE1-WAVEB-05",
+    "title": "Refactor goal_manager into a thin command-layer writer",
+    "goal": "Make azq/finis/goal_manager.py coordinate manual goal creation and status transitions while delegating persistence to storage.py.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/finis/goal_manager.py",
+      "azq/finis/storage.py"
+    ],
+    "depends_on": [
+      "STAGE1-WAVEB-04"
+    ],
+    "context": [
+      "The goal_manager.py inspection report says it should stop owning storage mechanics and become a thin command-layer coordinator.",
+      "The main remaining legacy write paths are add_goal(), close_goal(), and archive_goal()."
+    ],
+    "requirements": [
+      "Remove duplicated JSON-era storage helpers from goal_manager.py.",
+      "Rewrite add_goal() to create one canonical record using title, description, and derived_from.",
+      "Rewrite close_goal() to load one goal by exact id and rewrite only that canonical file with updated status.",
+      "Rewrite archive_goal() to load one goal by exact id and rewrite only that canonical file with status archived."
+    ],
+    "acceptance_criteria": [
+      "goal_manager.py no longer reads or writes goals.json directly.",
+      "add_goal(), close_goal(), and archive_goal() operate on canonical file-backed records.",
+      "Status transitions use exact goal_id lookup."
+    ],
+    "suggested_commit_message": "refactor goal manager onto canonical storage layer"
+  },
+  {
+    "task_id": "STAGE1-WAVEB-06",
+    "title": "Refactor fine onto canonical storage and title-based dedupe",
+    "goal": "Make azq/finis/fine.py use canonical storage, canonical field names, and file-backed goal writes.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/finis/fine.py",
+      "azq/finis/storage.py"
+    ],
+    "depends_on": [
+      "STAGE1-WAVEB-05"
+    ],
+    "context": [
+      "The fine.py inspection report says fine.py still imports legacy helpers from goals.py, dedupes against g['goal'], uses candidate objects with goal, and writes accepted goals back to goals.json.",
+      "This file is likely the easiest place for schema drift to survive if not migrated now."
+    ],
+    "requirements": [
+      "Replace .goals imports with canonical storage-layer imports.",
+      "Change candidate dedupe to compare against canonical title values.",
+      "Change temporary candidate objects from goal to title.",
+      "Write accepted goals one file at a time as canonical records with description and derived_from."
+    ],
+    "acceptance_criteria": [
+      "fine.py no longer depends on JSON-era helpers from goals.py.",
+      "Candidate dedupe compares against canonical title fields.",
+      "Accepted goals are written as canonical FINIS_###.md records, not to goals.json."
+    ],
+    "suggested_commit_message": "refactor fine onto canonical goal storage"
+  },
+  {
+    "task_id": "STAGE1-WAVEB-07",
+    "title": "Remove duplicated JSON-era Finis helpers",
+    "goal": "Delete the transitional helper functions that duplicate storage behavior now owned by azq/finis/storage.py.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/finis/goals.py",
+      "azq/finis/goal_manager.py",
+      "azq/finis/fine.py"
+    ],
+    "depends_on": [
+      "STAGE1-WAVEB-06"
+    ],
+    "context": [
+      "Stage 1 explicitly calls for removing duplicated JSON persistence helpers once the shared storage layer is active.",
+      "The reports for goals.py, goal_manager.py, and fine.py all identify duplicated JSON-era helper paths as a drift risk."
+    ],
+    "requirements": [
+      "Remove obsolete load_goals(), save_goals(), and next_goal_id() implementations from the legacy modules.",
+      "Remove no-longer-needed imports tied to JSON-era persistence.",
+      "Keep module responsibilities narrow and aligned with the Stage 1 architecture."
+    ],
+    "acceptance_criteria": [
+      "There is one shared Finis storage authority.",
+      "The legacy modules no longer duplicate JSON-era persistence helpers.",
+      "The active Finis command path no longer writes new state to goals.json."
+    ],
+    "suggested_commit_message": "remove duplicated legacy finis json helpers"
+  }
+]
