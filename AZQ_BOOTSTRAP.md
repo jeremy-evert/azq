@@ -47,7 +47,7 @@ By the end of bootstrap, the repository should contain visible craft artifacts s
 data/scintilla/audio/
 data/scintilla/transcripts/
 data/scintilla/sparks/
-data/finis/goals.json
+data/finis/goals/
 ```
 
 That moves the repository from `empty` to at least `purposed` in the current state model. fileciteturn8file7
@@ -134,7 +134,7 @@ mkdir -p \
   data/scintilla/audio \
   data/scintilla/transcripts \
   data/scintilla/sparks \
-  data/finis \
+  data/finis/goals \
   logs \
   scripts \
   tests
@@ -240,13 +240,16 @@ This uses the current Finis workflow to surface or derive candidate goals from s
 azq goal add
 ```
 
-Then type one clear goal statement.
+Then type one clear goal title.
 
-If successful, the current implementation writes:
+If successful, the Stage 1 implementation writes one canonical goal file per goal:
 
 ```text
-data/finis/goals.json
+data/finis/goals/FINIS_001.md
 ```
+
+`data/finis/goals/` is the canonical system of record for Finis goals.
+`data/finis/goals.json` may still exist as legacy migration input, but active goal state no longer lives there.
 
 List active goals:
 
@@ -274,7 +277,7 @@ And these visible artifacts exist on disk:
 data/scintilla/audio/
 data/scintilla/transcripts/
 data/scintilla/sparks/
-data/finis/goals.json
+data/finis/goals/
 ```
 
 That is the first living AZQ instance.
@@ -297,7 +300,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e .
-mkdir -p data/scintilla/audio data/scintilla/transcripts data/scintilla/sparks data/finis
+mkdir -p data/scintilla/audio data/scintilla/transcripts data/scintilla/sparks data/finis/goals
 azq capture
 azq sparks
 azq fine
@@ -387,4 +390,3 @@ It is the first pulse.
 If AZQ can gather one spark, preserve it, and elevate it into one real goal, then the repository has crossed the line from static code to living craft.
 
 That is enough for day one.
-

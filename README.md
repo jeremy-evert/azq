@@ -1,156 +1,129 @@
-Excellent moment to do this, Jeremy. The **README is the keystone**. If the README is clear, the repository feels alive from day one. If it's muddy, the project feels like a junk drawer.
-
-Let’s write a README that does four things:
-
-1. Explains **what AZQ is**
-2. Explains the **Rule of Craft**
-3. Explains **Scintilla**
-4. Shows **how to run the first engine**
-
-Clean. Clear. No bloat.
-
-You can drop this directly into `README.md`.
-
----
-
-# README.md
-
-```markdown
 # AZQ
 
 AZQ is a system for turning human thought into durable work.
 
-It is built around a simple rule of craft: ideas must be gathered,
-shaped, and acted upon in a deliberate sequence.
+It is built around a simple rule of craft: ideas are gathered, given purpose, shaped into structure, turned into work, and kept with visible evidence on disk.
 
-The system is divided into a small number of engines. Each engine
-represents a different stage in the craft process.
+The repository is organized as a small set of engines, each responsible for one stage in that craft pipeline.
 
 ---
 
 ## The Rule of Craft
 
-The AZQ system follows five stages:
+AZQ follows five stages:
 
 | Rule | Meaning |
-|-----|------|
-| **Cole Scintilla** | Gather sparks (ideas) |
-| **Fine Finem** | Define purpose |
-| **Strue Formam** | Build structure |
+| ---- | ------- |
+| **Cole Scintilla** | Gather sparks |
+| **Respice Finem** | Define goals |
+| **Strue Formam** | Build deliverables and maps |
 | **Age Agenda** | Execute work |
-| **Custodi Domum** | Maintain the system |
+| **Custodi Domum** | Maintain and archive the system |
 
-Each stage is implemented as a small engine inside the AZQ repository.
+The filesystem is intended to teach this architecture directly:
 
-The engines are designed to be simple, composable tools rather than
-large monolithic systems.
+```text
+spark -> goal -> deliverable -> task -> artifact -> archive
+```
 
 ---
 
-## First Engine: Cole Scintilla
+## Stage 1 Reality
 
-The first engine captures ideas.
+The current repository has the first live loop implemented:
 
-Ideas are fragile. They appear while driving, teaching, debugging,
-or walking. If they are not captured immediately, they vanish.
-
-The purpose of **Cole Scintilla** is to gather those sparks and store
-them permanently.
-
-The engine performs three actions:
-
-1. Record a thought
-2. Transcribe the audio
-3. Extract atomic ideas ("sparks")
-
-Pipeline:
-
+```text
+capture -> spark -> goal
 ```
 
-audio → transcript → sparks
+That means:
 
+* **Cole Scintilla** is live for capture and spark storage
+* **Respice Finem** is live for goal creation and listing
+* later engines remain architectural targets rather than finished code
+
+The active Stage 1 storage model is file-backed.
+Canonical Finis goals live as one file per goal under `data/finis/goals/`.
+`data/finis/goals.json` is legacy migration input only and should not be treated as the active system of record.
+
+---
+
+## Canonical Storage
+
+Stage 1 keeps the visible source of truth in the repository tree:
+
+```text
+data/scintilla/audio/
+data/scintilla/transcripts/
+data/scintilla/sparks/
+data/finis/goals/
 ```
 
-Example output:
+Finis goal files are human-readable Markdown records such as:
 
+```text
+data/finis/goals/FINIS_001.md
+data/finis/goals/FINIS_002.md
 ```
 
-scintilla/audio/2026-03-08_1812.wav
-scintilla/transcripts/2026-03-08_1812.txt
-scintilla/sparks/2026-03-08_1812.json
+Each canonical goal record exposes the Stage 1 fields:
 
-````
+* `goal_id`
+* `title`
+* `status`
+* `created`
+* `description`
+* `derived_from`
 
-Example sparks file:
-
-```json
-[
-  {
-    "spark": "create latin grammar for project tools",
-    "confidence": 0.91
-  },
-  {
-    "spark": "build spark capture system first",
-    "confidence": 0.88
-  }
-]
-````
+Where older data used a `goal` field, Stage 1 normalizes that into the canonical `title`.
 
 ---
 
 ## Repository Structure
 
-```
+```text
 azq/
-
-azq/
+  azq/
     scintilla/
-        capture.py
-        transcribe.py
-        extract.py
-
-data/
+    finis/
+    cli.py
+  data/
     scintilla/
-        audio/
-        transcripts/
-        sparks/
+      audio/
+      transcripts/
+      sparks/
+    finis/
+      goals/
 ```
 
 Code lives in `azq/`.
-
-Captured ideas live in `data/`.
+Visible craft artifacts live in `data/`.
 
 ---
 
-## Philosophy
+## Basic Use
 
-The system deliberately refuses to do too much too early.
+Install in editable mode:
 
-Scintilla does **not**:
+```bash
+python -m pip install -e .
+```
 
-* plan projects
-* summarize work
-* generate tasks
-* build dependency graphs
-* execute code
+Run the current live commands:
 
-Those responsibilities belong to later engines.
+```bash
+azq capture
+azq sparks
+azq fine
+azq goal add
+azq goals
+```
 
-Scintilla has only one purpose:
-
-**Gather sparks.**
+After creating a goal, the durable proof should be a goal file in `data/finis/goals/`, not a write to `data/finis/goals.json`.
 
 ---
 
 ## Status
 
-The project is in early development.
-
-Current focus:
-
-Implement the **Cole Scintilla** engine.
-
-Future engines will expand the craft rule.
-
----
-
+AZQ is in early development.
+Stage 1 is focused on normalizing Finis storage so later engines can depend on canonical file-backed goals without transitional glue.
