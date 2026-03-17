@@ -1,0 +1,16 @@
+[PASS] compileall
+Command: python -m compileall azq
+Return code: 0
+--- stdout ---
+Listing 'azq'...
+Listing 'azq/finis'...
+Listing 'azq/scintilla'...
+--- stderr ---
+
+
+[PASS] storage_import
+Command: python -c "import azq.finis.storage"
+Return code: 0
+--- stdout ---
+
+--- stderr ---

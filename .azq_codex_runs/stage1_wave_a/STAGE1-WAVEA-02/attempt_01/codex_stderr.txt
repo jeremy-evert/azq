@@ -1,0 +1,518 @@
+OpenAI Codex v0.115.0 (research preview)
+--------
+workdir: /data/git/azq
+model: gpt-5.4
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, /home/jevert/.codex/memories]
+reasoning effort: none
+reasoning summaries: none
+session id: 019cfa14-a52b-7780-bf51-6e7ea620eb5a
+--------
+user
+You are helping implement Stage 1 of AZQ.
+
+Read the repository files that are relevant to this task before making changes.
+Use the attached architectural documents as constraints, especially:
+- AZQ_IMPLEMENTATION_PLAN.md
+- AZQ_BUILD_TASKS_STAGE_1.md
+- AZQ_STATE_MODEL.md
+- AZQ_FILESYSTEM_MODEL.md
+- AZQ_COMMAND_MODEL.md
+
+Your job is to complete exactly one task object.
+
+Rules:
+
+1. Stay inside the files named by the task unless a tiny supporting edit is absolutely required to make the code importable or runnable.
+2. Keep the patch atomic and commit-sized.
+3. Do not implement future tasks early.
+4. Do not refactor unrelated modules.
+5. Do not change architecture documents unless the task explicitly asks for it.
+6. Preserve the current repository layout under `azq/`, not the aspirational `src/azq/` layout.
+7. Prefer simple, readable code over clever abstractions.
+8. Preserve backwards compatibility where practical during Stage 1.
+9. If a task depends on behavior that does not yet exist, do the smallest correct implementation that satisfies the current task only.
+10. Stop when the task’s acceptance criteria are satisfied.
+
+Before editing files:
+- briefly state what you think the task requires
+- name the files you plan to inspect
+- identify any dependency from `depends_on`
+
+When coding:
+- make only the smallest necessary changes
+- keep file formats human-readable and diff-friendly
+- preserve durable evidence on disk where relevant
+- avoid destructive behavior
+
+After coding:
+- show a concise summary of what changed
+- list the files changed
+- state how the acceptance criteria were satisfied
+- mention any tests or checks you ran
+- state any follow-up risk or note, but do not continue into the next task
+
+If the task is underspecified, make the smallest reasonable choice and explain it briefly.
+If the task cannot be completed cleanly without violating the rules, stop and explain the blocker rather than broadening scope.
+
+Task object:
+[paste one JSON task here]
+
+Do not "help" by beginning the next task.
+
+Task object:
+{
+  "task_id": "STAGE1-WAVEA-02",
+  "title": "Add canonical Finis path constants and directory helpers",
+  "goal": "Centralize path ownership for Finis goal persistence.",
+  "files_to_create": [],
+  "files_to_modify": [
+    "azq/finis/storage.py"
+  ],
+  "depends_on": [
+    "STAGE1-WAVEA-01"
+  ],
+  "context": [
+    "The canonical Stage 1 storage locations are data/finis/goals/ and data/finis/goals.json.",
+    "goals.json is legacy migration input only.",
+    "One module should own all Finis path decisions."
+  ],
+  "requirements": [
+    "Define constants for the goals directory and legacy goals.json file.",
+    "Add a helper to ensure the goals directory exists.",
+    "Add a helper to map a goal_id like FINIS_001 to a markdown file path in data/finis/goals/.",
+    "Add a helper to list goal files in deterministic order."
+  ],
+  "acceptance_criteria": [
+    "All Finis paths are defined in azq/finis/storage.py.",
+    "The goals directory can be created on demand.",
+    "Goal file lookup and listing are deterministic."
+  ],
+  "suggested_commit_message": "add finis storage path constants and helpers"
+}
+
+mcp startup: no servers
+codex
+Task `STAGE1-WAVEA-02` looks like a small storage-layer addition in `azq/finis/storage.py`: add canonical Finis path constants plus helpers for directory creation, per-goal markdown path mapping, and deterministic goal file listing. I’m going to inspect the Stage 1 architecture docs, the task dependency context from `STAGE1-WAVEA-01`, and the current `azq/finis/storage.py` implementation before editing.
+exec
+/bin/bash -lc "sed -n '1,220p' AZQ_COMMAND_MODEL.md" in /data/git/azqexec
+/bin/bash -lc "sed -n '1,220p' AZQ_IMPLEMENTATION_PLAN.md" in /data/git/azqexec
+/bin/bash -lc "sed -n '1,220p' AZQ_STATE_MODEL.md" in /data/git/azq succeeded in 0ms:
+# AZQ State Model
+
+## Purpose
+
+This document defines the formal state model of AZQ.
+
+It is the lifecycle grammar of the system: how work exists, how it moves, what commands are allowed to change it, and what evidence on disk proves that a transition actually occurred.
+
+The state model exists to keep five things true:
+
+1. The craft stages remain distinct.
+2. The filesystem remains the visible source of truth.
+3. Every meaningful transition is inspectable.
+4. The CLI remains small and memorable.
+5. No command can claim success without leaving durable evidence.
+
+AZQ is not a bag of commands.
+It is a staged craft system.
+Its state model therefore expresses the Rule of Craft:
+
+ succeeded in 0ms:
+# AZQ Implementation Plan
+
+## Purpose
+
+This document translates AZQ doctrine into a staged engineering roadmap.
+
+The repository already implements part of the first two engines:
+
+* `scintilla` exists and writes durable spark artifacts
+* `finis` exists, but still uses transitional JSON storage
+* `formam`, `agenda`, and `domum` are specified in documents but not yet implemented in code
+
+The goal of this plan is to move from the current partial system to a coherent five-engine system without violating the craft order:
+
+```text
+spark -> goal -> deliverable -> task -> artifact -> archive
+```
+
+The build order is intentionally strict:
+
+ succeeded in 0ms:
+# AZQ Command Model
+
+## Purpose
+
+This document defines the command-line interface for AZQ.
+
+The command model is the primary way users interact with the system.  
+It exposes the five engines of AZQ as a small, memorable set of commands.
+
+The CLI must obey the Craft Charter:
+
+- stages remain distinct
+- commands remain simple
+- every command produces or modifies a visible artifact
+- no command should bypass the craft pipeline
+
+The command model mirrors the AZQ flow:
+
+```
+
+exec
+/bin/bash -lc "sed -n '1,220p' AZQ_BUILD_TASKS_STAGE_1.md" in /data/git/azq succeeded in 0ms:
+# AZQ Build Tasks: Stage 1
+
+## Purpose
+
+This checklist turns **Stage 1: Normalize Finis Storage** from `AZQ_IMPLEMENTATION_PLAN.md` into atomic, commit-sized engineering work for the current repository.
+
+The goal of Stage 1 is simple:
+
+> move Finis from transitional JSON storage to first-class goal files so the on-disk structure matches the filesystem and state models.
+
+This checklist is intentionally grounded in the **current live tree**.
+The repository does **not** currently use `src/azq/...`; the live code is under `azq/`.
+
+Stage 1 therefore targets:
+
+* `azq/cli.py`
+* `azq/finis/goals.py`
+* `azq/finis/goal_manager.py`
+* `azq/finis/fine.py`
+* `azq/finis/storage.py` (new)
+exec
+/bin/bash -lc "sed -n '1,220p' AZQ_FILESYSTEM_MODEL.md" in /data/git/azq succeeded in 0ms:
+# AZQ Filesystem Model
+
+## Purpose
+
+This document defines the on‑disk structure of the AZQ system.
+
+The filesystem layout mirrors the intellectual pipeline of AZQ. Each stage of the craft process has a corresponding location on disk where its artifacts are stored. This allows the system to remain transparent, inspectable, and resilient.
+
+The guiding principle is simple:
+
+> The filesystem should teach the architecture.
+
+Anyone browsing the repository should be able to understand how ideas move through the system simply by reading the directory tree.
+
+---
+
+# Root Repository Layout
+
+```
+azq/
+exec
+/bin/bash -lc "sed -n '1,220p' azq/finis/storage.py" in /data/git/azq succeeded in 0ms:
+"""Filesystem scaffolding for canonical Finis goal storage.
+
+Stage 1 moves Finis persistence toward one goal record per file under
+``data/finis/goals/`` while preserving ``data/finis/goals.json`` as a legacy
+input during migration. This module currently owns only the shared path
+decisions and basic filesystem helpers required for later tasks.
+"""
+
+from pathlib import Path
+
+DATA_DIR = Path("data")
+FINIS_DIR = DATA_DIR / "finis"
+GOALS_DIR = FINIS_DIR / "goals"
+LEGACY_GOALS_FILE = FINIS_DIR / "goals.json"
+
+
+def ensure_goals_dir() -> Path:
+    """Create the canonical goals directory when it does not yet exist."""
+    GOALS_DIR.mkdir(parents=True, exist_ok=True)
+    return GOALS_DIR
+exec
+/bin/bash -lc 'rg -n "STAGE1-WAVEA-01|WAVEA-01|finis/storage|goals.json|data/finis/goals" -S AZQ_BUILD_TASKS_STAGE_1.md azq' in /data/git/azq succeeded in 0ms:
+AZQ_BUILD_TASKS_STAGE_1.md:20:* `azq/finis/storage.py` (new)
+AZQ_BUILD_TASKS_STAGE_1.md:21:* `data/finis/goals/` (new)
+AZQ_BUILD_TASKS_STAGE_1.md:22:* `data/finis/goals.json` (legacy read-only migration input)
+AZQ_BUILD_TASKS_STAGE_1.md:30:Stage 1 is complete when all active Finis flows read and write canonical **goal files** rather than `data/finis/goals.json`.
+AZQ_BUILD_TASKS_STAGE_1.md:34:* each goal lives in its own file under `data/finis/goals/`
+AZQ_BUILD_TASKS_STAGE_1.md:36:* `goals.json` is legacy input only
+AZQ_BUILD_TASKS_STAGE_1.md:48:* goals are stored only in `data/finis/goals.json`
+AZQ_BUILD_TASKS_STAGE_1.md:52:* no file-based goal records exist in `data/finis/goals/`
+AZQ_BUILD_TASKS_STAGE_1.md:91:  * `data/finis/goals/`
+AZQ_BUILD_TASKS_STAGE_1.md:92:  * `data/finis/goals.json` as legacy migration input only
+AZQ_BUILD_TASKS_STAGE_1.md:105:* `azq/finis/storage.py` (new)
+AZQ_BUILD_TASKS_STAGE_1.md:111:  * `data/finis/goals/`
+AZQ_BUILD_TASKS_STAGE_1.md:112:  * `data/finis/goals.json`
+AZQ_BUILD_TASKS_STAGE_1.md:117:  * map a `goal_id` to `data/finis/goals/FINIS_###.md`
+AZQ_BUILD_TASKS_STAGE_1.md:129:* `azq/finis/storage.py`
+AZQ_BUILD_TASKS_STAGE_1.md:159:* `azq/finis/storage.py`
+AZQ_BUILD_TASKS_STAGE_1.md:178:* `azq/finis/storage.py`
+AZQ_BUILD_TASKS_STAGE_1.md:184:  * load all goals from `data/finis/goals/`
+AZQ_BUILD_TASKS_STAGE_1.md:200:* `azq/finis/storage.py`
+AZQ_BUILD_TASKS_STAGE_1.md:204:* add a dedicated legacy reader for `data/finis/goals.json`
+codex
+The dependency is `STAGE1-WAVEA-01`; from the Stage 1 task sheet and the current `storage.py`, that dependency appears satisfied already, and this task stays contained to `azq/finis/storage.py`. The current file mostly matches the requested scaffolding, so I’m checking whether anything still needs tightening before I make a minimal patch.
+exec
+/bin/bash -lc 'git status --short azq/finis/storage.py' in /data/git/azq succeeded in 0ms:
+?? azq/finis/storage.py
+exec
+/bin/bash -lc "python - <<'PY'
+from azq.finis.storage import GOALS_DIR, LEGACY_GOALS_FILE, goal_file_path, list_goal_files
+print(GOALS_DIR)
+print(LEGACY_GOALS_FILE)
+print(goal_file_path('FINIS_001'))
+print(list_goal_files())
+PY" in /data/git/azq succeeded in 26ms:
+data/finis/goals
+data/finis/goals.json
+data/finis/goals/FINIS_001.md
+[]
+codex
+I’m making one small edit in `azq/finis/storage.py` to remove the last hard-coded goal filename pattern from the helper bodies. That keeps the path contract centralized in module-level constants without broadening into later storage tasks.
+file update
+M /data/git/azq/azq/finis/storage.py
+@@ -14,2 +14,5 @@
+ LEGACY_GOALS_FILE = FINIS_DIR / "goals.json"
++GOAL_FILE_PREFIX = "FINIS_"
++GOAL_FILE_SUFFIX = ".md"
++GOAL_FILE_GLOB = f"{GOAL_FILE_PREFIX}*{GOAL_FILE_SUFFIX}"
+ 
+@@ -27,3 +30,3 @@
+ 
+-    return sorted(path for path in GOALS_DIR.glob("FINIS_*.md") if path.is_file())
++    return sorted(path for path in GOALS_DIR.glob(GOAL_FILE_GLOB) if path.is_file())
+ 
+@@ -32,3 +35,3 @@
+     """Map an exact goal id to its canonical Markdown file path."""
+-    return GOALS_DIR / f"{goal_id}.md"
++    return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
+ 
+@@ -40,2 +43,5 @@
+     "LEGACY_GOALS_FILE",
++    "GOAL_FILE_PREFIX",
++    "GOAL_FILE_SUFFIX",
++    "GOAL_FILE_GLOB",
+     "ensure_goals_dir",
+apply_patch(auto_approved=true) exited 0 in 114ms:
+Success. Updated the following files:
+M /data/git/azq/azq/finis/storage.py
+file update:
+diff --git a/azq/finis/storage.py b/azq/finis/storage.py
+index 51b5604a3873dfc42990df613186acf61dd071e8..3bbe262354f707a2e34f757872f00508fa4de604
+--- a/azq/finis/storage.py
++++ b/azq/finis/storage.py
+@@ -12,6 +12,9 @@
+ FINIS_DIR = DATA_DIR / "finis"
+ GOALS_DIR = FINIS_DIR / "goals"
+ LEGACY_GOALS_FILE = FINIS_DIR / "goals.json"
++GOAL_FILE_PREFIX = "FINIS_"
++GOAL_FILE_SUFFIX = ".md"
++GOAL_FILE_GLOB = f"{GOAL_FILE_PREFIX}*{GOAL_FILE_SUFFIX}"
+ 
+ 
+ def ensure_goals_dir() -> Path:
+@@ -25,12 +28,12 @@
+     if not GOALS_DIR.exists():
+         return []
+ 
+-    return sorted(path for path in GOALS_DIR.glob("FINIS_*.md") if path.is_file())
++    return sorted(path for path in GOALS_DIR.glob(GOAL_FILE_GLOB) if path.is_file())
+ 
+ 
+ def goal_file_path(goal_id: str) -> Path:
+     """Map an exact goal id to its canonical Markdown file path."""
+-    return GOALS_DIR / f"{goal_id}.md"
++    return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
+ 
+ 
+ __all__ = [
+@@ -38,6 +41,9 @@
+     "FINIS_DIR",
+     "GOALS_DIR",
+     "LEGACY_GOALS_FILE",
++    "GOAL_FILE_PREFIX",
++    "GOAL_FILE_SUFFIX",
++    "GOAL_FILE_GLOB",
+     "ensure_goals_dir",
+     "list_goal_files",
+     "goal_file_path",
+
+file update:
+diff --git a/azq/finis/storage.py b/azq/finis/storage.py
+index 51b5604a3873dfc42990df613186acf61dd071e8..3bbe262354f707a2e34f757872f00508fa4de604
+--- a/azq/finis/storage.py
++++ b/azq/finis/storage.py
+@@ -12,6 +12,9 @@
+ FINIS_DIR = DATA_DIR / "finis"
+ GOALS_DIR = FINIS_DIR / "goals"
+ LEGACY_GOALS_FILE = FINIS_DIR / "goals.json"
++GOAL_FILE_PREFIX = "FINIS_"
++GOAL_FILE_SUFFIX = ".md"
++GOAL_FILE_GLOB = f"{GOAL_FILE_PREFIX}*{GOAL_FILE_SUFFIX}"
+ 
+ 
+ def ensure_goals_dir() -> Path:
+@@ -25,12 +28,12 @@
+     if not GOALS_DIR.exists():
+         return []
+ 
+-    return sorted(path for path in GOALS_DIR.glob("FINIS_*.md") if path.is_file())
++    return sorted(path for path in GOALS_DIR.glob(GOAL_FILE_GLOB) if path.is_file())
+ 
+ 
+ def goal_file_path(goal_id: str) -> Path:
+     """Map an exact goal id to its canonical Markdown file path."""
+-    return GOALS_DIR / f"{goal_id}.md"
++    return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
+ 
+ 
+ __all__ = [
+@@ -38,6 +41,9 @@
+     "FINIS_DIR",
+     "GOALS_DIR",
+     "LEGACY_GOALS_FILE",
++    "GOAL_FILE_PREFIX",
++    "GOAL_FILE_SUFFIX",
++    "GOAL_FILE_GLOB",
+     "ensure_goals_dir",
+     "list_goal_files",
+     "goal_file_path",
+
+codex
+The patch stays inside the task’s single file and only centralizes the remaining filename conventions. I’m running a couple of direct checks on the storage helpers now to confirm the constants and deterministic file helpers behave as expected.
+exec
+/bin/bash -lc "python - <<'PY'
+from azq.finis.storage import (
+    GOALS_DIR,
+    LEGACY_GOALS_FILE,
+    GOAL_FILE_GLOB,
+    ensure_goals_dir,
+    goal_file_path,
+    list_goal_files,
+)
+print(GOALS_DIR)
+print(LEGACY_GOALS_FILE)
+print(GOAL_FILE_GLOB)
+print(goal_file_path('FINIS_001'))
+print(ensure_goals_dir())
+print([path.name for path in list_goal_files()])
+PY" in /data/git/azq succeeded in 0ms:
+data/finis/goals
+data/finis/goals.json
+FINIS_*.md
+data/finis/goals/FINIS_001.md
+data/finis/goals
+[]
+exec
+/bin/bash -lc 'python -m py_compile azq/finis/storage.py' in /data/git/azq succeeded in 0ms:
+
+file update:
+diff --git a/azq/finis/storage.py b/azq/finis/storage.py
+index 51b5604a3873dfc42990df613186acf61dd071e8..3bbe262354f707a2e34f757872f00508fa4de604
+--- a/azq/finis/storage.py
++++ b/azq/finis/storage.py
+@@ -12,6 +12,9 @@
+ FINIS_DIR = DATA_DIR / "finis"
+ GOALS_DIR = FINIS_DIR / "goals"
+ LEGACY_GOALS_FILE = FINIS_DIR / "goals.json"
++GOAL_FILE_PREFIX = "FINIS_"
++GOAL_FILE_SUFFIX = ".md"
++GOAL_FILE_GLOB = f"{GOAL_FILE_PREFIX}*{GOAL_FILE_SUFFIX}"
+ 
+ 
+ def ensure_goals_dir() -> Path:
+@@ -25,12 +28,12 @@
+     if not GOALS_DIR.exists():
+         return []
+ 
+-    return sorted(path for path in GOALS_DIR.glob("FINIS_*.md") if path.is_file())
++    return sorted(path for path in GOALS_DIR.glob(GOAL_FILE_GLOB) if path.is_file())
+ 
+ 
+ def goal_file_path(goal_id: str) -> Path:
+     """Map an exact goal id to its canonical Markdown file path."""
+-    return GOALS_DIR / f"{goal_id}.md"
++    return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
+ 
+ 
+ __all__ = [
+@@ -38,6 +41,9 @@
+     "FINIS_DIR",
+     "GOALS_DIR",
+     "LEGACY_GOALS_FILE",
++    "GOAL_FILE_PREFIX",
++    "GOAL_FILE_SUFFIX",
++    "GOAL_FILE_GLOB",
+     "ensure_goals_dir",
+     "list_goal_files",
+     "goal_file_path",
+
+codex
+Implemented `STAGE1-WAVEA-02` in [azq/finis/storage.py](/data/git/azq/azq/finis/storage.py).
+
+The task required centralizing Finis goal path ownership for Stage 1. I inspected the Stage 1 architecture docs plus the existing storage scaffold, confirmed the dependency on `STAGE1-WAVEA-01` was already satisfied, and kept the change contained to the single allowed file.
+
+What changed:
+- Added canonical filename constants for Finis goal files: `GOAL_FILE_PREFIX`, `GOAL_FILE_SUFFIX`, and `GOAL_FILE_GLOB`.
+- Kept the canonical storage paths in one module: `GOALS_DIR` for `data/finis/goals/` and `LEGACY_GOALS_FILE` for legacy `data/finis/goals.json`.
+- Reused those constants in:
+  - `ensure_goals_dir()` to create the goals directory on demand
+  - `goal_file_path(goal_id)` to map `FINIS_001` to `data/finis/goals/FINIS_001.md`
+  - `list_goal_files()` to return goal files in deterministic sorted order
+
+Files changed:
+- [azq/finis/storage.py](/data/git/azq/azq/finis/storage.py)
+
+Acceptance criteria:
+- All Finis path decisions for Stage 1 are defined in `azq/finis/storage.py`.
+- The goals directory can be created on demand via `ensure_goals_dir()`.
+- Goal file lookup is deterministic through `goal_file_path()`, and listing is deterministic through sorted `list_goal_files()` output.
+
+Checks run:
+- `python -m py_compile azq/finis/storage.py`
+- Direct helper smoke test via Python import and calls to `ensure_goals_dir()`, `goal_file_path("FINIS_001")`, and `list_goal_files()`
+
+Follow-up note:
+- This task only establishes path and directory helpers. It does not yet add record normalization, parsing, read/write, or migration behavior from later Stage 1 tasks.
+file update:
+diff --git a/azq/finis/storage.py b/azq/finis/storage.py
+index 51b5604a3873dfc42990df613186acf61dd071e8..3bbe262354f707a2e34f757872f00508fa4de604
+--- a/azq/finis/storage.py
++++ b/azq/finis/storage.py
+@@ -12,6 +12,9 @@
+ FINIS_DIR = DATA_DIR / "finis"
+ GOALS_DIR = FINIS_DIR / "goals"
+ LEGACY_GOALS_FILE = FINIS_DIR / "goals.json"
++GOAL_FILE_PREFIX = "FINIS_"
++GOAL_FILE_SUFFIX = ".md"
++GOAL_FILE_GLOB = f"{GOAL_FILE_PREFIX}*{GOAL_FILE_SUFFIX}"
+ 
+ 
+ def ensure_goals_dir() -> Path:
+@@ -25,12 +28,12 @@
+     if not GOALS_DIR.exists():
+         return []
+ 
+-    return sorted(path for path in GOALS_DIR.glob("FINIS_*.md") if path.is_file())
++    return sorted(path for path in GOALS_DIR.glob(GOAL_FILE_GLOB) if path.is_file())
+ 
+ 
+ def goal_file_path(goal_id: str) -> Path:
+     """Map an exact goal id to its canonical Markdown file path."""
+-    return GOALS_DIR / f"{goal_id}.md"
++    return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
+ 
+ 
+ __all__ = [
+@@ -38,6 +41,9 @@
+     "FINIS_DIR",
+     "GOALS_DIR",
+     "LEGACY_GOALS_FILE",
++    "GOAL_FILE_PREFIX",
++    "GOAL_FILE_SUFFIX",
++    "GOAL_FILE_GLOB",
+     "ensure_goals_dir",
+     "list_goal_files",
+     "goal_file_path",
+
+tokens used
+15,706

@@ -1,0 +1,26 @@
+Implemented `STAGE1-WAVEA-02` in [azq/finis/storage.py](/data/git/azq/azq/finis/storage.py).
+
+The task required centralizing Finis goal path ownership for Stage 1. I inspected the Stage 1 architecture docs plus the existing storage scaffold, confirmed the dependency on `STAGE1-WAVEA-01` was already satisfied, and kept the change contained to the single allowed file.
+
+What changed:
+- Added canonical filename constants for Finis goal files: `GOAL_FILE_PREFIX`, `GOAL_FILE_SUFFIX`, and `GOAL_FILE_GLOB`.
+- Kept the canonical storage paths in one module: `GOALS_DIR` for `data/finis/goals/` and `LEGACY_GOALS_FILE` for legacy `data/finis/goals.json`.
+- Reused those constants in:
+  - `ensure_goals_dir()` to create the goals directory on demand
+  - `goal_file_path(goal_id)` to map `FINIS_001` to `data/finis/goals/FINIS_001.md`
+  - `list_goal_files()` to return goal files in deterministic sorted order
+
+Files changed:
+- [azq/finis/storage.py](/data/git/azq/azq/finis/storage.py)
+
+Acceptance criteria:
+- All Finis path decisions for Stage 1 are defined in `azq/finis/storage.py`.
+- The goals directory can be created on demand via `ensure_goals_dir()`.
+- Goal file lookup is deterministic through `goal_file_path()`, and listing is deterministic through sorted `list_goal_files()` output.
+
+Checks run:
+- `python -m py_compile azq/finis/storage.py`
+- Direct helper smoke test via Python import and calls to `ensure_goals_dir()`, `goal_file_path("FINIS_001")`, and `list_goal_files()`
+
+Follow-up note:
+- This task only establishes path and directory helpers. It does not yet add record normalization, parsing, read/write, or migration behavior from later Stage 1 tasks.

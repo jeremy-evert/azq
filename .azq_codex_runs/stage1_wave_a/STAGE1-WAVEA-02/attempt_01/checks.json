@@ -1,0 +1,18 @@
+[
+  {
+    "name": "compileall",
+    "command": "python -m compileall azq",
+    "returncode": 0,
+    "stdout": "Listing 'azq'...\nListing 'azq/finis'...\nListing 'azq/scintilla'...\n",
+    "stderr": "",
+    "passed": true
+  },
+  {
+    "name": "storage_import",
+    "command": "python -c \"import azq.finis.storage\"",
+    "returncode": 0,
+    "stdout": "",
+    "stderr": "",
+    "passed": true
+  }
+]

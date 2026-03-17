@@ -1,0 +1,20 @@
+This task required a minimal Stage 1 scaffold for canonical Finis storage, with no command rewiring yet. I inspected `AZQ_IMPLEMENTATION_PLAN.md`, `AZQ_BUILD_TASKS_STAGE_1.md`, `AZQ_STATE_MODEL.md`, `AZQ_FILESYSTEM_MODEL.md`, `AZQ_COMMAND_MODEL.md`, plus the current Finis modules in `azq/finis/`; `depends_on` was empty.
+
+I added [azq/finis/storage.py](/data/git/azq/azq/finis/storage.py). The module now owns the Stage 1 Finis path constants and the three scaffold helpers the task called for:
+- `GOALS_DIR` for `data/finis/goals/`
+- `LEGACY_GOALS_FILE` for `data/finis/goals.json`
+- `ensure_goals_dir()`
+- `list_goal_files()` with stable filename ordering
+- `goal_file_path(goal_id)` mapping `FINIS_###` to its canonical Markdown path
+
+Files changed: [azq/finis/storage.py](/data/git/azq/azq/finis/storage.py)
+
+Acceptance criteria:
+- `azq/finis/storage.py` exists.
+- The module imports cleanly.
+- No existing command behavior changed, because no existing handlers or CLI wiring were modified.
+
+Checks run:
+- `python -c 'import azq.finis.storage as s; print(s.GOALS_DIR); print(s.goal_file_path("FINIS_001"))'`
+
+Follow-up note: the module is intentionally limited to scaffolding only; normalization, parsing, migration, and repository reads remain for later Stage 1 tasks.
