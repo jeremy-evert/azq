@@ -220,11 +220,11 @@ def parse_goal_markdown(markdown_text: str) -> dict[str, Any]:
                 index += 1
             continue
 
-        if not stripped.startswith("- ") or ": " not in stripped:
+        if not stripped.startswith("- ") or ":" not in stripped:
             raise ValueError(f"Unrecognized goal metadata line: {line!r}")
 
-        field_name, field_value = stripped[2:].split(": ", 1)
-        metadata[field_name] = field_value
+        field_name, field_value = stripped[2:].split(":", 1)
+        metadata[field_name] = field_value.lstrip()
         index += 1
 
     description_lines = lines[index:]
@@ -283,6 +283,57 @@ def next_goal_id() -> str:
     return f"{GOAL_FILE_PREFIX}{highest_goal_number + 1:03d}"
 
 
+def _write_goal_file(goal_record: dict[str, Any]) -> Path:
+    """Write one canonical goal record to its exact Markdown file."""
+    record = normalize_goal_record(goal_record)
+    goal_id = str(record["goal_id"]).strip()
+    if not GOAL_ID_PATTERN.fullmatch(goal_id):
+        raise LegacyGoalsError(
+            f"Cannot write canonical goal file for invalid goal_id {goal_id!r}."
+        )
+
+    goal_path = goal_file_path(goal_id)
+    ensure_goals_dir()
+    goal_path.write_text(serialize_goal_markdown(record), encoding="utf-8")
+    return goal_path
+
+
+def migrate_legacy_goals() -> dict[str, int]:
+    """Migrate legacy JSON goals into canonical Markdown goal files.
+
+    Migration is intentionally one-way and additive:
+    - reads legacy state only through the dedicated legacy reader
+    - preserves each existing ``goal_id`` exactly
+    - writes only missing canonical files to avoid duplicate migrated records
+    """
+
+    legacy_goals = load_legacy_goals()
+    migrated = 0
+    skipped = 0
+
+    for legacy_goal in legacy_goals:
+        normalized_goal = normalize_goal_record(legacy_goal)
+        goal_id = str(normalized_goal["goal_id"]).strip()
+        if not GOAL_ID_PATTERN.fullmatch(goal_id):
+            raise LegacyGoalsError(
+                f"Legacy goal record is missing a valid canonical goal_id: {goal_id!r}."
+            )
+
+        goal_path = goal_file_path(goal_id)
+        if goal_path.exists():
+            skipped += 1
+            continue
+
+        _write_goal_file(normalized_goal)
+        migrated += 1
+
+    return {
+        "legacy_records": len(legacy_goals),
+        "migrated": migrated,
+        "skipped": skipped,
+    }
+
+
 __all__ = [
     "DATA_DIR",
     "FINIS_DIR",
@@ -309,4 +360,5 @@ __all__ = [
     "load_goal",
     "load_all_goals",
     "next_goal_id",
+    "migrate_legacy_goals",
 ]
