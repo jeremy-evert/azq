@@ -1,5 +1,6 @@
+.azq_codex_progress_stage1_wave_*.json
 .azq_codex_runs/
-.azq_codex_progress_stage1_wave_a.json
+codex_reports/
 
 
 # --------------------------------------------------
