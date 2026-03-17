@@ -263,8 +263,16 @@ def load_goal(goal_id: str) -> Optional[dict[str, Any]]:
     return parse_goal_markdown(goal_path.read_text(encoding="utf-8"))
 
 
-def load_all_goals() -> list[dict[str, Any]]:
-    """Load all canonical goal files in deterministic order."""
+def load_all_goals(*, migrate_legacy: bool = False) -> list[dict[str, Any]]:
+    """Load all canonical goal files in deterministic order.
+
+    When ``migrate_legacy`` is true, run the Stage 1 one-way migration trigger
+    first so callers read from canonical files even when legacy JSON still
+    needs to be materialized on disk.
+    """
+    if migrate_legacy:
+        ensure_canonical_goals_migrated()
+
     goals: list[dict[str, Any]] = []
     for goal_path in list_goal_files():
         goals.append(parse_goal_markdown(goal_path.read_text(encoding="utf-8")))
