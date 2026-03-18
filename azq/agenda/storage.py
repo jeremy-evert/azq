@@ -2,8 +2,9 @@
 
 Stage 3 starts with a single visible storage boundary for Agenda so narrower
 task, DAG, and log storage modules can grow behind this facade later without
-changing the package import surface. Canonical path ownership lives in
-``azq.agenda.paths`` and is re-exported here where useful.
+changing the package import surface. Canonical path ownership and task schema
+primitives live in focused sibling modules and are re-exported here where
+useful.
 """
 
 from azq.agenda.paths import (
@@ -26,6 +27,7 @@ from azq.agenda.paths import (
     task_file_path,
     task_log_file_path,
 )
+from azq.agenda.schemas import TASK_ID_PATTERN, normalize_task_record, task_id_number
 
 
 __all__ = [
@@ -39,6 +41,7 @@ __all__ = [
     "DAG_FILE_PREFIX",
     "DAG_FILE_SUFFIX",
     "TASK_LOG_FILE_SUFFIX",
+    "TASK_ID_PATTERN",
     "ensure_agenda_dirs",
     "ensure_tasks_dir",
     "ensure_dags_dir",
@@ -47,4 +50,6 @@ __all__ = [
     "dag_file_path",
     "task_log_file_path",
     "list_task_files",
+    "task_id_number",
+    "normalize_task_record",
 ]
