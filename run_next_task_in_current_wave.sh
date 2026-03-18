@@ -14,9 +14,7 @@ from pathlib import Path
 import azq_codex_stage1_task_runner as runner
 
 workspace = Path.cwd()
-unfinished = []
-
-for paths in runner.discover_stage1_waves(workspace):
+for paths in runner.discover_stage_waves(workspace):
     summary = runner.summarize_wave(paths, workspace)
     remaining = (
         summary.counts["pending"]
@@ -25,9 +23,10 @@ for paths in runner.discover_stage1_waves(workspace):
         + summary.counts["unknown"]
     )
     if remaining:
-        unfinished.append(summary.wave)
-
-print(unfinished[-1] if unfinished else "stage1_complete")
+        print(f"{paths.stage}:{summary.wave}")
+        break
+else:
+    print("all_complete")
 PY
   )
 }
@@ -42,25 +41,28 @@ print_report() {
 }
 
 print_wave_snapshot() {
-  local wave="$1"
+  local stage="$1"
+  local wave="$2"
 
   (
     cd "$WORKSPACE"
-    python - "$wave" <<'PY'
+    python - "$stage" "$wave" <<'PY'
 import sys
 from pathlib import Path
 
 import azq_codex_stage1_task_runner as runner
 
-wave = sys.argv[1]
+stage = int(sys.argv[1])
+wave = sys.argv[2]
 workspace = Path.cwd()
-wave_paths = runner.derive_wave_paths(wave)
+wave_paths = runner.derive_wave_paths(wave, stage)
 tasks_file, _checks_file, _warnings = runner.resolve_manifest_paths(workspace, wave_paths, None, None)
 state_file = workspace / wave_paths.state_file
 
 print()
 print("wave snapshot")
 print("=============")
+print(f"stage: {stage}")
 print(f"wave: {wave}")
 print(f"tasks file: {tasks_file.name}")
 print(f"state file: {state_file.name}")
@@ -79,20 +81,22 @@ PY
 }
 
 print_suggested_commit_message() {
-  local wave="$1"
+  local stage="$1"
+  local wave="$2"
 
   (
     cd "$WORKSPACE"
-    python - "$wave" <<'PY'
+    python - "$stage" "$wave" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 import azq_codex_stage1_task_runner as runner
 
-wave = sys.argv[1]
+stage = int(sys.argv[1])
+wave = sys.argv[2]
 workspace = Path.cwd()
-wave_paths = runner.derive_wave_paths(wave)
+wave_paths = runner.derive_wave_paths(wave, stage)
 tasks_file, _checks_file, _warnings = runner.resolve_manifest_paths(workspace, wave_paths, None, None)
 state_file = workspace / wave_paths.state_file
 
@@ -133,21 +137,22 @@ PY
 CURRENT_WAVE=$(select_current_wave)
 RUN_STATUS=0
 
-if [[ "$CURRENT_WAVE" == "stage1_complete" ]]; then
+if [[ "$CURRENT_WAVE" == "all_complete" ]]; then
   print_report
   echo
-  echo "No remaining Stage 1 tasks."
-  echo "Stage 1 Complete."
+  echo "No remaining staged tasks."
 else
-  echo "running next task in current wave: $CURRENT_WAVE"
+  CURRENT_STAGE=${CURRENT_WAVE%%:*}
+  CURRENT_WAVE_NAME=${CURRENT_WAVE#*:}
+  echo "running next task in current wave: stage $CURRENT_STAGE / $CURRENT_WAVE_NAME"
   set +e
-  python "$RUNNER" run --wave "$CURRENT_WAVE" --workspace "$WORKSPACE"
+  python "$RUNNER" run --stage "$CURRENT_STAGE" --wave "$CURRENT_WAVE_NAME" --workspace "$WORKSPACE"
   RUN_STATUS=$?
   set -e
 
   print_report
-  print_wave_snapshot "$CURRENT_WAVE"
-  print_suggested_commit_message "$CURRENT_WAVE"
+  print_wave_snapshot "$CURRENT_STAGE" "$CURRENT_WAVE_NAME"
+  print_suggested_commit_message "$CURRENT_STAGE" "$CURRENT_WAVE_NAME"
 fi
 
 exit "$RUN_STATUS"
