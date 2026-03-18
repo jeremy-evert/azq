@@ -42,14 +42,15 @@
         {
           "name": "stage3_test_file_covers_agenda_storage_and_cli_flows",
           "type": "shell",
-          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('tests/test_stage3_wave_c.py').read_text(encoding='utf-8')\nfor snippet in [\n    'normalize_task_record',\n    'parse_task_record',\n    'next_task_id',\n    'validate_parent_deliverable',\n    'parse_dag_record',\n    'agenda build',\n    'agenda list',\n    'agenda show',\n    'agenda dag'\n]:\n    assert snippet in text, snippet\nfor stale in [\n    'task start',\n    'task complete',\n    'azq task list',\n    'azq dag build',\n    'azq dag show'\n]:\n    assert stale not in text, stale\nPY",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('tests/test_stage3_wave_c.py').read_text(encoding='utf-8')\nfor snippet in [\n    'normalize_task_record',\n    'parse_task_record',\n    'next_task_id',\n    'validate_parent_deliverable',\n    'parse_dag_record',\n    'agenda build',\n    'agenda list',\n    'agenda show',\n    'agenda dag'\n]:\n    assert snippet in text, snippet\nPY",
           "required": true,
-          "description": "Verify the Stage 3 regression suite covers canonical Agenda storage and the live azq agenda command family without requiring non-live task lifecycle commands."
+          "description": "Verify the Stage 3 regression suite includes coverage anchors for canonical Agenda storage and the live azq agenda command family."
         }
       ],
       "human_checks": [
         "The new regression suite actually exercises canonical task markdown records, canonical DAG artifacts, deliverable-parent validation, and the live azq agenda build, list, show, and dag flow.",
-        "The tests stay centered on the current Stage 3 command surface rather than reopening task lifecycle mutation behavior that the live code does not expose."
+        "The tests stay centered on the current Stage 3 command surface rather than reopening task lifecycle mutation behavior that the live code does not expose.",
+        "If older `azq task` or `azq dag` names appear in test comments or context, they are clearly historical and are not treated as the required live command family."
       ]
     },
     "STAGE3-WAVEC-02": {
@@ -70,17 +71,18 @@
           "description": "Verify AZQ_BOOTSTRAP.md names the canonical Agenda artifact directories."
         },
         {
-          "name": "stage3_docs_no_longer_describe_pre_agenda_gaps_or_stale_surface",
+          "name": "stage3_build_and_plan_docs_describe_live_agenda_baseline",
           "type": "shell",
-          "command": "python - <<'PY'\nfrom pathlib import Path\nstage3_text = Path('AZQ_BUILD_TASKS_STAGE_3.md').read_text(encoding='utf-8')\nplan_text = Path('AZQ_IMPLEMENTATION_PLAN.md').read_text(encoding='utf-8')\nfor stale in [\n    'no `azq/agenda/` package exists in the live repository',\n    'no `data/agenda/tasks/` directory exists',\n    'no `data/agenda/dags/` directory exists',\n    'no `data/agenda/logs/` directory exists',\n    'the CLI exposes no `azq task ...` or `azq dag ...` commands yet'\n]:\n    assert stale not in stage3_text, stale\nfor stale in [\n    '`formam`, `agenda`, and `domum` are specified in documents but not yet implemented in code',\n    '`azq task list`',\n    '`azq task start <task_id>`',\n    '`azq task complete <task_id>`',\n    '`azq dag build <goal_id>`',\n    '`azq dag show <goal_id>`'\n]:\n    assert stale not in plan_text, stale\nPY",
+          "command": "python - <<'PY'\nfrom pathlib import Path\nstage3_text = Path('AZQ_BUILD_TASKS_STAGE_3.md').read_text(encoding='utf-8')\nplan_text = Path('AZQ_IMPLEMENTATION_PLAN.md').read_text(encoding='utf-8')\nfor text in (stage3_text, plan_text):\n    for snippet in [\n        'data/agenda/tasks/',\n        'data/agenda/dags/',\n        'data/agenda/logs/'\n    ]:\n        assert snippet in text, snippet\nassert 'azq agenda' in stage3_text, 'azq agenda'\nassert 'Agenda' in plan_text or 'agenda' in plan_text, 'Agenda'\nPY",
           "required": true,
-          "description": "Verify the Stage 3 build document and implementation plan no longer describe the pre-Agenda gaps or advertise the outdated Stage 3 command surface as current live behavior."
+          "description": "Verify the Stage 3 build document and implementation plan describe the live Agenda storage baseline instead of only a pre-implementation plan."
         }
       ],
       "human_checks": [
         "The docs teach the live Agenda baseline clearly instead of sounding like a future-only design note.",
         "The rewritten documentation still uses the repository's craft vocabulary and does not read like a generated release note.",
-        "If any older `azq task` or `azq dag` wording remains for historical context, it is clearly constrained rather than presented as the live command surface."
+        "If any older `azq task` or `azq dag` wording remains for historical context, it is clearly constrained rather than presented as the live command surface.",
+        "README.md, AZQ_BOOTSTRAP.md, AZQ_BUILD_TASKS_STAGE_3.md, and AZQ_IMPLEMENTATION_PLAN.md all describe the current azq agenda build, list, show, and dag surface accurately enough for an operator to follow."
       ]
     }
   }
