@@ -1,0 +1,167 @@
+[
+  {
+    "task_id": "STAGE3-WAVEB-01",
+    "title": "Implement azq agenda build as a thin deliverable-to-task writer",
+    "goal": "Make azq/agenda/build.py validate one exact canonical deliverable and create the first narrow file-backed Agenda task records on top of the Wave A storage helpers without turning Agenda into an execution engine.",
+    "files_to_create": [
+      "azq/agenda/build.py"
+    ],
+    "files_to_modify": [],
+    "depends_on": [],
+    "context": [
+      "Stage 3 Wave A already established canonical Agenda task, DAG, and log storage helpers under azq/agenda/.",
+      "The live repository uses router-based command families and thin command modules, so Wave B should mirror the healthy Stage 2 pattern rather than reopening storage work.",
+      "AZQ_BUILD_TASKS_STAGE_3.md is partially stale: it still says azq/agenda/ does not exist and frames the first commands as azq task or azq dag by goal_id, while the live repo already has Agenda storage modules and this wave is intentionally scoped to the first azq agenda command loop.",
+      "This first write path should stay deliverable-centered so Agenda remains downstream of canonical Formam deliverables instead of becoming a second planning system."
+    ],
+    "requirements": [
+      "Create azq/agenda/build.py.",
+      "Add a thin entrypoint such as build_agenda(deliverable_id).",
+      "Validate the parent deliverable by exact deliverable_id through the existing Agenda or Formam storage boundary.",
+      "Allocate the next stable TASK_### id through the existing Agenda storage helpers.",
+      "Generate one or more deterministic stub task records for that exact deliverable using the live canonical Agenda task schema.",
+      "Write canonical task files through existing Agenda storage helpers instead of writing files ad hoc.",
+      "Keep the first build behavior minimal, inspectable, and free of task execution, agent loops, or speculative planning logic."
+    ],
+    "acceptance_criteria": [
+      "A valid canonical deliverable can produce visible TASK_###.md artifact(s) under data/agenda/tasks/.",
+      "build.py delegates persistence and schema details to the existing Agenda storage layer instead of duplicating repository logic.",
+      "The first Agenda build behavior stays intentionally small, deterministic, and file-backed."
+    ],
+    "suggested_commit_message": "add agenda build command module for canonical task records"
+  },
+  {
+    "task_id": "STAGE3-WAVEB-02",
+    "title": "Implement azq agenda list as a thin presentation layer",
+    "goal": "Make azq/agenda/tasks.py provide a read-only listing view over canonical Agenda task storage so the first built tasks become visible from the command layer.",
+    "files_to_create": [
+      "azq/agenda/tasks.py"
+    ],
+    "files_to_modify": [],
+    "depends_on": [
+      "STAGE3-WAVEB-01"
+    ],
+    "context": [
+      "Wave B should expose read commands only after the first canonical Agenda write path exists.",
+      "The existing Stage 2 command pattern uses small presentation modules over shared storage helpers rather than embedding repository logic in the CLI.",
+      "Agenda task records are Markdown files and should remain inspectable and terminal-readable rather than hidden behind opaque command output."
+    ],
+    "requirements": [
+      "Create azq/agenda/tasks.py.",
+      "Add a read-only listing function such as list_tasks().",
+      "Load canonical tasks through the existing Agenda storage helpers.",
+      "Display at least task_id, deliverable_id, title, and status.",
+      "Keep the output simple, stable, and terminal-readable.",
+      "Preserve a clear no-tasks message when canonical Agenda storage is empty."
+    ],
+    "acceptance_criteria": [
+      "tasks.py can present canonical Agenda tasks without mutating task state.",
+      "The listing reads through shared Agenda storage helpers rather than duplicating repository logic.",
+      "The visible output stays focused on built tasks, not execution automation or later-stage artifact behavior."
+    ],
+    "suggested_commit_message": "add agenda task listing module"
+  },
+  {
+    "task_id": "STAGE3-WAVEB-03",
+    "title": "Implement azq agenda show with exact-id task inspection",
+    "goal": "Extend azq/agenda/tasks.py so one canonical Agenda task can be inspected clearly by exact task_id without broadening into start or complete behavior.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/agenda/tasks.py"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEB-02"
+    ],
+    "context": [
+      "Wave B is the first command-layer wave for Agenda and should prioritize useful read behavior before state-transition commands arrive in a later wave.",
+      "Exact task lookup matters because later Agenda state changes will depend on stable canonical TASK_### identifiers.",
+      "The live storage layer already validates parent deliverables on task load, so task inspection should remain a thin reader over that foundation."
+    ],
+    "requirements": [
+      "Add a reader such as show_task(task_id).",
+      "Load one task by exact task_id through the existing Agenda storage helpers.",
+      "Print the canonical task fields clearly, including deliverable linkage, dependencies, description, task intent metadata, execution notes, status, and created date.",
+      "Handle missing task ids with a readable exact-id failure message.",
+      "Keep output centered on canonical task inspection rather than execution or log mutation."
+    ],
+    "acceptance_criteria": [
+      "One canonical Agenda task can be inspected by exact id.",
+      "Missing tasks fail clearly without fuzzy matching.",
+      "tasks.py remains a presentation module over shared Agenda storage helpers."
+    ],
+    "suggested_commit_message": "add exact task inspection for agenda show"
+  },
+  {
+    "task_id": "STAGE3-WAVEB-04",
+    "title": "Implement azq agenda dag as a thin deliverable-scoped DAG refresher",
+    "goal": "Make azq/agenda/dags.py validate one exact canonical deliverable, derive its parent-goal view from existing Formam records and Agenda tasks, and write or refresh one visible canonical DAG artifact without broadening into execution flow.",
+    "files_to_create": [
+      "azq/agenda/dags.py"
+    ],
+    "files_to_modify": [
+      "azq/agenda/build.py"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEB-01",
+      "STAGE3-WAVEB-03"
+    ],
+    "context": [
+      "Wave A already created canonical DAG storage helpers, but no command-layer module currently turns those helpers into an operator-visible action.",
+      "AZQ_BUILD_TASKS_STAGE_3.md describes goal-level DAG artifacts, while this wave is intentionally deliverable-triggered by operator request; the narrow live-friendly approach is to resolve the exact deliverable first, then refresh the parent goal DAG from canonical Formam deliverables and Agenda tasks.",
+      "This command should stay file-backed and inspectable, preferring conservative edge derivation over smart planning."
+    ],
+    "requirements": [
+      "Create azq/agenda/dags.py.",
+      "Add a command-layer entrypoint such as build_deliverable_dag(deliverable_id) or agenda_dag(deliverable_id).",
+      "Validate the parent deliverable by exact deliverable_id through the existing storage boundary.",
+      "Resolve the parent goal from that deliverable and load canonical deliverables for the exact goal through Formam storage.",
+      "Load canonical Agenda tasks descended from those deliverables and build or refresh one GOAL_<goal_id>_DAG.json artifact through existing Agenda DAG storage helpers.",
+      "Keep dependency-edge derivation conservative and inspectable, using visible task and deliverable relationships rather than speculative planning structure.",
+      "Do not introduce task start, task completion, task logs, or automation beyond building and reading artifacts."
+    ],
+    "acceptance_criteria": [
+      "A deliverable with canonical parent records can refresh one visible DAG artifact under data/agenda/dags/.",
+      "dags.py remains a thin command-layer module over shared Formam and Agenda storage helpers.",
+      "The first DAG command stays narrow, deterministic, and visibly subordinate to existing deliverable and task artifacts."
+    ],
+    "suggested_commit_message": "add agenda dag command module for canonical dag refresh"
+  },
+  {
+    "task_id": "STAGE3-WAVEB-05",
+    "title": "Wire Agenda commands into the CLI",
+    "goal": "Expose the first usable Agenda command loop through a dedicated Agenda router and CLI module without broadening beyond the Stage 3 Wave B command set.",
+    "files_to_create": [
+      "azq/agenda/cli.py",
+      "azq/agenda/router.py"
+    ],
+    "files_to_modify": [
+      "azq/cli.py"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEB-01",
+      "STAGE3-WAVEB-02",
+      "STAGE3-WAVEB-03",
+      "STAGE3-WAVEB-04"
+    ],
+    "context": [
+      "The live top-level CLI delegates to engine routers for Scintilla, Finis, and Formam, but Agenda has no router or CLI module yet.",
+      "This wave is intentionally the first command-layer wave for Agenda, so CLI wiring should stop at build, list, show, and dag rather than reaching into start, complete, or wider Stage 3 closeout behavior.",
+      "The requested command family for this manifest is azq agenda ..., which is a deliberate live-repo judgment call even though older docs still describe azq task and azq dag command names."
+    ],
+    "requirements": [
+      "Create azq/agenda/cli.py and azq/agenda/router.py.",
+      "Add command help lines for azq agenda build <deliverable_id>, azq agenda list, azq agenda show <task_id>, and azq agenda dag <deliverable_id>.",
+      "Add an agenda branch in the new Agenda CLI module with clear usage messages for each supported subcommand.",
+      "Route build, list, show, and dag to the new azq/agenda command modules.",
+      "Update azq/cli.py to dispatch through the new Agenda router alongside the existing engine routers.",
+      "Keep command handling narrow and stylistically consistent with the existing router-based CLI.",
+      "Do not introduce start, complete, status, doctor, archive, or task-running behavior in this task."
+    ],
+    "acceptance_criteria": [
+      "The CLI exposes the first usable Agenda command loop through azq agenda ... routing.",
+      "azq agenda build, azq agenda list, azq agenda show, and azq agenda dag dispatch to dedicated Agenda modules.",
+      "CLI help and usage text stay aligned with the intentionally narrow Wave B scope."
+    ],
+    "suggested_commit_message": "wire agenda commands into cli"
+  }
+]
