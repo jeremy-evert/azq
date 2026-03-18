@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 WORKSPACE=${WORKSPACE:-$SCRIPT_DIR}
-RUNNER="$WORKSPACE/azq_codex_stage1_task_runner.py"
+RUNNER="$WORKSPACE/azq_codex_task_runner.py"
 
 section() {
   echo
@@ -16,7 +16,7 @@ select_current_wave() {
     cd "$WORKSPACE"
     python - <<'PY'
 from pathlib import Path
-import azq_codex_stage1_task_runner as runner
+import azq_codex_task_runner as runner
 
 workspace = Path.cwd()
 for paths in runner.discover_stage_waves(workspace):
@@ -52,7 +52,7 @@ print_wave_snapshot() {
     python - "$stage" "$wave" <<'PY'
 import sys
 from pathlib import Path
-import azq_codex_stage1_task_runner as runner
+import azq_codex_task_runner as runner
 
 stage = int(sys.argv[1])
 wave = sys.argv[2]
@@ -92,7 +92,7 @@ print_suggested_commit_message() {
 import json
 import sys
 from pathlib import Path
-import azq_codex_stage1_task_runner as runner
+import azq_codex_task_runner as runner
 
 stage = int(sys.argv[1])
 wave = sys.argv[2]
@@ -145,7 +145,7 @@ print_next_task_preview() {
 import json
 import sys
 from pathlib import Path
-import azq_codex_stage1_task_runner as runner
+import azq_codex_task_runner as runner
 
 stage = int(sys.argv[1])
 wave = sys.argv[2]

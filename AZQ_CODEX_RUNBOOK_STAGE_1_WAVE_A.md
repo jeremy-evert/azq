@@ -59,6 +59,9 @@ The primary task source for this runbook is the JSON list.
 
 Each Codex submission should use **one task object only**.
 
+The preferred staged runner entrypoint is `azq_codex_task_runner.py`.
+The older `azq_codex_stage1_task_runner.py` name remains only as a compatibility path for existing operator habits.
+
 ---
 
 ## Wave A Task Order
@@ -414,4 +417,3 @@ one check,
 one set.
 
 Then the next stone.
-
