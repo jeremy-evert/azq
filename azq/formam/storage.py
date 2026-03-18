@@ -130,6 +130,44 @@ def normalize_deliverable_record(
     }
 
 
+def normalize_goal_map_record(goal_map_record: dict[str, Any]) -> dict[str, Any]:
+    """Convert partial goal-map-shaped data into the Stage 2 map schema.
+
+    Fallbacks stay conservative so sparse map artifacts remain inspectable
+    without inventing structure that does not yet exist:
+    - ``deliverable_ids`` always becomes a list
+    - ``dependency_edges`` always becomes a list
+    - ``status`` defaults to ``draft``
+    - ``created`` becomes an empty string when missing
+    - ``notes`` becomes an empty string when missing
+    """
+
+    deliverable_ids = goal_map_record.get("deliverable_ids")
+    if deliverable_ids is None:
+        canonical_deliverable_ids: list[Any] = []
+    elif isinstance(deliverable_ids, list):
+        canonical_deliverable_ids = list(deliverable_ids)
+    else:
+        canonical_deliverable_ids = [deliverable_ids]
+
+    dependency_edges = goal_map_record.get("dependency_edges")
+    if dependency_edges is None:
+        canonical_dependency_edges: list[Any] = []
+    elif isinstance(dependency_edges, list):
+        canonical_dependency_edges = list(dependency_edges)
+    else:
+        canonical_dependency_edges = [dependency_edges]
+
+    return {
+        "goal_id": goal_map_record.get("goal_id", ""),
+        "deliverable_ids": canonical_deliverable_ids,
+        "dependency_edges": canonical_dependency_edges,
+        "status": goal_map_record.get("status", "draft"),
+        "created": goal_map_record.get("created", ""),
+        "notes": goal_map_record.get("notes", ""),
+    }
+
+
 def serialize_deliverable_markdown(deliverable_record: dict[str, Any]) -> str:
     """Serialize a canonical deliverable record into diff-friendly Markdown."""
     record = normalize_deliverable_record(deliverable_record)
@@ -374,6 +412,7 @@ __all__ = [
     "list_goal_map_files",
     "_deliverable_id_number",
     "normalize_deliverable_record",
+    "normalize_goal_map_record",
     "serialize_deliverable_record",
     "serialize_deliverable_markdown",
     "deliverable_to_markdown",
