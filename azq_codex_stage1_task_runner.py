@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AZQ Stage 1 Codex task runner and reporter."""
+"""AZQ Codex task runner and reporter for staged AZQ build waves."""
 from __future__ import annotations
 
 import argparse
@@ -13,14 +13,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
+DEFAULT_STAGE = 1
 DEFAULT_WAVE = "wave_a"
 DEFAULT_TEMPLATE_FILE = "AZQ_CODEX_PROMPT_TEMPLATE_STAGE_1.md"
 DEFAULT_REPORT_FILE = "codex_reports/codex_azq_task_status_report.md"
 DEFAULT_MAX_ATTEMPTS = 3
-TASKS_FILE_GLOB = "AZQ_BUILD_TASKS_STAGE_1_WAVE_*.json"
-TASKS_FILE_PATTERN = re.compile(r"^AZQ_BUILD_TASKS_STAGE_1_(WAVE_[A-Z0-9_]+)\.json$")
-CHECKS_FILE_GLOB = "AZQ_CHECKS_STAGE_1_WAVE_*.json"
-CHECKS_FILE_PATTERN = re.compile(r"^AZQ_CHECKS_STAGE_1_(WAVE_[A-Z0-9_]+)\.json$")
+TASKS_FILE_GLOB = "AZQ_BUILD_TASKS_STAGE_*_WAVE_*.json"
+TASKS_FILE_PATTERN = re.compile(r"^AZQ_BUILD_TASKS_STAGE_(\d+)_(WAVE_[A-Z0-9_]+)\.json$")
+CHECKS_FILE_GLOB = "AZQ_CHECKS_STAGE_*_WAVE_*.json"
+CHECKS_FILE_PATTERN = re.compile(r"^AZQ_CHECKS_STAGE_(\d+)_(WAVE_[A-Z0-9_]+)\.json$")
 
 
 @dataclass
@@ -41,6 +42,7 @@ class CheckResult:
 
 @dataclass
 class WavePaths:
+    stage: int
     wave: str
     tasks_file: str
     checks_file: str
@@ -60,6 +62,7 @@ class TaskSummary:
 
 @dataclass
 class WaveSummary:
+    stage: int
     wave: str
     tasks_file: str
     state_file: str
@@ -363,15 +366,27 @@ def wave_upper_token(wave: str) -> str:
     return normalize_wave_name(wave).upper()
 
 
-def derive_wave_paths(wave: str) -> WavePaths:
+def normalize_stage_number(raw_stage: int | str) -> int:
+    try:
+        stage = int(raw_stage)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Stage must be an integer like 1 or 2: {raw_stage}") from exc
+    if stage < 1:
+        raise ValueError(f"Stage must be >= 1: {raw_stage}")
+    return stage
+
+
+def derive_wave_paths(wave: str, stage: int | str = DEFAULT_STAGE) -> WavePaths:
+    stage_number = normalize_stage_number(stage)
     normalized = normalize_wave_name(wave)
     upper = wave_upper_token(normalized)
     return WavePaths(
+        stage=stage_number,
         wave=normalized,
-        tasks_file=f"AZQ_BUILD_TASKS_STAGE_1_{upper}.json",
-        checks_file=f"AZQ_CHECKS_STAGE_1_{upper}.json",
-        state_file=f".azq_codex_progress_stage1_{normalized}.json",
-        runs_dir=f".azq_codex_runs/stage1_{normalized}",
+        tasks_file=f"AZQ_BUILD_TASKS_STAGE_{stage_number}_{upper}.json",
+        checks_file=f"AZQ_CHECKS_STAGE_{stage_number}_{upper}.json",
+        state_file=f".azq_codex_progress_stage{stage_number}_{normalized}.json",
+        runs_dir=f".azq_codex_runs/stage{stage_number}_{normalized}",
     )
 
 
@@ -387,26 +402,37 @@ def normalize_task_status(raw_status: Optional[str]) -> str:
     return "unknown"
 
 
-def discover_stage1_waves(workspace: Path) -> List[WavePaths]:
+def wave_sort_key(paths: WavePaths) -> tuple[int, str]:
+    return paths.stage, paths.wave
+
+
+def discover_stage_waves(workspace: Path) -> List[WavePaths]:
     discovered: Dict[str, WavePaths] = {}
     for tasks_file in sorted(workspace.glob(TASKS_FILE_GLOB)):
         match = TASKS_FILE_PATTERN.match(tasks_file.name)
         if not match:
             continue
-        wave_paths = derive_wave_paths(match.group(1).lower())
-        discovered[wave_paths.wave] = wave_paths
+        stage, wave = match.groups()
+        wave_paths = derive_wave_paths(wave.lower(), stage)
+        discovered[f"stage{wave_paths.stage}:{wave_paths.wave}"] = wave_paths
 
     for checks_file in sorted(workspace.glob(CHECKS_FILE_GLOB)):
         match = CHECKS_FILE_PATTERN.match(checks_file.name)
         if not match:
             continue
-        wave_paths = derive_wave_paths(match.group(1).lower())
-        if wave_paths.wave in discovered:
+        stage, wave = match.groups()
+        wave_paths = derive_wave_paths(wave.lower(), stage)
+        key = f"stage{wave_paths.stage}:{wave_paths.wave}"
+        if key in discovered:
             continue
         if task_manifest_exists(checks_file):
-            discovered[wave_paths.wave] = wave_paths
+            discovered[key] = wave_paths
 
-    return [discovered[name] for name in sorted(discovered)]
+    return sorted(discovered.values(), key=wave_sort_key)
+
+
+def discover_stage1_waves(workspace: Path) -> List[WavePaths]:
+    return [paths for paths in discover_stage_waves(workspace) if paths.stage == 1]
 
 
 def resolve_manifest_paths(
@@ -469,6 +495,7 @@ def summarize_wave(paths: WavePaths, workspace: Path) -> WaveSummary:
         )
 
     return WaveSummary(
+        stage=paths.stage,
         wave=paths.wave,
         tasks_file=tasks_path.name,
         state_file=paths.state_file,
@@ -492,7 +519,7 @@ def render_markdown_report(summaries: List[WaveSummary], workspace: Path) -> str
             combined[key] += summary.counts[key]
 
     lines: List[str] = [
-        "# AZQ Stage 1 Task Status Report",
+        "# AZQ Task Status Report",
         "",
         f"Generated: {generated_at}",
         f"Workspace: `{workspace}`",
@@ -508,13 +535,13 @@ def render_markdown_report(summaries: List[WaveSummary], workspace: Path) -> str
         "",
         "## Per-wave summary",
         "",
-        "| Wave | Done | Pending | Failed | Active | Unknown | Total |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| Stage | Wave | Done | Pending | Failed | Active | Unknown | Total |",
+        "| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
 
     for summary in summaries:
         lines.append(
-            f"| `{summary.wave}` | {summary.counts['done']} | {summary.counts['pending']} | "
+            f"| {summary.stage} | `{summary.wave}` | {summary.counts['done']} | {summary.counts['pending']} | "
             f"{summary.counts['failed']} | {summary.counts['active']} | {summary.counts['unknown']} | {summary.tasks_present} |"
         )
 
@@ -522,7 +549,7 @@ def render_markdown_report(summaries: List[WaveSummary], workspace: Path) -> str
         lines.extend(
             [
                 "",
-                f"## {summary.wave}",
+                f"## stage{summary.stage}_{summary.wave}",
                 "",
                 f"- Tasks file: `{summary.tasks_file}`",
                 f"- State file: `{summary.state_file}`",
@@ -556,7 +583,7 @@ def render_markdown_report(summaries: List[WaveSummary], workspace: Path) -> str
 
 def write_status_report(workspace: Path, output: str) -> Path:
     report_path = (workspace / output).resolve()
-    summaries = [summarize_wave(paths, workspace) for paths in discover_stage1_waves(workspace)]
+    summaries = [summarize_wave(paths, workspace) for paths in discover_stage_waves(workspace)]
     markdown = render_markdown_report(summaries, workspace)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(markdown, encoding="utf-8")
@@ -565,7 +592,7 @@ def write_status_report(workspace: Path, output: str) -> Path:
 
 def resolve_run_paths(args: argparse.Namespace) -> tuple[WavePaths, Path, Path, Path, Optional[Path], Path, Path, List[str]]:
     workspace = Path(args.workspace).resolve()
-    wave_paths = derive_wave_paths(args.wave)
+    wave_paths = derive_wave_paths(args.wave, args.stage)
     tasks_file, checks_file, warnings = resolve_manifest_paths(workspace, wave_paths, args.tasks_file, args.checks_file)
     template_file = (workspace / args.prompt_template).resolve()
     state_file = (workspace / (args.state_file or wave_paths.state_file)).resolve()
@@ -594,9 +621,9 @@ def run_mode(args: argparse.Namespace) -> int:
         if str(exc) != "No remaining tasks found.":
             raise
         report_path = write_status_report(workspace, DEFAULT_REPORT_FILE)
-        print(f"No remaining tasks found in {args.wave}.")
+        print(f"No remaining tasks found in stage {args.stage} {args.wave}.")
         print(f"Wrote report: {report_path}")
-        print("Stage 1 Complete.")
+        print(f"Stage {args.stage} Complete.")
         return 0
     task_id = task["task_id"]
     task_slug = safe_task_slug(task_id)
@@ -631,6 +658,7 @@ def run_mode(args: argparse.Namespace) -> int:
             "attempt": attempt,
             "started_at": now_iso(),
             "dry_run": args.dry_run,
+            "stage": args.stage,
             "wave": args.wave,
             "checks_file": str(checks_file) if checks_file is not None else "",
             "codex_command": None if args.dry_run else [args.codex_bin, "exec", *args.codex_extra, "<prompt elided>"],
@@ -693,11 +721,12 @@ def report_mode(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run and report AZQ Stage 1 Codex task waves.")
+    parser = argparse.ArgumentParser(description="Run and report AZQ Codex task waves.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    run_parser = subparsers.add_parser("run", help="Run one Stage 1 task from the selected wave.")
+    run_parser = subparsers.add_parser("run", help="Run one task from the selected stage and wave.")
     run_parser.add_argument("--workspace", default=".", help="Repository root to run inside.")
+    run_parser.add_argument("--stage", type=int, default=DEFAULT_STAGE, help="Task stage to run, for example 1 or 2.")
     run_parser.add_argument("--wave", default=DEFAULT_WAVE, help="Task wave to run, for example wave_a or wave_b.")
     run_parser.add_argument("--task-id", help="Specific task_id to run. Defaults to the first unfinished task in the selected wave.")
     run_parser.add_argument("--tasks-file", help="Override the derived tasks file for the selected wave.")
@@ -711,7 +740,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--dry-run", action="store_true", help="Write prompt artifacts without invoking Codex.")
     run_parser.set_defaults(func=run_mode)
 
-    report_parser = subparsers.add_parser("report", help="Scan Stage 1 wave manifests and write a markdown task status report.")
+    report_parser = subparsers.add_parser("report", help="Scan staged wave manifests and write a markdown task status report.")
     report_parser.add_argument("--workspace", default=".", help="Repository root to inspect.")
     report_parser.add_argument("--output", default=DEFAULT_REPORT_FILE, help="Report path relative to the workspace root.")
     report_parser.set_defaults(func=report_mode)

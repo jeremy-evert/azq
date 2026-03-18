@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "AZQ Stage 2 Wave A Checks",
-  "purpose": "Define task-specific automated checks for Stage 2 Wave A so the Codex runner can evaluate the current Formam storage-foundation tasks without hardcoding all task logic.",
+  "purpose": "Define task-specific automated checks for Stage 2 Wave A so the Codex runner can evaluate the Formam storage-foundation tasks without hardcoding task logic into the runner.",
   "defaults": {
     "retry_cap": 3,
     "baseline_checks": [
@@ -17,7 +17,7 @@
         "type": "shell",
         "command": "python -c \"import azq.formam.storage\"",
         "required": true,
-        "description": "Verify the new Formam storage module imports cleanly."
+        "description": "Verify the Formam storage module imports cleanly."
       }
     ]
   },
@@ -42,11 +42,18 @@
       "description": "Add canonical Formam path constants and directory helpers.",
       "checks": [
         {
-          "name": "formam_path_helpers_smoke",
+          "name": "formam_path_helpers_exist",
           "type": "python",
           "required": true,
-          "description": "Verify Formam path and directory helpers exist for canonical deliverable and goal-map storage.",
-          "code": "from azq.formam import storage\nassert any(hasattr(storage, name) for name in ['FORM_DIR', 'DATA_FORM_DIR'])\nassert any(hasattr(storage, name) for name in ['DELIVERABLES_DIR', 'FORM_DELIVERABLES_DIR'])\nassert any(hasattr(storage, name) for name in ['MAPS_DIR', 'FORM_MAPS_DIR'])\nassert any(hasattr(storage, name) for name in ['deliverable_file_path', 'get_deliverable_path'])\nassert any(hasattr(storage, name) for name in ['goal_map_path', 'map_file_path', 'get_goal_map_path'])\nassert any(hasattr(storage, name) for name in ['list_deliverable_files', 'list_form_files', 'list_deliverables'])\nassert any(hasattr(storage, name) for name in ['ensure_form_dirs', 'ensure_formam_dirs', 'ensure_deliverables_dir', 'ensure_maps_dir'])"
+          "description": "Verify canonical Formam path constants and directory helpers exist.",
+          "code": "from azq.formam import storage\nassert hasattr(storage, 'DATA_DIR')\nassert hasattr(storage, 'FORM_DIR')\nassert hasattr(storage, 'DELIVERABLES_DIR')\nassert hasattr(storage, 'MAPS_DIR')\nassert hasattr(storage, 'ensure_form_dirs')\nassert hasattr(storage, 'deliverable_file_path')\nassert hasattr(storage, 'goal_map_file_path')\nassert hasattr(storage, 'list_deliverable_files')\nassert hasattr(storage, 'list_goal_map_files')"
+        },
+        {
+          "name": "formam_directory_helpers_behave",
+          "type": "python",
+          "required": true,
+          "description": "Verify Formam directory helpers create canonical directories and path helpers resolve deterministically.",
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.formam import storage\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    storage.FORM_DIR = tmp_path / 'form'\n    storage.DELIVERABLES_DIR = storage.FORM_DIR / 'deliverables'\n    storage.MAPS_DIR = storage.FORM_DIR / 'maps'\n    storage.ensure_form_dirs()\n    assert storage.DELIVERABLES_DIR.is_dir()\n    assert storage.MAPS_DIR.is_dir()\n    assert storage.deliverable_file_path('DELIV_001') == storage.DELIVERABLES_DIR / 'DELIV_001.md'\n    assert storage.goal_map_file_path('FINIS_001') == storage.MAPS_DIR / 'GOAL_FINIS_001_MAP.md'"
         }
       ],
       "human_checks": [
@@ -62,7 +69,7 @@
           "type": "python",
           "required": true,
           "description": "Verify a partial deliverable record normalizes into the canonical Stage 2 schema.",
-          "code": "from azq.formam import storage\npartial = {'deliverable_id': 'DELIV_001', 'goal_id': 'FINIS_001', 'title': 'Test deliverable'}\nfn = getattr(storage, 'normalize_deliverable_record', None) or getattr(storage, 'normalize_deliverable', None)\nassert fn is not None, 'normalization helper not found'\nresult = fn(partial)\nfor field in ['deliverable_id', 'goal_id', 'title', 'artifact_description', 'dependencies', 'status', 'created']:\n    assert field in result, f'missing field: {field}'\nassert result['deliverable_id'] == 'DELIV_001'\nassert result['goal_id'] == 'FINIS_001'\nassert result['title'] == 'Test deliverable'\nassert isinstance(result['dependencies'], list)"
+          "code": "from azq.formam import storage\npartial = {\n    'deliverable_id': 'DELIV_001',\n    'goal_id': 'FINIS_001',\n    'title': 'Test deliverable'\n}\nassert hasattr(storage, 'normalize_deliverable_record')\nresult = storage.normalize_deliverable_record(partial)\nfor field in ['deliverable_id', 'goal_id', 'title', 'artifact_description', 'dependencies', 'status', 'created']:\n    assert field in result, f'missing field: {field}'\nassert result['deliverable_id'] == 'DELIV_001'\nassert result['goal_id'] == 'FINIS_001'\nassert result['title'] == 'Test deliverable'\nassert isinstance(result['dependencies'], list)"
         }
       ],
       "human_checks": [
@@ -78,7 +85,7 @@
           "type": "python",
           "required": true,
           "description": "Verify a canonical deliverable record can round-trip through markdown serialization and parsing.",
-          "code": "from azq.formam import storage\nrecord = {\n    'deliverable_id': 'DELIV_001',\n    'goal_id': 'FINIS_001',\n    'title': 'Round trip test',\n    'artifact_description': 'Produce a visible artifact',\n    'dependencies': ['DELIV_000'],\n    'status': 'drafted',\n    'created': '2026-03-17T00:00:00'\n}\nserializer = getattr(storage, 'serialize_deliverable_record', None) or getattr(storage, 'deliverable_to_markdown', None)\nparser = getattr(storage, 'parse_deliverable_record', None) or getattr(storage, 'deliverable_from_markdown', None)\nassert serializer is not None, 'serializer not found'\nassert parser is not None, 'parser not found'\ntext = serializer(record)\nparsed = parser(text)\nfor field in ['deliverable_id', 'goal_id', 'title', 'artifact_description', 'dependencies', 'status', 'created']:\n    assert parsed[field] == record[field], f'round-trip mismatch: {field}'"
+          "code": "from azq.formam import storage\nrecord = {\n    'deliverable_id': 'DELIV_001',\n    'goal_id': 'FINIS_001',\n    'title': 'Round trip test',\n    'artifact_description': 'Produce a visible artifact',\n    'dependencies': ['DELIV_000'],\n    'status': 'drafted',\n    'created': '2026-03-17T00:00:00'\n}\nassert hasattr(storage, 'serialize_deliverable_record')\nassert hasattr(storage, 'parse_deliverable_record')\ntext = storage.serialize_deliverable_record(record)\nparsed = storage.parse_deliverable_record(text)\nfor field in ['deliverable_id', 'goal_id', 'title', 'artifact_description', 'dependencies', 'status', 'created']:\n    assert parsed[field] == record[field], f'round-trip mismatch: {field}'"
         }
       ],
       "human_checks": [
@@ -94,14 +101,14 @@
           "type": "python",
           "required": true,
           "description": "Verify file-backed read helpers and next-id allocation helpers exist.",
-          "code": "from azq.formam import storage\nassert any(hasattr(storage, name) for name in ['load_deliverable', 'load_deliverable_by_id']), 'missing single-deliverable loader'\nassert any(hasattr(storage, name) for name in ['load_all_deliverables', 'load_deliverables']), 'missing all-deliverables loader'\nassert any(hasattr(storage, name) for name in ['load_deliverables_for_goal', 'load_goal_deliverables']), 'missing goal deliverables loader'\nassert any(hasattr(storage, name) for name in ['next_deliverable_id', 'get_next_deliverable_id']), 'missing next-id helper'"
+          "code": "from azq.formam import storage\nassert hasattr(storage, 'load_deliverable')\nassert hasattr(storage, 'load_all_deliverables')\nassert hasattr(storage, 'load_deliverables_for_goal')\nassert hasattr(storage, 'next_deliverable_id')"
         },
         {
           "name": "deliverable_repository_helpers_behave_deterministically",
           "type": "python",
           "required": true,
           "description": "Verify deliverable repository helpers can load records and compute the next id from canonical files.",
-          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.formam import storage\nserializer = getattr(storage, 'serialize_deliverable_record', None) or getattr(storage, 'deliverable_to_markdown', None)\npath_for = getattr(storage, 'deliverable_file_path', None) or getattr(storage, 'get_deliverable_path', None)\nload_one = getattr(storage, 'load_deliverable', None) or getattr(storage, 'load_deliverable_by_id', None)\nload_all = getattr(storage, 'load_all_deliverables', None) or getattr(storage, 'load_deliverables', None)\nload_for_goal = getattr(storage, 'load_deliverables_for_goal', None) or getattr(storage, 'load_goal_deliverables', None)\nnext_id = getattr(storage, 'next_deliverable_id', None) or getattr(storage, 'get_next_deliverable_id', None)\nassert serializer is not None and path_for is not None\nassert load_one is not None and load_all is not None and load_for_goal is not None and next_id is not None\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    deliverables_attr = 'DELIVERABLES_DIR' if hasattr(storage, 'DELIVERABLES_DIR') else 'FORM_DELIVERABLES_DIR'\n    setattr(storage, deliverables_attr, tmp_path / 'deliverables')\n    getattr(storage, deliverables_attr).mkdir(parents=True, exist_ok=True)\n    records = [\n        {\n            'deliverable_id': 'DELIV_001',\n            'goal_id': 'FINIS_001',\n            'title': 'First deliverable',\n            'artifact_description': 'desc 1',\n            'dependencies': [],\n            'status': 'drafted',\n            'created': '2026-03-17'\n        },\n        {\n            'deliverable_id': 'DELIV_002',\n            'goal_id': 'FINIS_001',\n            'title': 'Second deliverable',\n            'artifact_description': 'desc 2',\n            'dependencies': ['DELIV_001'],\n            'status': 'drafted',\n            'created': '2026-03-17'\n        }\n    ]\n    for record in records:\n        path_for(record['deliverable_id']).write_text(serializer(record), encoding='utf-8')\n    assert load_one('DELIV_001')['title'] == 'First deliverable'\n    assert [item['deliverable_id'] for item in load_all()] == ['DELIV_001', 'DELIV_002']\n    assert [item['deliverable_id'] for item in load_for_goal('FINIS_001')] == ['DELIV_001', 'DELIV_002']\n    assert next_id() == 'DELIV_003'"
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.formam import storage\nrecord_1 = {\n    'deliverable_id': 'DELIV_001',\n    'goal_id': 'FINIS_001',\n    'title': 'First deliverable',\n    'artifact_description': 'desc 1',\n    'dependencies': [],\n    'status': 'drafted',\n    'created': '2026-03-17'\n}\nrecord_2 = {\n    'deliverable_id': 'DELIV_002',\n    'goal_id': 'FINIS_001',\n    'title': 'Second deliverable',\n    'artifact_description': 'desc 2',\n    'dependencies': ['DELIV_001'],\n    'status': 'drafted',\n    'created': '2026-03-17'\n}\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    storage.FORM_DIR = tmp_path / 'form'\n    storage.DELIVERABLES_DIR = storage.FORM_DIR / 'deliverables'\n    storage.MAPS_DIR = storage.FORM_DIR / 'maps'\n    storage.ensure_form_dirs()\n    storage.deliverable_file_path('DELIV_001').write_text(storage.serialize_deliverable_record(record_1), encoding='utf-8')\n    storage.deliverable_file_path('DELIV_002').write_text(storage.serialize_deliverable_record(record_2), encoding='utf-8')\n    assert storage.load_deliverable('DELIV_001')['title'] == 'First deliverable'\n    assert [item['deliverable_id'] for item in storage.load_all_deliverables()] == ['DELIV_001', 'DELIV_002']\n    assert [item['deliverable_id'] for item in storage.load_deliverables_for_goal('FINIS_001')] == ['DELIV_001', 'DELIV_002']\n    assert storage.next_deliverable_id() == 'DELIV_003'"
         }
       ],
       "human_checks": [
@@ -117,14 +124,14 @@
           "type": "python",
           "required": true,
           "description": "Verify Formam exposes a dedicated goal validation helper.",
-          "code": "from azq.formam import storage\nassert any(hasattr(storage, name) for name in ['validate_goal_id', 'validate_parent_goal', 'require_goal']), 'missing goal validation helper'"
+          "code": "from azq.formam import storage\nassert hasattr(storage, 'validate_parent_goal')"
         },
         {
           "name": "goal_validation_checks_exact_goal_id",
           "type": "python",
           "required": true,
-          "description": "Verify the goal validation helper can be driven with an exact canonical goal id.",
-          "code": "from unittest.mock import patch\nfrom azq.formam import storage\nvalidator = getattr(storage, 'validate_goal_id', None) or getattr(storage, 'validate_parent_goal', None) or getattr(storage, 'require_goal', None)\nassert validator is not None\nwith patch('azq.finis.storage.load_goal', return_value={'goal_id': 'FINIS_001', 'title': 'Parent goal', 'status': 'active', 'created': '', 'description': '', 'derived_from': []}):\n    result = validator('FINIS_001')\nassert result is not None"
+          "description": "Verify the goal validation helper succeeds for a present canonical goal and fails for a missing one.",
+          "code": "from unittest.mock import patch\nfrom azq.formam import storage\nwith patch('azq.finis.storage.load_goal', return_value={'goal_id': 'FINIS_001', 'title': 'Parent goal', 'status': 'active', 'created': '', 'description': '', 'derived_from': []}):\n    result = storage.validate_parent_goal('FINIS_001')\n    assert result['goal_id'] == 'FINIS_001'\nwith patch('azq.finis.storage.load_goal', return_value=None):\n    try:\n        storage.validate_parent_goal('FINIS_999')\n    except Exception:\n        pass\n    else:\n        raise AssertionError('missing parent goal should fail validation')"
         }
       ],
       "human_checks": [
@@ -140,7 +147,7 @@
           "type": "python",
           "required": true,
           "description": "Verify a partial goal-map record normalizes into the canonical Stage 2 map schema.",
-          "code": "from azq.formam import storage\npartial = {'goal_id': 'FINIS_001', 'deliverable_ids': ['DELIV_001']}\nfn = getattr(storage, 'normalize_goal_map_record', None) or getattr(storage, 'normalize_goal_map', None)\nassert fn is not None, 'goal map normalization helper not found'\nresult = fn(partial)\nfor field in ['goal_id', 'deliverable_ids', 'dependency_edges', 'status', 'created', 'notes']:\n    assert field in result, f'missing field: {field}'\nassert result['goal_id'] == 'FINIS_001'\nassert isinstance(result['deliverable_ids'], list)\nassert isinstance(result['dependency_edges'], list)"
+          "code": "from azq.formam import storage\npartial = {\n    'goal_id': 'FINIS_001',\n    'deliverable_ids': ['DELIV_001']\n}\nassert hasattr(storage, 'normalize_goal_map_record')\nresult = storage.normalize_goal_map_record(partial)\nfor field in ['goal_id', 'deliverable_ids', 'dependency_edges', 'status', 'created', 'notes']:\n    assert field in result, f'missing field: {field}'\nassert result['goal_id'] == 'FINIS_001'\nassert isinstance(result['deliverable_ids'], list)\nassert isinstance(result['dependency_edges'], list)"
         }
       ],
       "human_checks": [
@@ -156,7 +163,7 @@
           "type": "python",
           "required": true,
           "description": "Verify a canonical goal-map record can round-trip through markdown serialization and parsing.",
-          "code": "from azq.formam import storage\nrecord = {\n    'goal_id': 'FINIS_001',\n    'deliverable_ids': ['DELIV_001', 'DELIV_002'],\n    'dependency_edges': ['DELIV_001 -> DELIV_002'],\n    'status': 'mapped',\n    'created': '2026-03-17T00:00:00',\n    'notes': 'Initial dependency sketch'\n}\nserializer = getattr(storage, 'serialize_goal_map_record', None) or getattr(storage, 'goal_map_to_markdown', None)\nparser = getattr(storage, 'parse_goal_map_record', None) or getattr(storage, 'goal_map_from_markdown', None)\nassert serializer is not None, 'goal map serializer not found'\nassert parser is not None, 'goal map parser not found'\ntext = serializer(record)\nparsed = parser(text)\nfor field in ['goal_id', 'deliverable_ids', 'dependency_edges', 'status', 'created', 'notes']:\n    assert parsed[field] == record[field], f'round-trip mismatch: {field}'"
+          "code": "from azq.formam import storage\nrecord = {\n    'goal_id': 'FINIS_001',\n    'deliverable_ids': ['DELIV_001', 'DELIV_002'],\n    'dependency_edges': ['DELIV_001 -> DELIV_002'],\n    'status': 'mapped',\n    'created': '2026-03-17T00:00:00',\n    'notes': 'Initial dependency sketch'\n}\nassert hasattr(storage, 'serialize_goal_map_record')\nassert hasattr(storage, 'parse_goal_map_record')\ntext = storage.serialize_goal_map_record(record)\nparsed = storage.parse_goal_map_record(text)\nfor field in ['goal_id', 'deliverable_ids', 'dependency_edges', 'status', 'created', 'notes']:\n    assert parsed[field] == record[field], f'round-trip mismatch: {field}'"
         }
       ],
       "human_checks": [
@@ -172,14 +179,14 @@
           "type": "python",
           "required": true,
           "description": "Verify storage.py exposes canonical write helpers for both deliverables and goal maps.",
-          "code": "from azq.formam import storage\nassert any(hasattr(storage, name) for name in ['write_deliverable', 'save_deliverable', 'upsert_deliverable']), 'missing deliverable write helper'\nassert any(hasattr(storage, name) for name in ['write_goal_map', 'save_goal_map', 'upsert_goal_map']), 'missing goal map write helper'"
+          "code": "from azq.formam import storage\nassert hasattr(storage, 'write_deliverable')\nassert hasattr(storage, 'write_goal_map')"
         },
         {
           "name": "formam_write_helpers_write_canonical_files",
           "type": "python",
           "required": true,
           "description": "Verify one normalized deliverable and one normalized goal map can be persisted as canonical Formam files.",
-          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.formam import storage\nwrite_deliverable = getattr(storage, 'write_deliverable', None) or getattr(storage, 'save_deliverable', None) or getattr(storage, 'upsert_deliverable', None)\nwrite_goal_map = getattr(storage, 'write_goal_map', None) or getattr(storage, 'save_goal_map', None) or getattr(storage, 'upsert_goal_map', None)\nassert write_deliverable is not None, 'deliverable write helper not found'\nassert write_goal_map is not None, 'goal map write helper not found'\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    deliverables_attr = 'DELIVERABLES_DIR' if hasattr(storage, 'DELIVERABLES_DIR') else 'FORM_DELIVERABLES_DIR'\n    maps_attr = 'MAPS_DIR' if hasattr(storage, 'MAPS_DIR') else 'FORM_MAPS_DIR'\n    setattr(storage, deliverables_attr, tmp_path / 'deliverables')\n    setattr(storage, maps_attr, tmp_path / 'maps')\n    deliverable_record = {\n        'deliverable_id': 'DELIV_123',\n        'goal_id': 'FINIS_001',\n        'title': 'Write helper test',\n        'artifact_description': 'Produce a stable artifact',\n        'dependencies': [],\n        'status': 'drafted',\n        'created': '2026-03-17'\n    }\n    goal_map_record = {\n        'goal_id': 'FINIS_001',\n        'deliverable_ids': ['DELIV_123'],\n        'dependency_edges': [],\n        'status': 'mapped',\n        'created': '2026-03-17',\n        'notes': ''\n    }\n    deliverable_path = write_deliverable(deliverable_record)\n    goal_map_path = write_goal_map(goal_map_record)\n    assert deliverable_path.is_file(), 'canonical deliverable file was not written'\n    assert goal_map_path.is_file(), 'canonical goal map file was not written'\n    assert deliverable_path.name == 'DELIV_123.md'\n    assert goal_map_path.name == 'GOAL_FINIS_001_MAP.md'"
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.formam import storage\ndeliverable_record = {\n    'deliverable_id': 'DELIV_123',\n    'goal_id': 'FINIS_001',\n    'title': 'Write helper test',\n    'artifact_description': 'Produce a stable artifact',\n    'dependencies': [],\n    'status': 'drafted',\n    'created': '2026-03-17'\n}\ngoal_map_record = {\n    'goal_id': 'FINIS_001',\n    'deliverable_ids': ['DELIV_123'],\n    'dependency_edges': [],\n    'status': 'mapped',\n    'created': '2026-03-17',\n    'notes': ''\n}\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    storage.FORM_DIR = tmp_path / 'form'\n    storage.DELIVERABLES_DIR = storage.FORM_DIR / 'deliverables'\n    storage.MAPS_DIR = storage.FORM_DIR / 'maps'\n    storage.ensure_form_dirs()\n    deliverable_path = storage.write_deliverable(deliverable_record)\n    goal_map_path = storage.write_goal_map(goal_map_record)\n    assert deliverable_path.is_file(), 'canonical deliverable file was not written'\n    assert goal_map_path.is_file(), 'canonical goal map file was not written'\n    assert deliverable_path.name == 'DELIV_123.md'\n    assert goal_map_path.name == 'GOAL_FINIS_001_MAP.md'"
         }
       ],
       "human_checks": [
