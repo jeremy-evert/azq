@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "AZQ Stage 2 Wave D Checks",
-  "purpose": "Define task-specific automated checks for Stage 2 Wave D so the Codex runner can evaluate the Stage 2 refactor-prep work without hardcoding Wave D architecture logic into the runner.",
+  "purpose": "Define behavior-first checks for the Stage 2 Wave D refactor-prep wave so Formam can be cleaned up for Stage 3 without drifting from the live Stage 2 baseline.",
   "defaults": {
     "retry_cap": 3,
     "baseline_checks": [
@@ -10,197 +10,189 @@
         "type": "shell",
         "command": "python -m compileall azq",
         "required": true,
-        "description": "Verify the azq package still compiles after the refactor patch."
+        "description": "Verify the azq package still compiles after the refactor."
       },
       {
-        "name": "stage2_regression_suite",
+        "name": "stage_regression_suite",
         "type": "shell",
-        "command": "python -m pytest -q tests/test_stage2_wave_c.py",
+        "command": "python -m unittest discover -s tests -v",
         "required": true,
-        "description": "Verify the existing Stage 2 regression suite still passes while Wave D refactors preserve behavior."
+        "description": "Verify the existing regression suite still passes."
       },
       {
-        "name": "formam_modules_import",
+        "name": "formam_imports",
         "type": "shell",
-        "command": "python -c \"import azq.formam.storage, azq.formam.build, azq.formam.deliverables, azq.formam.maps\"",
+        "command": "python - <<'PY'\nimport azq.formam.storage\nimport azq.formam.build\nimport azq.formam.deliverables\nimport azq.formam.maps\nPY",
         "required": true,
-        "description": "Verify the live Formam command and storage modules still import cleanly."
+        "description": "Verify the current public Formam modules still import cleanly."
       },
       {
-        "name": "ritual_shell_syntax",
+        "name": "ritual_script_parses",
         "type": "shell",
         "command": "bash -n run_next_task_in_current_wave.sh",
         "required": true,
-        "description": "Verify the ritual shell wrapper still parses cleanly."
+        "description": "Verify the ritual runner shell script still parses."
       }
     ]
   },
   "tasks": {
     "STAGE2-WAVED-01": {
-      "description": "Extract Formam path and schema primitives into focused modules.",
+      "description": "Split Formam path and schema primitives out of storage.py while preserving the Stage 2 public surface.",
       "checks": [
         {
-          "name": "formam_path_and_schema_modules_exist",
+          "name": "paths_and_schemas_modules_exist",
           "type": "shell",
-          "command": "test -f azq/formam/paths.py && test -f azq/formam/schemas.py",
+          "command": "python - <<'PY'\nfrom pathlib import Path\nassert Path('azq/formam/paths.py').is_file(), 'missing azq/formam/paths.py'\nassert Path('azq/formam/schemas.py').is_file(), 'missing azq/formam/schemas.py'\nPY",
           "required": true,
-          "description": "Verify the new focused Formam paths and schemas modules exist."
+          "description": "Verify the new paths and schemas modules exist."
         },
         {
-          "name": "formam_path_and_schema_modules_import_cleanly",
+          "name": "paths_and_schemas_expose_expected_helpers",
           "type": "python",
           "required": true,
-          "description": "Verify the extracted Formam path and schema modules import cleanly and storage still exposes the public Stage 2 helpers.",
-          "code": "from azq.formam import paths, schemas, storage\nfor name in ['ensure_form_dirs', 'deliverable_file_path', 'goal_map_file_path']:\n    assert hasattr(paths, name), name\nfor name in ['normalize_deliverable_record', 'normalize_goal_map_record']:\n    assert hasattr(schemas, name), name\nfor name in ['ensure_form_dirs', 'deliverable_file_path', 'goal_map_file_path', 'normalize_deliverable_record', 'normalize_goal_map_record']:\n    assert hasattr(storage, name), name"
+          "description": "Verify the extracted modules expose the core path and schema helpers while storage.py remains import-compatible.",
+          "code": "import azq.formam.storage as storage\nimport azq.formam.paths as paths\nimport azq.formam.schemas as schemas\nfor name in ['DATA_DIR', 'FORM_DIR', 'DELIVERABLES_DIR', 'MAPS_DIR', 'ensure_form_dirs']:\n    assert hasattr(paths, name), f'missing paths helper: {name}'\nfor name in ['normalize_deliverable_record', 'normalize_goal_map_record']:\n    assert hasattr(schemas, name), f'missing schema helper: {name}'\nfor name in ['write_deliverable', 'write_goal_map', 'load_deliverable', 'load_goal_map']:\n    assert hasattr(storage, name), f'storage.py lost public helper: {name}'"
         }
       ],
       "human_checks": [
-        "azq/formam/storage.py is visibly narrower after the extraction and no longer reads like the only home for every Formam concern.",
-        "The new module names feel intuitive to an operator or contributor reading the tree for the first time.",
-        "No new craft-layer behavior was introduced while extracting paths and schemas."
+        "Keep path constants and normalization primitives in the extracted modules, not smeared across storage.py.",
+        "storage.py should still feel like a compatibility and repository surface, not a junk drawer."
       ]
     },
     "STAGE2-WAVED-02": {
-      "description": "Extract deliverable repository and markdown helpers from Formam storage.",
+      "description": "Extract deliverable storage helpers into a focused deliverable storage module without breaking the Stage 2 build/list/show path.",
       "checks": [
         {
           "name": "deliverable_storage_module_exists",
           "type": "shell",
-          "command": "test -f azq/formam/deliverable_storage.py",
+          "command": "python - <<'PY'\nfrom pathlib import Path\nassert Path('azq/formam/deliverable_storage.py').is_file(), 'missing azq/formam/deliverable_storage.py'\nPY",
           "required": true,
-          "description": "Verify the dedicated deliverable storage module exists."
+          "description": "Verify the deliverable storage module exists."
         },
         {
-          "name": "deliverable_storage_module_exposes_core_helpers",
+          "name": "deliverable_storage_round_trip_works",
           "type": "python",
           "required": true,
-          "description": "Verify the extracted deliverable storage module exposes the core Stage 2 deliverable helpers.",
-          "code": "from azq.formam import deliverable_storage\nfor name in ['serialize_deliverable_record', 'parse_deliverable_record', 'load_all_deliverables', 'load_deliverable', 'next_deliverable_id', 'write_deliverable']:\n    assert hasattr(deliverable_storage, name), name\nassert hasattr(deliverable_storage, 'load_goal_deliverables') or hasattr(deliverable_storage, 'load_deliverables_for_goal')"
+          "description": "Verify the extracted deliverable storage layer can normalize, write, read, and list canonical deliverables.",
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.formam import deliverable_storage\nwith TemporaryDirectory() as tmp:\n    root = Path(tmp)\n    deliverable_storage.FORM_DIR = root / 'data' / 'form'\n    deliverable_storage.DELIVERABLES_DIR = deliverable_storage.FORM_DIR / 'deliverables'\n    deliverable_storage.MAPS_DIR = deliverable_storage.FORM_DIR / 'maps'\n    deliverable_storage.ensure_form_dirs()\n    record = {\n        'deliverable_id': 'FORM_001',\n        'goal_id': 'FINIS_001',\n        'title': 'First deliverable',\n        'artifact_description': 'Describe the artifact.',\n        'dependencies': [],\n        'status': 'defined'\n    }\n    path = deliverable_storage.write_deliverable(record)\n    assert path.is_file(), 'deliverable file was not written'\n    loaded = deliverable_storage.load_deliverable('FORM_001')\n    assert loaded['deliverable_id'] == 'FORM_001'\n    assert loaded['goal_id'] == 'FINIS_001'\n    assert loaded['title'] == 'First deliverable'\n    all_items = deliverable_storage.load_all_deliverables()\n    assert len(all_items) == 1, all_items"
         },
         {
-          "name": "build_and_deliverables_reference_extracted_deliverable_module",
+          "name": "build_and_deliverables_modules_still_import",
           "type": "shell",
-          "command": "python - <<'PY'\nfrom pathlib import Path\nfor path in ['azq/formam/build.py', 'azq/formam/deliverables.py']:\n    text = Path(path).read_text(encoding='utf-8')\n    assert 'deliverable_storage' in text, path\nPY",
+          "command": "python - <<'PY'\nimport azq.formam.build\nimport azq.formam.deliverables\nPY",
           "required": true,
-          "description": "Verify the command-layer modules reference the extracted deliverable storage module instead of relying only on the old grab-bag storage file."
+          "description": "Verify the build/list/show path still imports cleanly after the extraction."
         }
       ],
       "human_checks": [
-        "build.py and deliverables.py now depend on a clearer deliverable-specific boundary rather than reaching into a catch-all storage module.",
-        "The extracted module preserves the canonical DELIV_### markdown format and deterministic repository behavior."
+        "The extracted deliverable module should own deliverable repository behavior, not just re-export one big storage blob.",
+        "The Stage 2 public commands should still read as thin command or presentation layers over storage."
       ]
     },
     "STAGE2-WAVED-03": {
-      "description": "Extract goal-map repository helpers and move dependency-edge derivation beside map logic.",
+      "description": "Extract goal-map storage helpers into a focused map storage module and move dependency-edge logic closer to map ownership.",
       "checks": [
         {
           "name": "map_storage_module_exists",
           "type": "shell",
-          "command": "test -f azq/formam/map_storage.py",
+          "command": "python - <<'PY'\nfrom pathlib import Path\nassert Path('azq/formam/map_storage.py').is_file(), 'missing azq/formam/map_storage.py'\nPY",
           "required": true,
-          "description": "Verify the dedicated goal-map storage module exists."
+          "description": "Verify the goal-map storage module exists."
         },
         {
-          "name": "map_storage_module_exposes_core_helpers",
+          "name": "map_storage_round_trip_and_edges_work",
           "type": "python",
           "required": true,
-          "description": "Verify the extracted goal-map storage module exposes the core Stage 2 map helpers.",
-          "code": "from azq.formam import map_storage\nfor name in ['serialize_goal_map_record', 'parse_goal_map_record', 'load_goal_map', 'write_goal_map']:\n    assert hasattr(map_storage, name), name"
+          "description": "Verify the extracted map storage layer can normalize, write, read, and preserve dependency edges in a canonical goal map.",
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.formam import map_storage\nwith TemporaryDirectory() as tmp:\n    root = Path(tmp)\n    map_storage.FORM_DIR = root / 'data' / 'form'\n    map_storage.DELIVERABLES_DIR = map_storage.FORM_DIR / 'deliverables'\n    map_storage.MAPS_DIR = map_storage.FORM_DIR / 'maps'\n    map_storage.ensure_form_dirs()\n    record = {\n        'goal_id': 'FINIS_001',\n        'deliverables': [\n            {'deliverable_id': 'FORM_001', 'title': 'One'},\n            {'deliverable_id': 'FORM_002', 'title': 'Two'}\n        ],\n        'dependency_edges': [\n            {'from': 'FORM_001', 'to': 'FORM_002'}\n        ],\n        'status': 'formed'\n    }\n    path = map_storage.write_goal_map(record)\n    assert path.is_file(), 'goal map file was not written'\n    loaded = map_storage.load_goal_map('FINIS_001')\n    assert loaded['goal_id'] == 'FINIS_001'\n    assert loaded['dependency_edges'] == [{'from': 'FORM_001', 'to': 'FORM_002'}], loaded\n    all_maps = map_storage.load_all_goal_maps()\n    assert len(all_maps) == 1, all_maps"
         },
         {
-          "name": "dependency_edge_derivation_moved_out_of_storage_module_body",
-          "type": "python",
+          "name": "maps_module_still_imports",
+          "type": "shell",
+          "command": "python - <<'PY'\nimport azq.formam.maps\nPY",
           "required": true,
-          "description": "Verify dependency-edge derivation now lives in a map-focused module rather than being defined directly inside azq.formam.storage.",
-          "code": "from azq.formam import maps, map_storage, storage\ncandidate = getattr(maps, 'derive_goal_map_dependency_edges', None) or getattr(map_storage, 'derive_goal_map_dependency_edges', None)\nassert candidate is not None, 'missing moved dependency-edge helper'\nif hasattr(storage, 'derive_goal_map_dependency_edges'):\n    assert storage.derive_goal_map_dependency_edges is candidate or storage.derive_goal_map_dependency_edges.__module__ in {'azq.formam.maps', 'azq.formam.map_storage'}"
+          "description": "Verify the map refresh and inspection path still imports cleanly after the extraction."
         }
       ],
       "human_checks": [
-        "Goal-map shaping code is now easier to find than it was in the all-in-one storage module.",
-        "The refactor preserves the sparse, human-readable Stage 2 map behavior and does not drift into Agenda-style graph planning."
+        "Dependency-edge derivation should feel like map behavior, not a stray helper trapped in a generic storage file.",
+        "The map storage surface should stay human-readable and visibly aligned with the Formam doctrine."
       ]
     },
     "STAGE2-WAVED-04": {
-      "description": "Split azq/cli.py into thinner engine-specific command routers.",
+      "description": "Split azq/cli.py into thinner engine-aware routers without breaking the public command surface.",
       "checks": [
         {
-          "name": "engine_specific_cli_modules_exist",
-          "type": "shell",
-          "command": "test -f azq/scintilla/cli.py && test -f azq/finis/cli.py && test -f azq/formam/cli.py",
+          "name": "engine_router_modules_exist",
+          "type": "python",
           "required": true,
-          "description": "Verify the new engine-specific CLI router modules exist."
+          "description": "Verify each engine package now has at least one router-like module for CLI dispatch.",
+          "code": "from pathlib import Path\ncandidates = ['router.py', 'commands.py', 'cli_router.py']\nfor package in ['azq/scintilla', 'azq/finis', 'azq/formam']:\n    pkg = Path(package)\n    assert any((pkg / candidate).is_file() for candidate in candidates), f'missing router-like module in {package}'"
         },
         {
-          "name": "engine_specific_cli_modules_import_cleanly",
+          "name": "top_level_cli_still_runs_and_dispatches",
           "type": "shell",
-          "command": "python -c \"import azq.cli, azq.scintilla.cli, azq.finis.cli, azq.formam.cli\"",
+          "command": "python - <<'PY'\nimport azq.cli\nfrom pathlib import Path\ntext = Path('azq/cli.py').read_text(encoding='utf-8')\nassert 'def main' in text\nassert 'from azq.' in text or 'import azq.' in text\nPY",
           "required": true,
-          "description": "Verify the top-level CLI and extracted engine-specific router modules import cleanly."
-        },
-        {
-          "name": "top_level_cli_is_thinner_and_routes_to_engine_modules",
-          "type": "shell",
-          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('azq/cli.py').read_text(encoding='utf-8')\nline_count = len(text.splitlines())\nassert line_count <= 200, line_count\nfor snippet in ['azq.scintilla.cli', 'azq.finis.cli', 'azq.formam.cli']:\n    assert snippet in text, snippet\nassert 'def main' in text\nPY",
-          "required": true,
-          "description": "Verify azq/cli.py has been reduced to a thinner top-level entrypoint that routes to engine-specific CLI modules."
+          "description": "Verify the top-level CLI still imports and remains the user-facing entrypoint after router extraction."
         }
       ],
       "human_checks": [
-        "The Finis readiness trigger moved to a narrower place without breaking the existing Formam command loop.",
-        "The split kept public Stage 2 command behavior stable instead of adding new commands or new craft-layer logic."
+        "This task is about thinner boundaries, not cosmetic shuffling. The top-level CLI should be easier to read after the refactor.",
+        "Do not over-fragment dispatch logic into tiny files that make navigation worse."
       ]
     },
     "STAGE2-WAVED-05": {
-      "description": "Rename the staged task runner to match its real scope and keep a thin compatibility path.",
+      "description": "Rename the stage-aware runner to a stage-agnostic name while preserving a compatibility path and keeping the ritual script honest.",
       "checks": [
         {
-          "name": "stage_agnostic_runner_exists",
+          "name": "new_runner_exists",
           "type": "shell",
-          "command": "test -f azq_codex_task_runner.py",
+          "command": "python - <<'PY'\nfrom pathlib import Path\nassert Path('azq_codex_task_runner.py').is_file(), 'missing azq_codex_task_runner.py'\nPY",
           "required": true,
-          "description": "Verify the new stage-agnostic runner entrypoint exists."
+          "description": "Verify the new stage-agnostic runner exists."
         },
         {
-          "name": "old_and_new_runner_entrypoints_both_report_cleanly",
+          "name": "old_and_new_runner_can_both_report",
           "type": "shell",
-          "command": "python azq_codex_task_runner.py report --workspace . >/dev/null && python azq_codex_stage1_task_runner.py report --workspace . >/dev/null",
+          "command": "python - <<'PY'\nimport subprocess\nimport sys\ncommands = [\n    [sys.executable, 'azq_codex_task_runner.py', 'report', '--workspace', '.'],\n    [sys.executable, 'azq_codex_stage1_task_runner.py', 'report', '--workspace', '.']\n]\nfor cmd in commands:\n    proc = subprocess.run(cmd, capture_output=True, text=True)\n    assert proc.returncode == 0, (cmd, proc.stdout, proc.stderr)\nPY",
           "required": true,
-          "description": "Verify the renamed runner works and the old Stage-1-named path still acts as a compatibility entrypoint."
+          "description": "Verify both the new runner and the compatibility entrypoint can still produce a report."
         },
         {
-          "name": "ritual_and_runbooks_reference_stage_agnostic_runner",
+          "name": "ritual_script_mentions_new_runner",
           "type": "shell",
-          "command": "python - <<'PY'\nfrom pathlib import Path\nfor path in ['run_next_task_in_current_wave.sh', 'AZQ_CODEX_RUNBOOK_STAGE_1_WAVE_A.md', 'AZQ_CODEX_RUNBOOK_STAGE_2_WAVE_A.md']:\n    text = Path(path).read_text(encoding='utf-8')\n    assert 'azq_codex_task_runner.py' in text, path\nPY",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('run_next_task_in_current_wave.sh').read_text(encoding='utf-8')\nassert 'azq_codex_task_runner.py' in text, 'ritual runner does not reference new task runner name'\nPY",
           "required": true,
-          "description": "Verify the shell ritual and live runbooks now reference the stage-agnostic runner name."
+          "description": "Verify the ritual script points at the new primary runner name."
         }
       ],
       "human_checks": [
-        "The compatibility path stays thin rather than duplicating full runner logic under both filenames.",
-        "The rename improves the operator-facing language without redesigning staged task semantics."
+        "The old runner name should degrade into compatibility, not remain the conceptual center of the system.",
+        "Runbook and ritual wording should make the new runner name feel like the primary tool."
       ]
     },
     "STAGE2-WAVED-06": {
-      "description": "Add regression coverage for the Wave D refactor seams.",
+      "description": "Extend regression coverage so the Wave D refactor proves no Stage 2 Formam behavior drift.",
       "checks": [
         {
-          "name": "stage2_regression_suite_still_passes_after_wave_d",
-          "type": "shell",
-          "command": "python -m pytest -q tests/test_stage2_wave_c.py",
+          "name": "stage2_refactor_regression_tests_exist",
+          "type": "python",
           "required": true,
-          "description": "Verify the Stage 2 regression suite passes after the Wave D refactors and test updates."
+          "description": "Verify there is explicit test coverage for the major Wave D refactor surfaces.",
+          "code": "from pathlib import Path\ncandidate_files = [Path('tests/test_stage2_wave_d.py'), Path('tests/test_stage2_wave_c.py')]\nexisting = [path for path in candidate_files if path.is_file()]\nassert existing, 'missing Stage 2 refactor regression test file'\ntext = '\\n'.join(path.read_text(encoding='utf-8') for path in existing)\nfor token in ['paths', 'schemas', 'deliverable_storage', 'map_storage']:\n    assert token in text, f'missing Wave D surface in tests: {token}'"
         },
         {
-          "name": "stage2_tests_reference_wave_d_refactor_surfaces",
+          "name": "stage2_regression_suite_still_passes_after_refactor",
           "type": "shell",
-          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('tests/test_stage2_wave_c.py').read_text(encoding='utf-8')\nmatched = [\n    snippet for snippet in [\n        'azq.formam.paths',\n        'azq.formam.schemas',\n        'azq.formam.deliverable_storage',\n        'azq.formam.map_storage',\n        'azq.formam.cli',\n        'azq_codex_task_runner.py'\n    ]\n    if snippet in text\n]\nassert len(matched) >= 4, matched\nPY",
+          "command": "python -m unittest discover -s tests -v",
           "required": true,
-          "description": "Verify the Stage 2 regression file was extended to cover the major public seams introduced by Wave D."
+          "description": "Verify the full regression suite still passes after the Wave D refactor."
         }
       ],
       "human_checks": [
-        "The new assertions focus on preserved public behavior and invokable entrypoints rather than overfitting to one exact internal import graph.",
-        "The added coverage remains readable and does not turn tests/test_stage2_wave_c.py into an unmaintainable architecture snapshot."
+        "The new tests should exercise preserved behavior, not merely prove that files were renamed.",
+        "Wave D should leave Stage 2 safer for Stage 3, not just rearranged."
       ]
     }
   }
