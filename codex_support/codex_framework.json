@@ -109,5 +109,9 @@
     "output_type": "json",
     "replacement_mode": "new_file",
     "artifact_purpose": "Draft a Stage 2 Wave D checks recipe for a refactor-prep wave that preserves Stage 2 behavior without introducing Stage 3 behavior."
+  },
+  "good_analog": {
+    "instruction": "Use this existing artifact as the closest model for decomposition and tone.",
+    "filename": "AZQ_BUILD_TASKS_STAGE_2_WAVE_B.json"
   }
 }
