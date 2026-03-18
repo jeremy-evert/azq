@@ -590,6 +590,10 @@ def write_status_report(workspace: Path, output: str) -> Path:
     return report_path
 
 
+def render_stage_closeout_message(stage: int) -> str:
+    return f"Stage {normalize_stage_number(stage)} Complete."
+
+
 def resolve_run_paths(args: argparse.Namespace) -> tuple[WavePaths, Path, Path, Path, Optional[Path], Path, Path, List[str]]:
     workspace = Path(args.workspace).resolve()
     wave_paths = derive_wave_paths(args.wave, args.stage)
@@ -623,7 +627,7 @@ def run_mode(args: argparse.Namespace) -> int:
         report_path = write_status_report(workspace, DEFAULT_REPORT_FILE)
         print(f"No remaining tasks found in stage {args.stage} {args.wave}.")
         print(f"Wrote report: {report_path}")
-        print(f"Stage {args.stage} Complete.")
+        print(render_stage_closeout_message(args.stage))
         return 0
     task_id = task["task_id"]
     task_slug = safe_task_slug(task_id)

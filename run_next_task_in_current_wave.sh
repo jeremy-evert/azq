@@ -161,7 +161,17 @@ if state_file.exists():
 else:
     state = {"tasks": {}, "history": []}
 
-task = runner.choose_next_task(tasks, state, None)
+try:
+    task = runner.choose_next_task(tasks, state, None)
+except ValueError as exc:
+    if str(exc) != "No remaining tasks found.":
+        raise
+    print()
+    print("next task preview")
+    print("=================")
+    print("No remaining tasks found in this wave.")
+    print(f"{runner.render_stage_closeout_message(stage)}")
+    raise SystemExit(0)
 
 print()
 print("next task preview")
