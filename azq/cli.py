@@ -1,5 +1,6 @@
 import sys
 
+from azq.agenda.router import dispatch as dispatch_agenda
 from azq.finis.router import dispatch as dispatch_finis
 from azq.formam.router import dispatch as dispatch_formam
 from azq.scintilla.router import dispatch as dispatch_scintilla
@@ -22,6 +23,10 @@ def print_commands() -> None:
     print("  azq form list")
     print("  azq form show <deliverable_id>")
     print("  azq form map <goal_id>")
+    print("  azq agenda build <deliverable_id>")
+    print("  azq agenda list")
+    print("  azq agenda show <task_id>")
+    print("  azq agenda dag <deliverable_id>")
 
 
 def main():
@@ -30,7 +35,12 @@ def main():
         print_commands()
         return
 
-    for dispatch in (dispatch_scintilla, dispatch_finis, dispatch_formam):
+    for dispatch in (
+        dispatch_scintilla,
+        dispatch_finis,
+        dispatch_formam,
+        dispatch_agenda,
+    ):
         if dispatch(argv):
             return
 
