@@ -34,6 +34,11 @@
       "status": "passed_checks",
       "updated_at": "2026-03-18T14:35:30-05:00",
       "note": "Passed checks on attempt 1."
+    },
+    "STAGE3-WAVEA-08": {
+      "status": "passed_checks",
+      "updated_at": "2026-03-18T14:40:52-05:00",
+      "note": "Passed checks on attempt 1."
     }
   },
   "history": [
@@ -146,6 +151,22 @@
       "task_id": "STAGE3-WAVEA-07",
       "attempt": 1,
       "timestamp": "2026-03-18T14:35:30-05:00",
+      "stage": 3,
+      "wave": "wave_a"
+    },
+    {
+      "event": "codex_submitted",
+      "task_id": "STAGE3-WAVEA-08",
+      "attempt": 1,
+      "timestamp": "2026-03-18T14:38:22-05:00",
+      "stage": 3,
+      "wave": "wave_a"
+    },
+    {
+      "event": "passed_checks",
+      "task_id": "STAGE3-WAVEA-08",
+      "attempt": 1,
+      "timestamp": "2026-03-18T14:40:52-05:00",
       "stage": 3,
       "wave": "wave_a"
     }

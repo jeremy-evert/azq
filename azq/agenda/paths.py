@@ -14,6 +14,7 @@ DAG_FILE_PREFIX = "GOAL_"
 DAG_FILE_SUFFIX = "_DAG.json"
 DAG_FILE_GLOB = f"{DAG_FILE_PREFIX}*{DAG_FILE_SUFFIX}"
 TASK_LOG_FILE_SUFFIX = "_LOG.md"
+TASK_LOG_FILE_GLOB = f"{TASK_FILE_PREFIX}*{TASK_LOG_FILE_SUFFIX}"
 
 
 def ensure_agenda_dirs() -> tuple[Path, Path, Path]:
@@ -57,6 +58,14 @@ def task_log_file_path(task_id: str) -> Path:
     return LOGS_DIR / f"{task_id}{TASK_LOG_FILE_SUFFIX}"
 
 
+def list_task_log_files() -> list[Path]:
+    """Return canonical task log files in stable filename order."""
+    if not LOGS_DIR.exists():
+        return []
+
+    return sorted(path for path in LOGS_DIR.glob(TASK_LOG_FILE_GLOB) if path.is_file())
+
+
 def list_task_files() -> list[Path]:
     """Return canonical task record files in stable filename order."""
     if not TASKS_DIR.exists():
@@ -86,6 +95,7 @@ __all__ = [
     "DAG_FILE_SUFFIX",
     "DAG_FILE_GLOB",
     "TASK_LOG_FILE_SUFFIX",
+    "TASK_LOG_FILE_GLOB",
     "ensure_agenda_dirs",
     "ensure_tasks_dir",
     "ensure_dags_dir",
@@ -93,6 +103,7 @@ __all__ = [
     "task_file_path",
     "dag_file_path",
     "task_log_file_path",
+    "list_task_log_files",
     "list_task_files",
     "list_dag_files",
 ]
