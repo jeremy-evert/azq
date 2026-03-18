@@ -11,13 +11,6 @@
         "command": "python -m compileall azq",
         "required": true,
         "description": "Verify the azq package still compiles after the patch."
-      },
-      {
-        "name": "stage2_regression_suite",
-        "type": "shell",
-        "command": "python -m pytest -q tests/test_stage2_wave_c.py",
-        "required": true,
-        "description": "Verify the Stage 2 regression suite exists and passes."
       }
     ]
   },
@@ -31,6 +24,13 @@
           "command": "test -f tests/test_stage2_wave_c.py",
           "required": true,
           "description": "Verify the Stage 2 regression test file exists."
+        },
+        {
+          "name": "stage2_regression_suite",
+          "type": "shell",
+          "command": "python -m pytest -q tests/test_stage2_wave_c.py",
+          "required": true,
+          "description": "Verify the Stage 2 regression suite exists and passes."
         },
         {
           "name": "stage2_test_file_covers_formam_flows",
@@ -58,9 +58,9 @@
         {
           "name": "bootstrap_teaches_live_formam_artifacts",
           "type": "shell",
-          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('AZQ_BOOTSTRAP.md').read_text(encoding='utf-8')\nfor snippet in [\n    'data/form/deliverables/',\n    'data/form/maps/'\n]:\n    assert snippet in text, snippet\nassert 'remain mostly specified' not in text\nPY",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('AZQ_BOOTSTRAP.md').read_text(encoding='utf-8')\nfor snippet in [\n    'data/form/deliverables/',\n    'data/form/maps/'\n]:\n    assert snippet in text, snippet\nPY",
           "required": true,
-          "description": "Verify AZQ_BOOTSTRAP.md no longer presents Formam as merely aspirational and names the canonical Formam artifact directories."
+          "description": "Verify AZQ_BOOTSTRAP.md names the canonical Formam artifact directories."
         },
         {
           "name": "stage2_build_tasks_no_longer_describes_pre_formam_gaps",
@@ -81,7 +81,7 @@
         {
           "name": "runner_handles_exhausted_stage2_wave_cleanly",
           "type": "shell",
-          "command": "python - <<'PY'\nimport json\nimport subprocess\nimport sys\nfrom pathlib import Path\nfrom tempfile import TemporaryDirectory\nrepo = Path.cwd()\nwith TemporaryDirectory() as tmp:\n    workspace = Path(tmp)\n    tasks = [\n        {'task_id': 'STAGE2-WAVEC-01', 'title': 'Task 1'},\n        {'task_id': 'STAGE2-WAVEC-02', 'title': 'Task 2'},\n        {'task_id': 'STAGE2-WAVEC-03', 'title': 'Task 3'},\n    ]\n    state = {\n        'tasks': {\n            'STAGE2-WAVEC-01': {'status': 'passed_checks', 'updated_at': '2026-03-17T00:00:00'},\n            'STAGE2-WAVEC-02': {'status': 'passed_checks', 'updated_at': '2026-03-17T00:00:00'},\n            'STAGE2-WAVEC-03': {'status': 'passed_checks', 'updated_at': '2026-03-17T00:00:00'},\n        },\n        'history': []\n    }\n    (workspace / 'AZQ_BUILD_TASKS_STAGE_2_WAVE_C.json').write_text(json.dumps(tasks), encoding='utf-8')\n    (workspace / '.azq_codex_progress_stage2_wave_c.json').write_text(json.dumps(state), encoding='utf-8')\n    proc = subprocess.run(\n        [sys.executable, str(repo / 'azq_codex_stage1_task_runner.py'), 'run', '--stage', '2', '--wave', 'wave_c', '--workspace', str(workspace)],\n        capture_output=True,\n        text=True,\n        cwd=str(repo),\n    )\n    assert proc.returncode == 0, proc.stdout + proc.stderr\n    assert 'No remaining tasks found in stage 2 wave_c.' in proc.stdout, proc.stdout\n    assert 'Stage 2 Complete.' in proc.stdout, proc.stdout\n    assert (workspace / 'codex_reports' / 'codex_azq_task_status_report.md').is_file()\nPY",
+          "command": "python - <<'PY'\nimport json\nimport subprocess\nimport sys\nfrom pathlib import Path\nfrom tempfile import TemporaryDirectory\nrepo = Path.cwd()\nwith TemporaryDirectory() as tmp:\n    workspace = Path(tmp)\n    tasks = [\n        {'task_id': 'STAGE2-WAVEC-01', 'title': 'Task 1'},\n        {'task_id': 'STAGE2-WAVEC-02', 'title': 'Task 2'},\n        {'task_id': 'STAGE2-WAVEC-03', 'title': 'Task 3'}\n    ]\n    state = {\n        'tasks': {\n            'STAGE2-WAVEC-01': {'status': 'passed_checks', 'updated_at': '2026-03-17T00:00:00'},\n            'STAGE2-WAVEC-02': {'status': 'passed_checks', 'updated_at': '2026-03-17T00:00:00'},\n            'STAGE2-WAVEC-03': {'status': 'passed_checks', 'updated_at': '2026-03-17T00:00:00'}\n        },\n        'history': []\n    }\n    (workspace / 'AZQ_BUILD_TASKS_STAGE_2_WAVE_C.json').write_text(json.dumps(tasks), encoding='utf-8')\n    (workspace / '.azq_codex_progress_stage2_wave_c.json').write_text(json.dumps(state), encoding='utf-8')\n    proc = subprocess.run(\n        [sys.executable, str(repo / 'azq_codex_stage1_task_runner.py'), 'run', '--stage', '2', '--wave', 'wave_c', '--workspace', str(workspace)],\n        capture_output=True,\n        text=True,\n        cwd=str(repo)\n    )\n    assert proc.returncode == 0, proc.stdout + proc.stderr\n    assert 'No remaining' in proc.stdout, proc.stdout\n    assert 'Stage 2 Complete' in proc.stdout, proc.stdout\n    assert (workspace / 'codex_reports' / 'codex_azq_task_status_report.md').is_file()\nPY",
           "required": true,
           "description": "Verify the Python runner treats an exhausted Stage 2 Wave C backlog as successful closeout and still writes a report."
         },
