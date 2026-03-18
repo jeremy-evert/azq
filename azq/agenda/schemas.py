@@ -9,6 +9,10 @@ import re
 from typing import Any, Optional
 
 TASK_ID_PATTERN = re.compile(r"^TASK_(\d+)$")
+TASK_INTENT_HEADING = "## Task Intent"
+DESCRIPTION_HEADING = "## Description"
+DEPENDENCIES_HEADING = "## Dependencies"
+EXECUTION_NOTES_HEADING = "## Execution Notes"
 
 
 def task_id_number(task_id: str) -> Optional[int]:
@@ -116,6 +120,10 @@ def normalize_task_record(task_record: dict[str, Any]) -> dict[str, Any]:
 
 __all__ = [
     "TASK_ID_PATTERN",
+    "TASK_INTENT_HEADING",
+    "DESCRIPTION_HEADING",
+    "DEPENDENCIES_HEADING",
+    "EXECUTION_NOTES_HEADING",
     "task_id_number",
     "normalize_task_record",
 ]

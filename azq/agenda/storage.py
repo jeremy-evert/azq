@@ -7,6 +7,21 @@ primitives live in focused sibling modules and are re-exported here where
 useful.
 """
 
+from azq.agenda.task_storage import (
+    load_all_tasks,
+    load_deliverable_tasks,
+    load_task,
+    load_tasks_for_deliverable,
+    next_task_id,
+    parse_task_markdown,
+    parse_task_record,
+    save_task,
+    serialize_task_markdown,
+    serialize_task_record,
+    task_from_markdown,
+    task_to_markdown,
+    write_task,
+)
 from azq.agenda.paths import (
     AGENDA_DIR,
     DAGS_DIR,
@@ -15,6 +30,7 @@ from azq.agenda.paths import (
     DATA_DIR,
     LOGS_DIR,
     TASKS_DIR,
+    TASK_FILE_PREFIX,
     TASK_FILE_GLOB,
     TASK_FILE_SUFFIX,
     TASK_LOG_FILE_SUFFIX,
@@ -27,7 +43,15 @@ from azq.agenda.paths import (
     task_file_path,
     task_log_file_path,
 )
-from azq.agenda.schemas import TASK_ID_PATTERN, normalize_task_record, task_id_number
+from azq.agenda.schemas import (
+    DEPENDENCIES_HEADING,
+    DESCRIPTION_HEADING,
+    EXECUTION_NOTES_HEADING,
+    TASK_ID_PATTERN,
+    TASK_INTENT_HEADING,
+    normalize_task_record,
+    task_id_number,
+)
 
 
 __all__ = [
@@ -36,12 +60,17 @@ __all__ = [
     "TASKS_DIR",
     "DAGS_DIR",
     "LOGS_DIR",
+    "TASK_FILE_PREFIX",
     "TASK_FILE_SUFFIX",
     "TASK_FILE_GLOB",
     "DAG_FILE_PREFIX",
     "DAG_FILE_SUFFIX",
     "TASK_LOG_FILE_SUFFIX",
     "TASK_ID_PATTERN",
+    "TASK_INTENT_HEADING",
+    "DEPENDENCIES_HEADING",
+    "DESCRIPTION_HEADING",
+    "EXECUTION_NOTES_HEADING",
     "ensure_agenda_dirs",
     "ensure_tasks_dir",
     "ensure_dags_dir",
@@ -52,4 +81,17 @@ __all__ = [
     "list_task_files",
     "task_id_number",
     "normalize_task_record",
+    "serialize_task_record",
+    "serialize_task_markdown",
+    "task_to_markdown",
+    "parse_task_record",
+    "parse_task_markdown",
+    "task_from_markdown",
+    "load_task",
+    "load_all_tasks",
+    "load_tasks_for_deliverable",
+    "load_deliverable_tasks",
+    "next_task_id",
+    "write_task",
+    "save_task",
 ]
