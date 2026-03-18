@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This checklist turns **Stage 2: Implement Formam** from `AZQ_IMPLEMENTATION_PLAN.md` into atomic, commit-sized engineering work for the current repository.
+This checklist turned **Stage 2: Implement Formam** from `AZQ_IMPLEMENTATION_PLAN.md` into atomic, commit-sized engineering work for the current repository.
 
 The goal of Stage 2 is simple:
 
@@ -11,18 +11,18 @@ The goal of Stage 2 is simple:
 This checklist is intentionally grounded in the **current live tree**.
 The repository does **not** currently use `src/azq/...`; the live code is under `azq/`.
 
-Stage 2 therefore targets:
+The live Stage 2 baseline now includes:
 
 * `azq/cli.py`
-* `azq/formam/__init__.py` (new)
-* `azq/formam/storage.py` (new)
-* `azq/formam/build.py` (new)
-* `azq/formam/deliverables.py` (new)
-* `azq/formam/maps.py` (new)
-* `data/form/deliverables/` (new)
-* `data/form/maps/` (new)
+* `azq/formam/__init__.py`
+* `azq/formam/storage.py`
+* `azq/formam/build.py`
+* `azq/formam/deliverables.py`
+* `azq/formam/maps.py`
+* `data/form/deliverables/`
+* `data/form/maps/`
 
-This checklist exists to shorten the path from doctrine to code. It should be practical enough to use while actually committing work.
+This checklist now serves as the Stage 2 completion ledger and reference for the canonical Formam baseline. It should still be practical enough to use while auditing the resulting code and artifacts.
 
 ---
 
@@ -63,18 +63,20 @@ Wave A is intentionally a **storage foundation wave**, not a full working CLI wa
 
 ---
 
-## Current Stage 2 Gaps
+## Canonical Stage 2 Baseline
 
-The current implementation has these concrete mismatches with the Stage 2 objective:
+The current implementation now establishes these Stage 2 truths:
 
-* there is no `azq/formam/` package in the live repository
-* no `data/form/deliverables/` directory exists
-* no `data/form/maps/` directory exists
-* the CLI does not expose any `azq form ...` commands yet
-* there is no canonical deliverable schema in code
-* there is no canonical goal map schema in code
-* no Formam command currently validates that a deliverable descends from a real canonical goal
-* the repository can reach `purposed`, but not yet `formed`, from live artifacts on disk
+* `azq/formam/` exists in the live repository
+* canonical deliverables are stored one per file under `data/form/deliverables/`
+* canonical goal maps are stored one per file under `data/form/maps/`
+* the CLI exposes `azq form build`, `azq form list`, `azq form show`, and `azq form map`
+* canonical deliverable and goal-map schema decisions live in code
+* Formam validates parent goals against canonical Finis storage before writing deliverables
+* the repository can truthfully reach `formed` from live artifacts on disk
+
+For operators, `data/form/deliverables/` and `data/form/maps/` are the canonical Stage 2 system of record.
+Those files are the first place to inspect when confirming what Formam currently believes.
 
 ---
 
@@ -503,6 +505,11 @@ Stage 2 map rules:
 
 * the docs teach the live Stage 2 Formam model rather than only the planned one
 
+**Stage 2 closeout note:**
+
+* this documentation alignment belongs to Wave C because Formam is no longer aspirational at Stage 2
+* operator-facing docs should describe the file-backed baseline as already live, not merely planned
+
 ---
 
 ## Commit Grouping Suggestion
@@ -524,6 +531,8 @@ If you want these as sensible commit waves rather than 17 single-file nibbles, u
 This keeps each wave reviewable while still respecting atomicity.
 
 Wave A is intentionally broader than the old Stage 1 storage wave because Formam needs both deliverable and map artifact models defined before the CLI can safely create either one.
+
+Wave C closes Stage 2 by making the documentation match that live baseline, explicitly teaching operators that `data/form/deliverables/` and `data/form/maps/` are the canonical records to inspect.
 
 ---
 
