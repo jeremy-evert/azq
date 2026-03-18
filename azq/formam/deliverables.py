@@ -2,7 +2,10 @@
 
 from typing import Any, Optional
 
-from azq.formam import storage
+from azq.formam.deliverable_storage import (
+    load_all_deliverables as load_all_deliverable_records,
+    load_deliverable as load_deliverable_record,
+)
 
 NO_DELIVERABLES_MESSAGE = "No deliverables defined."
 DELIVERABLE_NOT_FOUND_MESSAGE = "Deliverable not found for exact deliverable_id:"
@@ -10,12 +13,12 @@ DELIVERABLE_NOT_FOUND_MESSAGE = "Deliverable not found for exact deliverable_id:
 
 def load_all_deliverables() -> list[dict[str, Any]]:
     """Load canonical deliverables through the shared Formam storage layer."""
-    return storage.load_all_deliverables()
+    return load_all_deliverable_records()
 
 
 def load_deliverable(deliverable_id: str) -> Optional[dict[str, Any]]:
     """Load one canonical deliverable through the shared Formam storage layer."""
-    return storage.load_deliverable(deliverable_id)
+    return load_deliverable_record(deliverable_id)
 
 
 def _display_width(deliverables: list[dict[str, Any]], field: str, minimum: int) -> int:

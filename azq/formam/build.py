@@ -3,7 +3,13 @@
 from datetime import date
 from typing import Any, Optional
 
-from azq.formam import storage
+from azq.formam.deliverable_storage import (
+    load_goal_deliverables,
+    next_deliverable_id,
+    validate_parent_goal,
+    write_deliverable,
+)
+from azq.formam.storage import load_goal_map, write_goal_map
 
 INITIAL_GOAL_MAP_NOTES = (
     "Initial Formam stub map generated from canonical deliverables."
@@ -69,24 +75,24 @@ def build_goal_map_record(
 
 def build_form(goal_id: str) -> dict[str, Any]:
     """Create one stub deliverable and refresh its canonical goal map."""
-    goal_record = storage.validate_parent_goal(goal_id, active_only=True)
+    goal_record = validate_parent_goal(goal_id, active_only=True)
     created = str(date.today())
-    deliverable_id = storage.next_deliverable_id()
+    deliverable_id = next_deliverable_id()
 
     deliverable_record = build_stub_deliverable_record(
         goal_record, deliverable_id, created=created
     )
-    deliverable_path = storage.write_deliverable(deliverable_record)
+    deliverable_path = write_deliverable(deliverable_record)
 
-    goal_deliverables = storage.load_goal_deliverables(goal_record["goal_id"])
-    existing_goal_map = storage.load_goal_map(goal_record["goal_id"])
+    goal_deliverables = load_goal_deliverables(goal_record["goal_id"])
+    existing_goal_map = load_goal_map(goal_record["goal_id"])
     goal_map_record = build_goal_map_record(
         goal_record,
         goal_deliverables,
         created=created,
         existing_map=existing_goal_map,
     )
-    goal_map_path = storage.write_goal_map(goal_map_record)
+    goal_map_path = write_goal_map(goal_map_record)
 
     result = {
         "goal": goal_record,
