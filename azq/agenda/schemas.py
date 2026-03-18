@@ -1,14 +1,16 @@
-"""Canonical schema primitives for Agenda task records.
+"""Canonical schema primitives for Agenda task records and DAG artifacts.
 
 Task normalization lives here so later file-backed repository logic can rely on
-one durable task-record shape without mixing schema concerns into task or DAG
-storage code.
+one durable task-record shape without mixing schema concerns into task storage
+code. DAG normalization also lives here as a distinct schema concern so graph
+artifacts can stay separate from task records before they reach disk.
 """
 
 import re
 from typing import Any, Optional
 
 TASK_ID_PATTERN = re.compile(r"^TASK_(\d+)$")
+GRAPH_ID_SUFFIX = "_DAG"
 TASK_INTENT_HEADING = "## Task Intent"
 DESCRIPTION_HEADING = "## Description"
 DEPENDENCIES_HEADING = "## Dependencies"
@@ -118,12 +120,119 @@ def normalize_task_record(task_record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _normalize_string_list(value: Any) -> list[str]:
+    """Normalize list-like schema input into a stable string list."""
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(item).strip() for item in value if str(item).strip()]
+
+    normalized = str(value).strip()
+    if not normalized:
+        return []
+    return [normalized]
+
+
+def _normalize_dag_edge(edge: Any, index: int) -> dict[str, str]:
+    """Normalize one dependency edge into the canonical edge schema."""
+    if isinstance(edge, dict):
+        from_task_id = str(
+            edge.get(
+                "from_task_id",
+                edge.get("from", edge.get("source", edge.get("predecessor", ""))),
+            )
+        ).strip()
+        to_task_id = str(
+            edge.get(
+                "to_task_id",
+                edge.get("to", edge.get("target", edge.get("successor", ""))),
+            )
+        ).strip()
+        edge_id = str(edge.get("edge_id", "")).strip()
+    elif isinstance(edge, (list, tuple)) and len(edge) >= 2:
+        from_task_id = str(edge[0]).strip()
+        to_task_id = str(edge[1]).strip()
+        edge_id = ""
+    else:
+        from_task_id = str(edge).strip()
+        to_task_id = ""
+        edge_id = ""
+
+    if not edge_id:
+        if from_task_id or to_task_id:
+            edge_id = f"{from_task_id}->{to_task_id}"
+        else:
+            edge_id = f"edge_{index:03d}"
+
+    return {
+        "edge_id": edge_id,
+        "from_task_id": from_task_id,
+        "to_task_id": to_task_id,
+    }
+
+
+def _normalize_dependency_edges(dag_record: dict[str, Any]) -> list[dict[str, str]]:
+    """Normalize DAG edges into a readable, stable edge list."""
+    raw_edges = dag_record.get(
+        "dependency_edges",
+        dag_record.get("edges", dag_record.get("dependencies")),
+    )
+    if raw_edges is None:
+        return []
+    if not isinstance(raw_edges, (list, tuple)):
+        raw_edges = [raw_edges]
+
+    return [_normalize_dag_edge(edge, index) for index, edge in enumerate(raw_edges, 1)]
+
+
+def normalize_dag_record(dag_record: dict[str, Any]) -> dict[str, Any]:
+    """Convert partial DAG-shaped data into the canonical Agenda DAG schema.
+
+    DAG normalization stays separate from task-record normalization.
+    The schema is intentionally sparse and inspectable:
+    - ``graph_id`` is the stable graph-level identity
+    - ``goal_id`` anchors the graph to its parent goal
+    - ``dependency_edges`` always contains explicit edge objects
+    - ``status`` defaults to ``draft``
+    - ``created`` and ``notes`` become empty strings when missing
+    """
+
+    goal_id = str(
+        dag_record.get("goal_id", dag_record.get("parent_goal_id", dag_record.get("goal", "")))
+    ).strip()
+    graph_id = str(
+        dag_record.get("graph_id", dag_record.get("dag_id", dag_record.get("id", "")))
+    ).strip()
+    if not graph_id and goal_id:
+        graph_id = f"GOAL_{goal_id}{GRAPH_ID_SUFFIX}"
+
+    return {
+        "graph_id": graph_id,
+        "goal_id": goal_id,
+        "deliverable_ids": _normalize_string_list(
+            dag_record.get(
+                "deliverable_ids",
+                dag_record.get("deliverables", dag_record.get("deliverable_id")),
+            )
+        ),
+        "task_ids": _normalize_string_list(
+            dag_record.get("task_ids", dag_record.get("tasks", dag_record.get("task_id")))
+        ),
+        "dependency_edges": _normalize_dependency_edges(dag_record),
+        "status": str(dag_record.get("status", "draft")).strip() or "draft",
+        "created": str(dag_record.get("created", "")).strip(),
+        "notes": str(dag_record.get("notes", dag_record.get("description", ""))).strip(),
+    }
+
+
 __all__ = [
     "TASK_ID_PATTERN",
+    "GRAPH_ID_SUFFIX",
     "TASK_INTENT_HEADING",
     "DESCRIPTION_HEADING",
     "DEPENDENCIES_HEADING",
     "EXECUTION_NOTES_HEADING",
     "task_id_number",
     "normalize_task_record",
+    "normalize_dag_record",
 ]
