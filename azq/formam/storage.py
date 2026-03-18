@@ -466,6 +466,14 @@ def load_deliverable(deliverable_id: str) -> Optional[dict[str, Any]]:
     return parse_deliverable_markdown(deliverable_path.read_text(encoding="utf-8"))
 
 
+def load_goal_map(goal_id: str) -> Optional[dict[str, Any]]:
+    """Load one canonical goal map record by exact goal id."""
+    goal_map_path = goal_map_file_path(goal_id)
+    if not goal_map_path.is_file():
+        return None
+    return parse_goal_map_markdown(goal_map_path.read_text(encoding="utf-8"))
+
+
 def load_all_deliverables() -> list[dict[str, Any]]:
     """Load all canonical deliverable files in deterministic order."""
     deliverables: list[dict[str, Any]] = []
@@ -616,6 +624,7 @@ __all__ = [
     "parse_goal_map_markdown",
     "goal_map_from_markdown",
     "load_deliverable",
+    "load_goal_map",
     "load_all_deliverables",
     "load_goal_deliverables",
     "load_deliverables_for_goal",
