@@ -2,7 +2,7 @@
   {
     "task_id": "STAGE2-WAVEB-01",
     "title": "Implement azq form build as a thin command-layer writer",
-    "goal": "Make azq/formam/build.py coordinate parent-goal validation, stub deliverable creation, and canonical Formam writes without turning Formam into a task system.",
+    "goal": "Make azq/formam/build.py coordinate exact parent-goal validation, deterministic stub deliverable creation, and canonical Formam writes without turning Formam into a planning or task engine.",
     "files_to_create": [
       "azq/formam/build.py"
     ],
@@ -11,31 +11,32 @@
     ],
     "depends_on": [],
     "context": [
-      "Wave A established canonical Formam storage, normalization, parsing, and write helpers in azq/formam/storage.py.",
-      "The implementation plan explicitly says azq form build <goal_id> should generate a stub deliverable and a goal map rather than trying to solve full planning on day one.",
-      "The live CLI still has no form command branch, so build.py should remain a small command-layer module that can be wired later.",
-      "Formam must define deliverables and boundaries of work, not execution tasks."
+      "Stage 2 defines Formam as the stage that turns goals into deliverables and dependency maps.",
+      "Wave A already established canonical Formam storage, normalization, parsing, exact lookup, parent-goal validation, and write helpers.",
+      "The implementation plan says azq form build <goal_id> should generate a stub deliverable and a goal map rather than trying to solve full planning on day one.",
+      "Formam must define boundaries of work, not task lists, scheduling, or Agenda behavior."
     ],
     "requirements": [
       "Create azq/formam/build.py.",
-      "Add a small command-layer entrypoint such as build_form(goal_id).",
-      "Validate the parent goal by exact goal_id through the canonical Finis-backed Formam validation helper.",
-      "Allocate the next stable DELIV_### id through storage.py.",
+      "Add a thin command-layer entrypoint such as build_form(goal_id).",
+      "Validate the parent goal by exact goal_id through the canonical Formam/Finis validation helper.",
+      "Allocate the next stable DELIV_### id through azq/formam/storage.py.",
       "Generate one deterministic stub deliverable record from the validated goal data.",
-      "Write one canonical deliverable file and one canonical goal map file through storage.py.",
-      "Keep the implementation deterministic, inspectable, and free of Agenda-style task generation."
+      "Write one canonical deliverable file through azq/formam/storage.py.",
+      "Write or refresh one canonical goal map file through azq/formam/storage.py.",
+      "Keep the behavior minimal, inspectable, and free of Agenda-style task generation or speculative planning logic."
     ],
     "acceptance_criteria": [
       "A valid canonical goal can produce one DELIV_###.md file and one GOAL_<goal_id>_MAP.md file.",
-      "build.py delegates persistence decisions to azq/formam/storage.py rather than writing files ad hoc.",
-      "The initial build behavior remains intentionally minimal and human-readable."
+      "build.py delegates persistence and file-format decisions to azq/formam/storage.py rather than writing files ad hoc.",
+      "The first build behavior remains intentionally small, deterministic, and human-readable."
     ],
     "suggested_commit_message": "add form build command module for canonical deliverables"
   },
   {
     "task_id": "STAGE2-WAVEB-02",
     "title": "Implement azq form list as a thin presentation layer",
-    "goal": "Make azq/formam/deliverables.py provide a read-only listing view over canonical Formam storage.",
+    "goal": "Make azq/formam/deliverables.py provide a read-only listing view over canonical Formam storage so deliverables become visible from the command layer.",
     "files_to_create": [
       "azq/formam/deliverables.py"
     ],
@@ -44,22 +45,22 @@
       "STAGE2-WAVEB-01"
     ],
     "context": [
-      "The implementation plan calls for azq form list as one of the first public Formam commands.",
-      "Wave B should expose read commands only after the write path exists, so list should sit on top of the canonical storage foundation and the first build path.",
-      "The CLI still does not know about form commands, so this task should stay focused on presentation logic rather than command wiring."
+      "The Stage 2 implementation plan calls for azq form list as one of the first public Formam commands.",
+      "Wave B should expose read commands only after the first canonical write path exists.",
+      "The list command should sit on top of canonical Formam storage rather than duplicating repository logic or introducing search features."
     ],
     "requirements": [
       "Create azq/formam/deliverables.py.",
       "Add a read-only listing function such as list_deliverables().",
       "Load canonical deliverables through azq/formam/storage.py.",
       "Display at least deliverable_id, goal_id, title, and status.",
-      "Keep the output simple and terminal-readable.",
+      "Keep the output simple, stable, and terminal-readable.",
       "Preserve a clear no-deliverables message when canonical storage is empty."
     ],
     "acceptance_criteria": [
       "deliverables.py can present canonical deliverables without mutating state.",
       "The listing reads through storage.py rather than duplicating repository logic.",
-      "The visible output stays focused on deliverables, not tasks or scheduling."
+      "The visible output stays focused on deliverables, not tasks, scheduling, or execution."
     ],
     "suggested_commit_message": "add form deliverable listing module"
   },
@@ -75,16 +76,16 @@
       "STAGE2-WAVEB-02"
     ],
     "context": [
-      "The implementation plan calls for azq form show <deliverable_id> as a first-class Formam read command.",
+      "The Stage 2 implementation plan calls for azq form show <deliverable_id> as a first-class Formam read command.",
       "Exact-id lookup matters because later Agenda work will depend on stable deliverable identifiers.",
-      "This command should inspect one existing deliverable, not broaden into search, filtering, or planning features."
+      "This command should inspect one existing deliverable and stop there rather than broadening into filtering, searching, or planning features."
     ],
     "requirements": [
       "Add a reader such as show_deliverable(deliverable_id).",
-      "Load one deliverable by exact deliverable_id through storage.py.",
-      "Print the canonical deliverable fields clearly, including dependencies and artifact_description.",
+      "Load one deliverable by exact deliverable_id through azq/formam/storage.py.",
+      "Print the canonical deliverable fields clearly, including artifact_description and dependencies.",
       "Handle missing deliverable ids with a readable exact-id failure message.",
-      "Keep output centered on artifact definition rather than task speculation."
+      "Keep output centered on artifact definition and parent linkage rather than task speculation."
     ],
     "acceptance_criteria": [
       "One canonical deliverable can be inspected by exact id.",
@@ -96,7 +97,7 @@
   {
     "task_id": "STAGE2-WAVEB-04",
     "title": "Implement azq form map as a thin command-layer map refresher",
-    "goal": "Make azq/formam/maps.py regenerate a canonical goal map from the current deliverables for one exact goal.",
+    "goal": "Make azq/formam/maps.py generate or refresh a canonical goal map from the current deliverables for one exact goal.",
     "files_to_create": [
       "azq/formam/maps.py"
     ],
@@ -107,23 +108,24 @@
       "STAGE2-WAVEB-03"
     ],
     "context": [
-      "The implementation plan calls for azq form map <goal_id> to create or refresh the visible dependency structure for a goal.",
-      "Wave A already defined canonical map storage and write helpers, so Wave B should build a thin command-layer refresher on top of that foundation.",
-      "Map output should remain human-readable and conservative even when dependency data is sparse."
+      "The Stage 2 implementation plan calls for azq form map <goal_id> to create or refresh the visible dependency structure for a goal.",
+      "Wave A already defined canonical map storage, normalization, parsing, and write helpers.",
+      "Map output should remain human-readable and conservative even when dependency data is sparse.",
+      "Formam maps should record deliverable relationships, not hidden planning state."
     ],
     "requirements": [
       "Create azq/formam/maps.py.",
       "Add a command-layer entrypoint such as build_goal_map(goal_id) or refresh_goal_map(goal_id).",
-      "Validate the parent goal by exact goal_id through the canonical Formam validation helper.",
-      "Load deliverables for that exact goal through storage.py.",
-      "Write or refresh one canonical GOAL_<goal_id>_MAP.md file through storage.py.",
+      "Validate the parent goal by exact goal_id through the canonical validation helper.",
+      "Load deliverables for that exact goal through azq/formam/storage.py.",
+      "Write or refresh one canonical GOAL_<goal_id>_MAP.md file through azq/formam/storage.py.",
       "If dependency edges are derived automatically, derive them conservatively from existing deliverable dependency lists rather than inventing planning structure.",
-      "Do not create tasks or broaden into Agenda behavior."
+      "Do not introduce task generation, scheduling, or Agenda behavior."
     ],
     "acceptance_criteria": [
       "A goal with deliverables can produce or refresh one visible canonical map artifact.",
       "Map regeneration depends on canonical deliverables for the exact parent goal.",
-      "maps.py remains a thin command-layer module over storage.py."
+      "maps.py remains a thin command-layer module over shared storage helpers."
     ],
     "suggested_commit_message": "add form goal map command module"
   },
@@ -142,9 +144,10 @@
       "STAGE2-WAVEB-04"
     ],
     "context": [
-      "The live CLI currently exposes Scintilla and Finis commands only.",
-      "The implementation plan defines the first Formam command set as azq form build, azq form list, azq form show, and azq form map.",
-      "Canonical goals already depend on ensure_finis_storage_ready(), so Formam command routing should keep goal-backed operations aligned with the Stage 1 migration boundary."
+      "The live CLI currently exposes Scintilla and Finis command families, but not Formam.",
+      "The Stage 2 implementation plan defines the first Formam command set as azq form build, azq form list, azq form show, and azq form map.",
+      "Canonical goals already depend on ensure_finis_storage_ready(), so Formam command routing should keep goal-backed operations aligned with the Stage 1 migration boundary.",
+      "Wave B is complete when the repository has a first usable Formam command loop."
     ],
     "requirements": [
       "Add command help lines for azq form build <goal_id>, azq form list, azq form show <deliverable_id>, and azq form map <goal_id>.",
@@ -152,7 +155,7 @@
       "Route build, list, show, and map to the new azq/formam modules.",
       "Run ensure_finis_storage_ready() before Formam commands that depend on canonical goals.",
       "Keep command handling narrow and stylistically consistent with the existing CLI.",
-      "Do not introduce Agenda, doctor, or status behavior in this task."
+      "Do not introduce Agenda, doctor, status, or task behavior in this task."
     ],
     "acceptance_criteria": [
       "The CLI exposes the first usable Formam command loop.",
