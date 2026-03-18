@@ -13,6 +13,24 @@ from azq.agenda.schemas import (
     normalize_task_record,
     task_id_number,
 )
+from azq.formam import storage as formam_storage
+
+
+class CanonicalDeliverableValidationError(ValueError):
+    """Raised when an Agenda parent deliverable cannot be validated canonically."""
+
+    def __init__(
+        self,
+        deliverable_id: str,
+        message: str,
+        *,
+        code: str,
+        deliverable_record: Optional[dict[str, Any]] = None,
+    ) -> None:
+        super().__init__(message)
+        self.deliverable_id = deliverable_id
+        self.code = code
+        self.deliverable_record = deliverable_record
 
 
 def ensure_tasks_dir() -> Path:
@@ -242,19 +260,51 @@ def task_from_markdown(markdown_text: str) -> dict[str, Any]:
     return parse_task_markdown(markdown_text)
 
 
+def validate_canonical_deliverable(deliverable_id: str) -> dict[str, Any]:
+    """Validate an exact canonical parent deliverable through Formam storage."""
+
+    canonical_deliverable_id = str(deliverable_id).strip()
+    if not canonical_deliverable_id:
+        raise CanonicalDeliverableValidationError(
+            canonical_deliverable_id,
+            "Task parent deliverable_id is required.",
+            code="missing_deliverable_id",
+        )
+
+    deliverable_record = formam_storage.load_deliverable(canonical_deliverable_id)
+    if deliverable_record is None:
+        raise CanonicalDeliverableValidationError(
+            canonical_deliverable_id,
+            "Cannot use task record: canonical parent deliverable "
+            f"{canonical_deliverable_id} does not exist.",
+            code="missing_deliverable",
+        )
+
+    return deliverable_record
+
+
+def validate_parent_deliverable(deliverable_id: str) -> dict[str, Any]:
+    """Validate an exact canonical parent deliverable before Agenda persistence."""
+    return validate_canonical_deliverable(deliverable_id)
+
+
 def load_task(task_id: str) -> Optional[dict[str, Any]]:
     """Load one canonical task record by exact task id."""
     task_path = task_file_path(task_id)
     if not task_path.is_file():
         return None
-    return parse_task_markdown(task_path.read_text(encoding="utf-8"))
+    task_record = parse_task_markdown(task_path.read_text(encoding="utf-8"))
+    validate_canonical_deliverable(task_record["deliverable_id"])
+    return task_record
 
 
 def load_all_tasks() -> list[dict[str, Any]]:
     """Load all canonical task files in deterministic order."""
     tasks: list[dict[str, Any]] = []
     for task_path in list_task_files():
-        tasks.append(parse_task_markdown(task_path.read_text(encoding="utf-8")))
+        task_record = parse_task_markdown(task_path.read_text(encoding="utf-8"))
+        validate_canonical_deliverable(task_record["deliverable_id"])
+        tasks.append(task_record)
     return tasks
 
 
@@ -291,6 +341,7 @@ def write_task(task_record: dict[str, Any]) -> Path:
             f"Cannot write canonical task file for invalid task_id {task_id!r}."
         )
 
+    validate_canonical_deliverable(record["deliverable_id"])
     task_path = task_file_path(task_id)
     ensure_tasks_dir()
     task_path.write_text(serialize_task_markdown(record), encoding="utf-8")
@@ -303,6 +354,7 @@ def save_task(task_record: dict[str, Any]) -> Path:
 
 
 __all__ = [
+    "CanonicalDeliverableValidationError",
     "ensure_tasks_dir",
     "task_file_path",
     "list_task_files",
@@ -312,6 +364,8 @@ __all__ = [
     "parse_task_record",
     "parse_task_markdown",
     "task_from_markdown",
+    "validate_canonical_deliverable",
+    "validate_parent_deliverable",
     "load_task",
     "load_all_tasks",
     "load_tasks_for_deliverable",

@@ -8,6 +8,7 @@ useful.
 """
 
 from azq.agenda.task_storage import (
+    CanonicalDeliverableValidationError,
     load_all_tasks,
     load_deliverable_tasks,
     load_task,
@@ -20,6 +21,8 @@ from azq.agenda.task_storage import (
     serialize_task_record,
     task_from_markdown,
     task_to_markdown,
+    validate_canonical_deliverable,
+    validate_parent_deliverable,
     write_task,
 )
 from azq.agenda.paths import (
@@ -71,6 +74,7 @@ __all__ = [
     "DEPENDENCIES_HEADING",
     "DESCRIPTION_HEADING",
     "EXECUTION_NOTES_HEADING",
+    "CanonicalDeliverableValidationError",
     "ensure_agenda_dirs",
     "ensure_tasks_dir",
     "ensure_dags_dir",
@@ -87,6 +91,8 @@ __all__ = [
     "parse_task_record",
     "parse_task_markdown",
     "task_from_markdown",
+    "validate_canonical_deliverable",
+    "validate_parent_deliverable",
     "load_task",
     "load_all_tasks",
     "load_tasks_for_deliverable",
