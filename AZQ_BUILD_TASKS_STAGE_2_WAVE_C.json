@@ -1,0 +1,69 @@
+[
+  {
+    "task_id": "STAGE2-WAVEC-01",
+    "title": "Add Stage 2 regression test suite for canonical Formam flows",
+    "goal": "Lock the canonical Stage 2 baseline with automated tests covering Formam storage invariants and the first file-backed Formam command flows.",
+    "files_to_create": [
+      "tests/test_stage2_wave_c.py"
+    ],
+    "files_to_modify": [],
+    "depends_on": [],
+    "context": [
+      "Wave C is the final closeout wave for Stage 2 and is intentionally limited to verification and documentation alignment.",
+      "The Stage 2 checklist explicitly calls for regression tests covering deliverable normalization, deliverable markdown round-trip, next deliverable id generation, exact parent-goal validation, goal-map markdown round-trip, and the first Formam command flows.",
+      "Wave A and Wave B already establish the canonical Formam storage model and the first Formam CLI loop, so Wave C should protect that baseline rather than broadening architecture.",
+      "Formam must remain the stage that defines deliverables and maps before any Agenda work begins."
+    ],
+    "requirements": [
+      "Add automated tests for deliverable normalization into the canonical Stage 2 deliverable schema.",
+      "Add automated tests for canonical deliverable markdown round-trip behavior.",
+      "Add automated tests for next_deliverable_id() based on existing DELIV_###.md files.",
+      "Add automated tests for exact canonical parent-goal validation against the Finis storage layer.",
+      "Add automated tests for canonical goal-map markdown round-trip behavior.",
+      "Add automated tests for azq form build writing one canonical deliverable and one canonical goal map for a valid parent goal.",
+      "Add automated tests for azq form list and azq form show against canonical Formam storage.",
+      "Add automated tests for azq form map writing or refreshing a canonical goal map.",
+      "Keep the tests focused on structure invariants and CLI-visible behavior rather than speculative planning features."
+    ],
+    "acceptance_criteria": [
+      "The repository has an automated regression suite for the highest-risk Stage 2 Formam storage and command flows.",
+      "The tests prove the canonical file-backed Formam model behaves deterministically.",
+      "Stage 2 behavior is locked by tests rather than manual inspection alone."
+    ],
+    "suggested_commit_message": "add stage 2 regression tests for canonical formam flows"
+  },
+  {
+    "task_id": "STAGE2-WAVEC-02",
+    "title": "Align Stage 2 documentation with live Formam behavior",
+    "goal": "Make the operator-facing docs teach the live Stage 2 truth by describing canonical deliverables and goal maps as active Formam artifacts and by showing that deliverables come before tasks.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "AZQ_BOOTSTRAP.md",
+      "README.md"
+    ],
+    "depends_on": [
+      "STAGE2-WAVEC-01"
+    ],
+    "context": [
+      "Wave C closeout explicitly requires the docs to stop presenting Formam as doctrine only once the first live Formam command loop exists.",
+      "The Stage 2 checklist says the docs must define data/form/deliverables/ and data/form/maps/ as active Formam storage and keep the language aligned with deliverables-before-tasks.",
+      "The current README and bootstrap docs still describe Formam as mostly specified rather than implemented.",
+      "This closeout wave exists to freeze Stage 2 before Agenda begins, so documentation drift must be removed now."
+    ],
+    "requirements": [
+      "Refactor AZQ_BOOTSTRAP.md so it no longer presents Formam only as a future engine once Stage 2 is complete.",
+      "Refactor README.md so the project overview reflects the live canonical Formam model.",
+      "Explicitly define data/form/deliverables/ as the canonical home for active deliverable artifacts.",
+      "Explicitly define data/form/maps/ as the canonical home for active goal-map artifacts.",
+      "Document the first live Formam command set: azq form build, azq form list, azq form show, and azq form map.",
+      "Clarify that deliverables and maps are structure artifacts and that tasks still begin later in Agenda.",
+      "Align examples and terminology around DELIV_### and GOAL_<goal_id>_MAP.md artifacts where useful."
+    ],
+    "acceptance_criteria": [
+      "The docs no longer teach a pre-Stage-2 picture where Formam exists only as planned doctrine.",
+      "A new operator can read the docs and understand where canonical deliverables and goal maps live on disk.",
+      "The docs clearly preserve the craft order by teaching deliverables before tasks."
+    ],
+    "suggested_commit_message": "align stage 2 docs with live formam artifacts"
+  }
+]
