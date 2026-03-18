@@ -16,13 +16,13 @@
     ],
     "context": [
       "The pre-Stage-3 refactor report identifies azq/formam/storage.py as the largest active Stage 2 hotspot and recommends decomposing it by concern before Agenda work begins.",
-      "Stage 2 is already functionally complete, so Wave D should preserve behavior while improving module boundaries.",
-      "The implementation plan says each engine should stay small and filesystem-driven, which the current 683-line storage module no longer satisfies."
+      "Stage 2 is functionally complete, so Wave D should preserve behavior while improving module boundaries.",
+      "The implementation plan says each engine should stay small and filesystem-driven, which the current all-in-one storage module no longer satisfies."
     ],
     "requirements": [
       "Create a Formam paths module that owns canonical data/form/deliverables/ and data/form/maps/ path decisions and directory helpers.",
-      "Create a Formam schemas module that owns deliverable and goal-map normalization helpers plus any schema constants that do not need to live in storage.py.",
-      "Update azq/formam/storage.py to import and re-export the moved helpers if a stable public surface is needed.",
+      "Create a Formam schemas module that owns deliverable normalization, goal-map normalization, and schema constants that do not need to live in storage.py.",
+      "Update azq/formam/storage.py to import and re-export moved helpers if a stable public surface is needed.",
       "Keep external Stage 2 behavior unchanged while shrinking the storage module's responsibility.",
       "Do not introduce Agenda task concepts or new Formam command behavior in this task."
     ],
@@ -43,7 +43,8 @@
     "files_to_modify": [
       "azq/formam/storage.py",
       "azq/formam/build.py",
-      "azq/formam/deliverables.py"
+      "azq/formam/deliverables.py",
+      "azq/formam/__init__.py"
     ],
     "depends_on": [
       "STAGE2-WAVED-01"
@@ -77,18 +78,19 @@
     "files_to_modify": [
       "azq/formam/storage.py",
       "azq/formam/maps.py",
-      "azq/formam/build.py"
+      "azq/formam/build.py",
+      "azq/formam/__init__.py"
     ],
     "depends_on": [
       "STAGE2-WAVED-02"
     ],
     "context": [
-      "The pre-Stage-3 refactor report specifically recommends moving derive_goal_map_dependency_edges() out of azq/formam/storage.py and closer to map logic.",
+      "The pre-Stage-3 refactor report specifically recommends moving dependency-edge derivation out of azq/formam/storage.py and closer to map logic.",
       "Stage 2 goal maps are visible structure artifacts, so the code that shapes them should be easy to find and reason about.",
       "This refactor should keep maps human-readable and conservative rather than introducing richer planning behavior."
     ],
     "requirements": [
-      "Create a dedicated goal-map storage module for map markdown serialization, parsing, repository reads, and canonical writes.",
+      "Create a dedicated goal-map storage module for map markdown serialization, parsing, repository reads, exact-id lookup, and canonical writes.",
       "Move dependency-edge derivation out of azq/formam/storage.py and place it in azq/formam/maps.py or another clearly map-focused module.",
       "Update map-building code to use the extracted helpers through narrow imports.",
       "Preserve the canonical GOAL_<goal_id>_MAP.md format and the current sparse, inspectable Stage 2 map behavior.",
@@ -111,10 +113,7 @@
       "azq/formam/cli.py"
     ],
     "files_to_modify": [
-      "azq/cli.py",
-      "azq/formam/build.py",
-      "azq/formam/deliverables.py",
-      "azq/formam/maps.py"
+      "azq/cli.py"
     ],
     "depends_on": [
       "STAGE2-WAVED-03"
@@ -141,7 +140,7 @@
   {
     "task_id": "STAGE2-WAVED-05",
     "title": "Rename the staged task runner to match its real scope and keep a thin compatibility path",
-    "goal": "Correct the Stage 1-only naming drift in the Codex runner now that it drives multiple stages, while keeping operator scripts readable and stable.",
+    "goal": "Correct the Stage-1-only naming drift in the Codex runner now that it drives multiple stages, while keeping operator scripts readable and stable.",
     "files_to_create": [
       "azq_codex_task_runner.py"
     ],
@@ -161,13 +160,13 @@
     ],
     "requirements": [
       "Introduce a stage-agnostic runner entrypoint such as azq_codex_task_runner.py.",
-      "Keep azq_codex_stage1_task_runner.py as a thin compatibility shim or redirect path if needed so existing operator habits do not break abruptly.",
+      "Keep azq_codex_stage1_task_runner.py as a thin compatibility shim or redirect path so existing operator habits do not break abruptly.",
       "Update the shell ritual and live runbooks to refer to the stage-agnostic runner name where appropriate.",
       "Avoid changing task semantics or expanding runner behavior in this task.",
-      "Keep the result clearer and more intuitive than the current Stage 1-only filename."
+      "Keep the result clearer and more intuitive than the current Stage-1-only filename."
     ],
     "acceptance_criteria": [
-      "The primary runner filename no longer implies a false Stage 1-only scope.",
+      "The primary runner filename no longer implies a false Stage-1-only scope.",
       "Existing ritual entrypoints still work or fail over cleanly through a compatibility path.",
       "Operator-facing references align with the renamed runner."
     ],
@@ -193,7 +192,7 @@
       "Extend the Stage 2 regression suite to cover the public helpers or entrypoints affected by the Formam storage split.",
       "Extend coverage so CLI routing changes still prove build, list, show, and map behavior remains intact.",
       "Add at least one regression assertion that the stage-agnostic runner path remains invokable if the rename task is completed.",
-      "Keep the tests focused on preserved behavior rather than the internal module layout.",
+      "Keep the tests focused on preserved behavior rather than internal module layout.",
       "Do not broaden this task into Stage 3 Agenda testing."
     ],
     "acceptance_criteria": [
