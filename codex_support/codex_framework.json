@@ -113,5 +113,9 @@
   "good_analog": {
     "instruction": "Use this existing artifact as the closest model for decomposition and tone.",
     "filename": "AZQ_BUILD_TASKS_STAGE_2_WAVE_B.json"
+  },
+  "closest_existing_checks_analog": {
+    "filename": "AZQ_CHECKS_STAGE_2_WAVE_B.json",
+    "reason": "Stage 3 Wave B is the Agenda command-layer analogue of Stage 2 Wave B."
   }
 }
