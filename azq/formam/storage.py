@@ -1,30 +1,41 @@
-"""Filesystem scaffolding for canonical Formam storage.
+"""Filesystem-backed Formam storage facade.
 
-Stage 2 introduces Formam as the boundary that owns deliverable and map
-storage decisions. This module is intentionally small and import-safe so later
-tasks can build on one shared definition of the Formam data locations.
+Stage 2 keeps the shared public storage surface here while path ownership and
+schema primitives live in focused sibling modules.
 """
 
 from pathlib import Path
-import re
 from typing import Any, Optional
 
 from azq.finis import storage as finis_storage
-
-DATA_DIR = Path("data")
-FORM_DIR = DATA_DIR / "form"
-DELIVERABLES_DIR = FORM_DIR / "deliverables"
-MAPS_DIR = FORM_DIR / "maps"
-DELIVERABLE_FILE_SUFFIX = ".md"
-DELIVERABLE_FILE_GLOB = f"DELIV_*{DELIVERABLE_FILE_SUFFIX}"
-MAP_FILE_PREFIX = "GOAL_"
-MAP_FILE_SUFFIX = "_MAP.md"
-MAP_FILE_GLOB = f"{MAP_FILE_PREFIX}*{MAP_FILE_SUFFIX}"
-ARTIFACT_DESCRIPTION_HEADING = "## Artifact Description"
-DELIVERABLES_HEADING = "## Deliverables"
-DEPENDENCY_EDGES_HEADING = "## Dependency Edges"
-NOTES_HEADING = "## Notes"
-DELIVERABLE_ID_PATTERN = re.compile(r"^DELIV_(\d+)$")
+from azq.formam.paths import (
+    DATA_DIR,
+    DELIVERABLES_DIR,
+    DELIVERABLE_FILE_GLOB,
+    DELIVERABLE_FILE_SUFFIX,
+    FORM_DIR,
+    MAPS_DIR,
+    MAP_FILE_GLOB,
+    MAP_FILE_PREFIX,
+    MAP_FILE_SUFFIX,
+    deliverable_file_path,
+    ensure_deliverables_dir,
+    ensure_form_dirs,
+    ensure_maps_dir,
+    goal_map_file_path,
+    list_deliverable_files,
+    list_goal_map_files,
+)
+from azq.formam.schemas import (
+    ARTIFACT_DESCRIPTION_HEADING,
+    DELIVERABLES_HEADING,
+    DELIVERABLE_ID_PATTERN,
+    DEPENDENCY_EDGES_HEADING,
+    NOTES_HEADING,
+    deliverable_id_number,
+    normalize_deliverable_record,
+    normalize_goal_map_record,
+)
 
 
 class CanonicalGoalValidationError(ValueError):
@@ -46,129 +57,9 @@ class CanonicalGoalValidationError(ValueError):
         self.goal_record = goal_record
 
 
-def ensure_form_dirs() -> tuple[Path, Path]:
-    """Create the canonical Formam directories when they do not yet exist."""
-    DELIVERABLES_DIR.mkdir(parents=True, exist_ok=True)
-    MAPS_DIR.mkdir(parents=True, exist_ok=True)
-    return DELIVERABLES_DIR, MAPS_DIR
-
-
-def ensure_deliverables_dir() -> Path:
-    """Create the canonical deliverables directory when it does not yet exist."""
-    ensure_form_dirs()
-    return DELIVERABLES_DIR
-
-
-def ensure_maps_dir() -> Path:
-    """Create the canonical maps directory when it does not yet exist."""
-    ensure_form_dirs()
-    return MAPS_DIR
-
-
-def deliverable_file_path(deliverable_id: str) -> Path:
-    """Map an exact deliverable id to its canonical Markdown file path."""
-    return DELIVERABLES_DIR / f"{deliverable_id}{DELIVERABLE_FILE_SUFFIX}"
-
-
-def goal_map_file_path(goal_id: str) -> Path:
-    """Map an exact goal id to its canonical Formam map file path."""
-    return MAPS_DIR / f"{MAP_FILE_PREFIX}{goal_id}{MAP_FILE_SUFFIX}"
-
-
-def list_deliverable_files() -> list[Path]:
-    """Return canonical deliverable files in stable filename order."""
-    if not DELIVERABLES_DIR.exists():
-        return []
-
-    return sorted(
-        path for path in DELIVERABLES_DIR.glob(DELIVERABLE_FILE_GLOB) if path.is_file()
-    )
-
-
-def list_goal_map_files() -> list[Path]:
-    """Return canonical goal map files in stable filename order."""
-    if not MAPS_DIR.exists():
-        return []
-
-    return sorted(path for path in MAPS_DIR.glob(MAP_FILE_GLOB) if path.is_file())
-
-
 def _deliverable_id_number(deliverable_id: str) -> Optional[int]:
-    """Extract the numeric suffix from a canonical DELIV deliverable id."""
-    match = DELIVERABLE_ID_PATTERN.fullmatch(deliverable_id)
-    if match is None:
-        return None
-    return int(match.group(1))
-
-
-def normalize_deliverable_record(
-    deliverable_record: dict[str, Any],
-) -> dict[str, Any]:
-    """Convert partial deliverable-shaped data into the Stage 2 schema.
-
-    Fallbacks stay conservative so stub deliverables remain explicit rather
-    than silently gaining invented structure:
-    - ``artifact_description`` becomes an empty string when missing
-    - ``dependencies`` always becomes a list
-    - ``status`` defaults to ``drafted``
-    - ``created`` becomes an empty string when missing
-    """
-
-    dependencies = deliverable_record.get("dependencies")
-    if dependencies is None:
-        canonical_dependencies: list[Any] = []
-    elif isinstance(dependencies, list):
-        canonical_dependencies = list(dependencies)
-    else:
-        canonical_dependencies = [dependencies]
-
-    return {
-        "deliverable_id": deliverable_record.get("deliverable_id", ""),
-        "goal_id": deliverable_record.get("goal_id", ""),
-        "title": deliverable_record.get("title", ""),
-        "artifact_description": deliverable_record.get("artifact_description", ""),
-        "dependencies": canonical_dependencies,
-        "status": deliverable_record.get("status", "drafted"),
-        "created": deliverable_record.get("created", ""),
-    }
-
-
-def normalize_goal_map_record(goal_map_record: dict[str, Any]) -> dict[str, Any]:
-    """Convert partial goal-map-shaped data into the Stage 2 map schema.
-
-    Fallbacks stay conservative so sparse map artifacts remain inspectable
-    without inventing structure that does not yet exist:
-    - ``deliverable_ids`` always becomes a list
-    - ``dependency_edges`` always becomes a list
-    - ``status`` defaults to ``draft``
-    - ``created`` becomes an empty string when missing
-    - ``notes`` becomes an empty string when missing
-    """
-
-    deliverable_ids = goal_map_record.get("deliverable_ids")
-    if deliverable_ids is None:
-        canonical_deliverable_ids: list[Any] = []
-    elif isinstance(deliverable_ids, list):
-        canonical_deliverable_ids = list(deliverable_ids)
-    else:
-        canonical_deliverable_ids = [deliverable_ids]
-
-    dependency_edges = goal_map_record.get("dependency_edges")
-    if dependency_edges is None:
-        canonical_dependency_edges: list[Any] = []
-    elif isinstance(dependency_edges, list):
-        canonical_dependency_edges = list(dependency_edges)
-    else:
-        canonical_dependency_edges = [dependency_edges]
-
-    return {
-        "goal_id": goal_map_record.get("goal_id", ""),
-        "deliverable_ids": canonical_deliverable_ids,
-        "dependency_edges": canonical_dependency_edges,
-        "status": goal_map_record.get("status", "draft"),
-        "created": goal_map_record.get("created", ""),
-        "notes": goal_map_record.get("notes", ""),
-    }
+    """Backward-compatible alias for the shared deliverable id parser."""
+    return deliverable_id_number(deliverable_id)
 
 
 def serialize_deliverable_markdown(deliverable_record: dict[str, Any]) -> str:
