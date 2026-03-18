@@ -498,6 +498,51 @@ def load_deliverables_for_goal(goal_id: str) -> list[dict[str, Any]]:
     return load_goal_deliverables(goal_id)
 
 
+def derive_goal_map_dependency_edges(
+    deliverables: list[dict[str, Any]],
+) -> list[str]:
+    """Derive stable human-readable edges from canonical deliverable dependencies.
+
+    Edges stay conservative:
+    - only exact deliverable ids present in ``deliverables`` become edges
+    - self-references are ignored
+    - duplicate edges collapse while preserving deterministic order
+    """
+
+    deliverable_ids = {
+        str(deliverable.get("deliverable_id", "")).strip()
+        for deliverable in deliverables
+        if str(deliverable.get("deliverable_id", "")).strip()
+    }
+
+    dependency_edges: list[str] = []
+    seen_edges: set[str] = set()
+
+    for deliverable in deliverables:
+        deliverable_id = str(deliverable.get("deliverable_id", "")).strip()
+        if not deliverable_id:
+            continue
+
+        dependencies = normalize_deliverable_record(deliverable)["dependencies"]
+        for dependency in dependencies:
+            dependency_id = str(dependency).strip()
+            if (
+                not dependency_id
+                or dependency_id == deliverable_id
+                or dependency_id not in deliverable_ids
+            ):
+                continue
+
+            edge = f"{dependency_id} -> {deliverable_id}"
+            if edge in seen_edges:
+                continue
+
+            seen_edges.add(edge)
+            dependency_edges.append(edge)
+
+    return dependency_edges
+
+
 def validate_canonical_goal(
     goal_id: str, *, active_only: bool = False
 ) -> dict[str, Any]:
@@ -628,6 +673,7 @@ __all__ = [
     "load_all_deliverables",
     "load_goal_deliverables",
     "load_deliverables_for_goal",
+    "derive_goal_map_dependency_edges",
     "CanonicalGoalValidationError",
     "validate_canonical_goal",
     "validate_parent_goal",
