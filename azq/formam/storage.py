@@ -548,6 +548,36 @@ def next_deliverable_id() -> str:
     return f"DELIV_{highest_deliverable_number + 1:03d}"
 
 
+def write_deliverable(deliverable_record: dict[str, Any]) -> Path:
+    """Write one canonical deliverable record to its exact Markdown file."""
+    record = normalize_deliverable_record(deliverable_record)
+    deliverable_id = str(record["deliverable_id"]).strip()
+    if not DELIVERABLE_ID_PATTERN.fullmatch(deliverable_id):
+        raise ValueError(
+            f"Cannot write canonical deliverable file for invalid deliverable_id {deliverable_id!r}."
+        )
+
+    deliverable_path = deliverable_file_path(deliverable_id)
+    ensure_deliverables_dir()
+    deliverable_path.write_text(
+        serialize_deliverable_markdown(record), encoding="utf-8"
+    )
+    return deliverable_path
+
+
+def write_goal_map(goal_map_record: dict[str, Any]) -> Path:
+    """Write one canonical goal map record to its exact Markdown file."""
+    record = normalize_goal_map_record(goal_map_record)
+    goal_id = str(record["goal_id"]).strip()
+    if not goal_id:
+        raise ValueError("Cannot write canonical goal map file without a goal_id.")
+
+    goal_map_path = goal_map_file_path(goal_id)
+    ensure_maps_dir()
+    goal_map_path.write_text(serialize_goal_map_markdown(record), encoding="utf-8")
+    return goal_map_path
+
+
 __all__ = [
     "DATA_DIR",
     "FORM_DIR",
@@ -593,4 +623,6 @@ __all__ = [
     "validate_canonical_goal",
     "validate_parent_goal",
     "next_deliverable_id",
+    "write_deliverable",
+    "write_goal_map",
 ]
