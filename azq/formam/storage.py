@@ -21,6 +21,9 @@ MAP_FILE_PREFIX = "GOAL_"
 MAP_FILE_SUFFIX = "_MAP.md"
 MAP_FILE_GLOB = f"{MAP_FILE_PREFIX}*{MAP_FILE_SUFFIX}"
 ARTIFACT_DESCRIPTION_HEADING = "## Artifact Description"
+DELIVERABLES_HEADING = "## Deliverables"
+DEPENDENCY_EDGES_HEADING = "## Dependency Edges"
+NOTES_HEADING = "## Notes"
 DELIVERABLE_ID_PATTERN = re.compile(r"^DELIV_(\d+)$")
 
 
@@ -208,6 +211,55 @@ def deliverable_to_markdown(deliverable_record: dict[str, Any]) -> str:
     return serialize_deliverable_markdown(deliverable_record)
 
 
+def serialize_goal_map_markdown(goal_map_record: dict[str, Any]) -> str:
+    """Serialize a canonical goal-map record into diff-friendly Markdown."""
+    record = normalize_goal_map_record(goal_map_record)
+    lines = [
+        f"# Goal Map: {record['goal_id']}",
+        "",
+        f"- status: {record['status']}",
+        f"- created: {record['created']}",
+        "",
+        DELIVERABLES_HEADING,
+        "",
+    ]
+
+    deliverable_ids = record["deliverable_ids"]
+    if deliverable_ids:
+        for item in deliverable_ids:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- []")
+
+    lines.extend(["", DEPENDENCY_EDGES_HEADING, ""])
+
+    dependency_edges = record["dependency_edges"]
+    if dependency_edges:
+        for item in dependency_edges:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- []")
+
+    lines.extend(["", NOTES_HEADING, ""])
+
+    notes = record["notes"]
+    if notes:
+        lines.extend(str(notes).splitlines())
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def serialize_goal_map_record(goal_map_record: dict[str, Any]) -> str:
+    """Backward-compatible alias for canonical goal-map Markdown."""
+    return serialize_goal_map_markdown(goal_map_record)
+
+
+def goal_map_to_markdown(goal_map_record: dict[str, Any]) -> str:
+    """Alias for callers expecting a goal-map-to-Markdown helper."""
+    return serialize_goal_map_markdown(goal_map_record)
+
+
 def parse_deliverable_markdown(markdown_text: str) -> dict[str, Any]:
     """Parse a canonical Markdown deliverable file back into a record."""
     lines = markdown_text.splitlines()
@@ -299,6 +351,111 @@ def parse_deliverable_record(markdown_text: str) -> dict[str, Any]:
 def deliverable_from_markdown(markdown_text: str) -> dict[str, Any]:
     """Alias for callers expecting a Markdown-to-deliverable helper."""
     return parse_deliverable_markdown(markdown_text)
+
+
+def _parse_goal_map_list_section(
+    lines: list[str], start_index: int, next_heading: str
+) -> tuple[list[str], int]:
+    """Parse a simple Markdown bullet-list section used by goal maps."""
+    items: list[str] = []
+    index = start_index
+
+    while index < len(lines):
+        stripped = lines[index].strip()
+        if stripped == "":
+            index += 1
+            continue
+        if stripped == next_heading:
+            break
+        if stripped == "- []":
+            index += 1
+            continue
+        if not stripped.startswith("- "):
+            raise ValueError(f"Unrecognized goal map list item: {lines[index]!r}")
+        items.append(stripped[2:])
+        index += 1
+
+    return items, index
+
+
+def parse_goal_map_markdown(markdown_text: str) -> dict[str, Any]:
+    """Parse a canonical Markdown goal-map file back into a record."""
+    lines = markdown_text.splitlines()
+    if not lines:
+        raise ValueError("Goal map markdown is empty.")
+
+    header = lines[0].strip()
+    if not header.startswith("# Goal Map: "):
+        raise ValueError(
+            "Goal map markdown must start with a '# Goal Map: <goal_id>' header."
+        )
+
+    goal_id = header[len("# Goal Map: ") :].strip()
+    if not goal_id:
+        raise ValueError("Goal map markdown header must include a goal id.")
+
+    metadata: dict[str, str] = {}
+    index = 1
+
+    while index < len(lines) and lines[index].strip() == "":
+        index += 1
+
+    while index < len(lines):
+        stripped = lines[index].strip()
+        if stripped == DELIVERABLES_HEADING:
+            index += 1
+            break
+        if stripped == "":
+            index += 1
+            continue
+        if not stripped.startswith("- ") or ":" not in stripped:
+            raise ValueError(f"Unrecognized goal map metadata line: {lines[index]!r}")
+        field_name, field_value = stripped[2:].split(":", 1)
+        metadata[field_name] = field_value.lstrip()
+        index += 1
+
+    deliverable_ids, index = _parse_goal_map_list_section(
+        lines, index, DEPENDENCY_EDGES_HEADING
+    )
+    if index >= len(lines) or lines[index].strip() != DEPENDENCY_EDGES_HEADING:
+        raise ValueError(
+            f"Goal map markdown is missing required {DEPENDENCY_EDGES_HEADING!r} section."
+        )
+
+    dependency_edges, index = _parse_goal_map_list_section(
+        lines, index + 1, NOTES_HEADING
+    )
+    if index >= len(lines) or lines[index].strip() != NOTES_HEADING:
+        raise ValueError(
+            f"Goal map markdown is missing required {NOTES_HEADING!r} section."
+        )
+
+    notes_lines = lines[index + 1 :]
+    while notes_lines and notes_lines[0].strip() == "":
+        notes_lines.pop(0)
+    while notes_lines and notes_lines[-1].strip() == "":
+        notes_lines.pop()
+
+    return normalize_goal_map_record(
+        {
+            "goal_id": goal_id,
+            "deliverable_ids": deliverable_ids,
+            "dependency_edges": dependency_edges,
+            "status": metadata.get("status", "draft"),
+            "created": metadata.get("created", ""),
+            "notes": "\n".join(notes_lines),
+        }
+    )
+
+
+def parse_goal_map_record(markdown_text: str) -> dict[str, Any]:
+    """Backward-compatible alias for canonical goal-map Markdown parsing."""
+    return parse_goal_map_markdown(markdown_text)
+
+
+def goal_map_from_markdown(markdown_text: str) -> dict[str, Any]:
+    """Alias for callers expecting a Markdown-to-goal-map helper."""
+    return parse_goal_map_markdown(markdown_text)
 
 
 def load_deliverable(deliverable_id: str) -> Optional[dict[str, Any]]:
@@ -402,6 +559,9 @@ __all__ = [
     "MAP_FILE_SUFFIX",
     "MAP_FILE_GLOB",
     "ARTIFACT_DESCRIPTION_HEADING",
+    "DELIVERABLES_HEADING",
+    "DEPENDENCY_EDGES_HEADING",
+    "NOTES_HEADING",
     "DELIVERABLE_ID_PATTERN",
     "ensure_form_dirs",
     "ensure_deliverables_dir",
@@ -416,9 +576,15 @@ __all__ = [
     "serialize_deliverable_record",
     "serialize_deliverable_markdown",
     "deliverable_to_markdown",
+    "serialize_goal_map_record",
+    "serialize_goal_map_markdown",
+    "goal_map_to_markdown",
     "parse_deliverable_record",
     "parse_deliverable_markdown",
     "deliverable_from_markdown",
+    "parse_goal_map_record",
+    "parse_goal_map_markdown",
+    "goal_map_from_markdown",
     "load_deliverable",
     "load_all_deliverables",
     "load_goal_deliverables",
