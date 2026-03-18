@@ -25,6 +25,14 @@ def task_id_number(task_id: str) -> Optional[int]:
     return int(match.group(1))
 
 
+def canonical_graph_id(goal_id: str) -> str:
+    """Build the canonical graph id for one exact goal id."""
+    normalized_goal_id = str(goal_id).strip()
+    if not normalized_goal_id:
+        return ""
+    return f"GOAL_{normalized_goal_id}{GRAPH_ID_SUFFIX}"
+
+
 def _normalize_task_dependencies(task_record: dict[str, Any]) -> list[Any]:
     """Normalize task dependency input into a stable list field."""
     dependencies = task_record.get("dependencies", task_record.get("depends_on"))
@@ -204,7 +212,7 @@ def normalize_dag_record(dag_record: dict[str, Any]) -> dict[str, Any]:
         dag_record.get("graph_id", dag_record.get("dag_id", dag_record.get("id", "")))
     ).strip()
     if not graph_id and goal_id:
-        graph_id = f"GOAL_{goal_id}{GRAPH_ID_SUFFIX}"
+        graph_id = canonical_graph_id(goal_id)
 
     return {
         "graph_id": graph_id,
@@ -233,6 +241,7 @@ __all__ = [
     "DEPENDENCIES_HEADING",
     "EXECUTION_NOTES_HEADING",
     "task_id_number",
+    "canonical_graph_id",
     "normalize_task_record",
     "normalize_dag_record",
 ]

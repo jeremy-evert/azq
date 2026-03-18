@@ -12,6 +12,7 @@ TASK_FILE_SUFFIX = ".md"
 TASK_FILE_GLOB = f"{TASK_FILE_PREFIX}*{TASK_FILE_SUFFIX}"
 DAG_FILE_PREFIX = "GOAL_"
 DAG_FILE_SUFFIX = "_DAG.json"
+DAG_FILE_GLOB = f"{DAG_FILE_PREFIX}*{DAG_FILE_SUFFIX}"
 TASK_LOG_FILE_SUFFIX = "_LOG.md"
 
 
@@ -64,6 +65,14 @@ def list_task_files() -> list[Path]:
     return sorted(path for path in TASKS_DIR.glob(TASK_FILE_GLOB) if path.is_file())
 
 
+def list_dag_files() -> list[Path]:
+    """Return canonical DAG artifact files in stable filename order."""
+    if not DAGS_DIR.exists():
+        return []
+
+    return sorted(path for path in DAGS_DIR.glob(DAG_FILE_GLOB) if path.is_file())
+
+
 __all__ = [
     "DATA_DIR",
     "AGENDA_DIR",
@@ -75,6 +84,7 @@ __all__ = [
     "TASK_FILE_GLOB",
     "DAG_FILE_PREFIX",
     "DAG_FILE_SUFFIX",
+    "DAG_FILE_GLOB",
     "TASK_LOG_FILE_SUFFIX",
     "ensure_agenda_dirs",
     "ensure_tasks_dir",
@@ -84,4 +94,5 @@ __all__ = [
     "dag_file_path",
     "task_log_file_path",
     "list_task_files",
+    "list_dag_files",
 ]

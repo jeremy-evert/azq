@@ -2,11 +2,24 @@
 
 Stage 3 starts with a single visible storage boundary for Agenda so narrower
 task, DAG, and log storage modules can grow behind this facade later without
-changing the package import surface. Canonical path ownership and task schema
-primitives live in focused sibling modules and are re-exported here where
-useful.
+changing the package import surface. Canonical path ownership and task/DAG
+schema primitives live in focused sibling modules and are re-exported here
+where useful.
 """
 
+from azq.agenda.dag_storage import (
+    dag_from_json,
+    dag_to_json,
+    load_all_dags,
+    load_dag,
+    load_goal_dag,
+    parse_dag_json,
+    parse_dag_record,
+    save_dag,
+    serialize_dag_json,
+    serialize_dag_record,
+    write_dag,
+)
 from azq.agenda.task_storage import (
     CanonicalDeliverableValidationError,
     load_all_tasks,
@@ -29,6 +42,7 @@ from azq.agenda.paths import (
     AGENDA_DIR,
     DAGS_DIR,
     DAG_FILE_PREFIX,
+    DAG_FILE_GLOB,
     DAG_FILE_SUFFIX,
     DATA_DIR,
     LOGS_DIR,
@@ -42,6 +56,7 @@ from azq.agenda.paths import (
     ensure_dags_dir,
     ensure_logs_dir,
     ensure_tasks_dir,
+    list_dag_files,
     list_task_files,
     task_file_path,
     task_log_file_path,
@@ -53,6 +68,7 @@ from azq.agenda.schemas import (
     GRAPH_ID_SUFFIX,
     TASK_ID_PATTERN,
     TASK_INTENT_HEADING,
+    canonical_graph_id,
     normalize_dag_record,
     normalize_task_record,
     task_id_number,
@@ -69,6 +85,7 @@ __all__ = [
     "TASK_FILE_SUFFIX",
     "TASK_FILE_GLOB",
     "DAG_FILE_PREFIX",
+    "DAG_FILE_GLOB",
     "DAG_FILE_SUFFIX",
     "TASK_LOG_FILE_SUFFIX",
     "TASK_ID_PATTERN",
@@ -85,10 +102,18 @@ __all__ = [
     "task_file_path",
     "dag_file_path",
     "task_log_file_path",
+    "list_dag_files",
     "list_task_files",
     "task_id_number",
+    "canonical_graph_id",
     "normalize_task_record",
     "normalize_dag_record",
+    "serialize_dag_record",
+    "serialize_dag_json",
+    "dag_to_json",
+    "parse_dag_record",
+    "parse_dag_json",
+    "dag_from_json",
     "serialize_task_record",
     "serialize_task_markdown",
     "task_to_markdown",
@@ -97,11 +122,16 @@ __all__ = [
     "task_from_markdown",
     "validate_canonical_deliverable",
     "validate_parent_deliverable",
+    "load_dag",
+    "load_goal_dag",
+    "load_all_dags",
     "load_task",
     "load_all_tasks",
     "load_tasks_for_deliverable",
     "load_deliverable_tasks",
     "next_task_id",
+    "write_dag",
     "write_task",
+    "save_dag",
     "save_task",
 ]
