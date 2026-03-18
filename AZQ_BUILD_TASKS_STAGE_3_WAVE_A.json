@@ -1,0 +1,293 @@
+[
+  {
+    "task_id": "STAGE3-WAVEA-01",
+    "title": "Create Agenda package scaffolding and storage facade module",
+    "goal": "Introduce a new package boundary for Agenda with an import-safe public storage facade before any task, DAG, or log behavior is implemented.",
+    "files_to_create": [
+      "azq/agenda/__init__.py",
+      "azq/agenda/storage.py"
+    ],
+    "files_to_modify": [],
+    "depends_on": [],
+    "context": [
+      "Stage 3 is the Agenda stage that turns canonical deliverables into executable tasks with durable work evidence.",
+      "The live repository already has split engine boundaries for Scintilla, Finis, and Formam under azq/.",
+      "Wave A is the storage-and-schema foundation wave for Agenda, not a command-implementation wave.",
+      "The Stage 3 build checklist says Agenda should start with package scaffolding and a thin storage facade rather than a monolithic implementation blob."
+    ],
+    "requirements": [
+      "Create the azq/agenda package.",
+      "Create azq/agenda/storage.py as the public Stage 3 storage boundary.",
+      "Keep the initial modules import-safe and small.",
+      "Do not add azq task or azq dag command handling yet.",
+      "Do not introduce task generation, DAG building, or task state transitions in this task."
+    ],
+    "acceptance_criteria": [
+      "azq/agenda/__init__.py exists.",
+      "azq/agenda/storage.py exists.",
+      "The new Agenda storage facade can be imported without error."
+    ],
+    "suggested_commit_message": "add agenda package scaffolding"
+  },
+  {
+    "task_id": "STAGE3-WAVEA-02",
+    "title": "Extract Agenda path constants and directory helpers into a focused module",
+    "goal": "Centralize Agenda path ownership for tasks, DAGs, and logs in a dedicated module before storage helpers start reading or writing files.",
+    "files_to_create": [
+      "azq/agenda/paths.py"
+    ],
+    "files_to_modify": [
+      "azq/agenda/storage.py"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEA-01"
+    ],
+    "context": [
+      "The live Stage 2 Formam code already split path ownership into azq/formam/paths.py rather than burying it in a giant storage module.",
+      "Stage 3 requires three canonical storage surfaces: data/agenda/tasks/, data/agenda/dags/, and data/agenda/logs/.",
+      "Wave A should establish deterministic file-path conventions before any Agenda command-layer work exists."
+    ],
+    "requirements": [
+      "Create a dedicated azq/agenda/paths.py module.",
+      "Define constants for the tasks, dags, and logs directories.",
+      "Add helpers to ensure all three directories exist.",
+      "Add a helper to map a task_id like TASK_001 to a canonical task file path.",
+      "Add a helper to map a goal_id like FINIS_001 to a canonical DAG file path such as GOAL_FINIS_001_DAG.json.",
+      "Add a helper to map a task_id like TASK_001 to a canonical log file path such as TASK_001_LOG.md.",
+      "Add a helper to list task files in deterministic order.",
+      "Expose the path helpers through azq/agenda/storage.py only as a thin facade if needed."
+    ],
+    "acceptance_criteria": [
+      "One focused module owns the canonical Agenda path decisions.",
+      "Agenda directories can be created on demand.",
+      "Task, DAG, and log path lookup is deterministic."
+    ],
+    "suggested_commit_message": "add agenda path constants and helpers"
+  },
+  {
+    "task_id": "STAGE3-WAVEA-03",
+    "title": "Extract canonical task schema helpers into a focused module",
+    "goal": "Create a dedicated schema module that normalizes partial task-shaped data into the Stage 3 canonical task record before any file format or repository helpers depend on it.",
+    "files_to_create": [
+      "azq/agenda/schemas.py"
+    ],
+    "files_to_modify": [
+      "azq/agenda/storage.py"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEA-02"
+    ],
+    "context": [
+      "The Stage 3 build checklist defines the canonical task fields as task_id, deliverable_id, description, dependencies, status, execution_notes, and created.",
+      "The live Stage 2 refactor pattern already uses a dedicated schemas module for Formam normalization.",
+      "Agenda tasks must remain subordinate to deliverables rather than becoming free-floating work records."
+    ],
+    "requirements": [
+      "Add task normalization helpers in azq/agenda/schemas.py.",
+      "Ensure every normalized task record includes task_id, deliverable_id, description, dependencies, status, execution_notes, and created.",
+      "Provide conservative fallback values for missing dependencies, status, execution_notes, and created fields.",
+      "Normalize dependencies into a list.",
+      "Keep the default status simple and explicit for Stage 3 foundation work.",
+      "Expose the normalization helper through azq/agenda/storage.py only as a thin facade if needed."
+    ],
+    "acceptance_criteria": [
+      "One focused module can normalize incomplete task-shaped data into canonical task records.",
+      "Canonical task output always includes the Stage 3 required fields.",
+      "Dependencies always normalize to a list."
+    ],
+    "suggested_commit_message": "add agenda task schema normalization"
+  },
+  {
+    "task_id": "STAGE3-WAVEA-04",
+    "title": "Implement task storage helpers in a dedicated task-storage module",
+    "goal": "Make canonical task records readable, writable, listable, and allocatable through a dedicated task-storage module rather than growing the Agenda facade into a grab bag.",
+    "files_to_create": [
+      "azq/agenda/task_storage.py"
+    ],
+    "files_to_modify": [
+      "azq/agenda/storage.py"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEA-03"
+    ],
+    "context": [
+      "The Stage 3 build checklist says task storage should live in a dedicated task-storage module.",
+      "Stage 3 task files are the first visible Agenda artifacts and should be diff-friendly and inspectable.",
+      "Wave A must establish file-backed task reads and id allocation before any Wave B command work can create or mutate tasks."
+    ],
+    "requirements": [
+      "Create azq/agenda/task_storage.py.",
+      "Choose and implement a diff-friendly markdown on-disk format for TASK_###.md files.",
+      "Add serializer and parser helpers for canonical task records.",
+      "Add repository helpers to load all tasks, load one task by exact task_id, load all tasks for one exact deliverable_id, and compute the next stable TASK_### id.",
+      "Keep ordering deterministic and lookup exact-match only.",
+      "Expose the task storage helpers through azq/agenda/storage.py only as a thin facade if needed."
+    ],
+    "acceptance_criteria": [
+      "Task records can be normalized, written, read, listed, and allocated through a dedicated task-storage module.",
+      "The resulting task files are human-readable and diff-friendly.",
+      "The Agenda storage facade does not need to own the full implementation directly."
+    ],
+    "suggested_commit_message": "add agenda task storage helpers"
+  },
+  {
+    "task_id": "STAGE3-WAVEA-05",
+    "title": "Add canonical deliverable-parent validation helpers for Agenda tasks",
+    "goal": "Ensure Agenda can prove a task descends from a real canonical deliverable before any task file is written or mutated.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/agenda/task_storage.py",
+      "azq/agenda/storage.py"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEA-04"
+    ],
+    "context": [
+      "Stage 3 tasks must descend from canonical Formam deliverables, not from goals directly and not from hidden state.",
+      "The Stage 3 build checklist calls for one exact-match deliverable validation boundary before tasks are created or mutated.",
+      "The live repo already has canonical Formam deliverable storage under azq/formam/."
+    ],
+    "requirements": [
+      "Add a validation helper that loads one canonical deliverable by exact deliverable_id.",
+      "Reject missing parent deliverables before any Agenda task write occurs.",
+      "Fail clearly when a deliverable record is malformed enough that task derivation should stop.",
+      "Keep deliverable validation logic small and reusable by later Agenda commands.",
+      "Do not broaden this task into DAG creation or task state transition behavior."
+    ],
+    "acceptance_criteria": [
+      "Agenda exposes a deliverable validation helper.",
+      "The helper checks parent deliverables by exact deliverable_id.",
+      "A future Wave B command can use the helper to stop invalid task creation early."
+    ],
+    "suggested_commit_message": "add agenda deliverable validation helpers"
+  },
+  {
+    "task_id": "STAGE3-WAVEA-06",
+    "title": "Extract canonical DAG schema helpers into the shared schema module",
+    "goal": "Extend the Agenda schema boundary so partial DAG-shaped data can normalize into the canonical Stage 3 DAG record before DAG storage helpers are implemented.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/agenda/schemas.py",
+      "azq/agenda/storage.py"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEA-05"
+    ],
+    "context": [
+      "The Stage 3 build checklist defines the canonical DAG fields as goal_id, deliverable_ids, task_ids, dependency_edges, status, created, and notes.",
+      "Wave A should define both task and DAG schema boundaries before any command layer starts generating executable structures.",
+      "The first DAG implementation should stay sparse and inspectable rather than pretending to have smart planning already."
+    ],
+    "requirements": [
+      "Add DAG normalization helpers in azq/agenda/schemas.py.",
+      "Ensure every normalized DAG record includes goal_id, deliverable_ids, task_ids, dependency_edges, status, created, and notes.",
+      "Provide conservative fallback values for missing generated fields.",
+      "Normalize deliverable_ids, task_ids, and dependency_edges into lists.",
+      "Keep the default status simple and explicit.",
+      "Expose the normalization helper through azq/agenda/storage.py only as a thin facade if needed."
+    ],
+    "acceptance_criteria": [
+      "One focused module can normalize incomplete DAG-shaped data into canonical DAG records.",
+      "Canonical DAG output always includes the Stage 3 required fields.",
+      "deliverable_ids, task_ids, and dependency_edges always normalize to lists."
+    ],
+    "suggested_commit_message": "add agenda dag schema normalization"
+  },
+  {
+    "task_id": "STAGE3-WAVEA-07",
+    "title": "Implement DAG storage helpers in a dedicated dag-storage module",
+    "goal": "Make canonical DAG records readable, writable, and inspectable through a dedicated DAG-storage module so graph storage does not get buried in a generic Agenda facade.",
+    "files_to_create": [
+      "azq/agenda/dag_storage.py"
+    ],
+    "files_to_modify": [
+      "azq/agenda/storage.py"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEA-06"
+    ],
+    "context": [
+      "The Stage 3 build checklist calls for a dedicated DAG-storage module rather than a monolithic storage.py.",
+      "Stage 3 DAG files should be simple, inspectable JSON artifacts under data/agenda/dags/.",
+      "Wave A should establish a canonical DAG representation before Wave B command work starts building or showing DAGs."
+    ],
+    "requirements": [
+      "Create azq/agenda/dag_storage.py.",
+      "Choose and implement a simple JSON on-disk format for GOAL_<goal_id>_DAG.json files.",
+      "Add serializer and parser helpers for canonical DAG records.",
+      "Add repository helpers to load one DAG by exact goal_id and write one canonical DAG record.",
+      "Add a helper to derive stable dependency-edge structures from task relationships, keeping that behavior beside DAG logic rather than in a generic facade.",
+      "Expose the DAG storage helpers through azq/agenda/storage.py only as a thin facade if needed."
+    ],
+    "acceptance_criteria": [
+      "DAG records can be normalized, written, read, and inspected through a dedicated DAG-storage module.",
+      "Dependency-edge derivation has a clear home beside DAG logic.",
+      "The Agenda storage facade remains smaller than the full implementation."
+    ],
+    "suggested_commit_message": "add agenda dag storage helpers"
+  },
+  {
+    "task_id": "STAGE3-WAVEA-08",
+    "title": "Implement task-log helpers in a dedicated log-storage module",
+    "goal": "Create the append-only log-storage boundary that will let Agenda leave durable work evidence without leaking into artifact publication or archive behavior.",
+    "files_to_create": [
+      "azq/agenda/log_storage.py"
+    ],
+    "files_to_modify": [
+      "azq/agenda/storage.py"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEA-07"
+    ],
+    "context": [
+      "Stage 3 requires durable work-log evidence under data/agenda/logs/ whenever a task starts or completes.",
+      "The first log implementation should be append-only, human-readable, and clearly separate from later artifact or archive work.",
+      "Wave A should establish the log-writing boundary before any Wave B task command tries to use it."
+    ],
+    "requirements": [
+      "Create azq/agenda/log_storage.py.",
+      "Add helpers to create one task log file for a canonical task.",
+      "Add helpers to append a visible started entry and a visible completed entry.",
+      "Keep the log format human-readable and append-only.",
+      "Keep log writing separate from artifact publication, archive behavior, and repository-wide status logic.",
+      "Expose the log helpers through azq/agenda/storage.py only as a thin facade if needed."
+    ],
+    "acceptance_criteria": [
+      "Agenda can leave durable task-log evidence through a dedicated log-storage module.",
+      "The log format is readable and inspectable by a human operator.",
+      "No later-stage artifact or archive behavior is introduced."
+    ],
+    "suggested_commit_message": "add agenda task log helpers"
+  },
+  {
+    "task_id": "STAGE3-WAVEA-09",
+    "title": "Keep azq agenda storage as a thin public facade",
+    "goal": "Establish azq/agenda/storage.py as the stable public boundary that re-exports Agenda storage helpers from focused modules without becoming the implementation blob itself.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/agenda/storage.py",
+      "azq/agenda/__init__.py"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEA-08"
+    ],
+    "context": [
+      "The live Stage 2 Formam code already uses a thin storage facade over focused modules such as paths.py, schemas.py, deliverable_storage.py, and map_storage.py.",
+      "The Stage 3 build checklist explicitly says azq/agenda/storage.py should remain the public boundary rather than becoming a monolithic implementation file that needs later cleanup.",
+      "Wave A closes when the Agenda foundation exists as a clean storage surface ready for Wave B command work."
+    ],
+    "requirements": [
+      "Re-export the public Agenda storage helpers from the focused modules through azq/agenda/storage.py.",
+      "Keep the facade readable, stable, and import-safe for later command-layer modules.",
+      "Avoid duplicating implementation logic in the facade when the focused modules already own the real behavior.",
+      "Update azq/agenda/__init__.py only as needed to present a clean package boundary.",
+      "Do not introduce azq task or azq dag CLI command handling in this task."
+    ],
+    "acceptance_criteria": [
+      "azq/agenda/storage.py is the public Agenda storage boundary, not the implementation blob.",
+      "The focused modules own paths, schemas, task storage, DAG storage, and log storage concerns.",
+      "Wave B command modules can depend on a stable Agenda storage facade without reopening Wave A boundaries."
+    ],
+    "suggested_commit_message": "keep agenda storage as thin facade"
+  }
+]
