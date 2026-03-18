@@ -1,0 +1,73 @@
+[
+  {
+    "task_id": "STAGE3-WAVEC-01",
+    "title": "Add Stage 3 regression test suite for canonical Agenda storage and CLI flows",
+    "goal": "Protect the live Stage 3 Agenda baseline with automated regression coverage over canonical task storage, canonical DAG storage, exact deliverable validation, and the active Agenda CLI command flow.",
+    "files_to_create": [
+      "tests/test_stage3_wave_c.py"
+    ],
+    "files_to_modify": [],
+    "depends_on": [
+      "STAGE3-WAVEB-05"
+    ],
+    "context": [
+      "Stage 3 Wave A established canonical Agenda storage for tasks, DAGs, and task logs.",
+      "Stage 3 Wave B wired the active Agenda command path through azq agenda build, list, show, and dag.",
+      "Wave C should close Stage 3 by turning the live implementation into a stable baseline rather than leaving it as a merely functional prototype.",
+      "The Stage 3 build document is stale in places: it still frames older azq task or azq dag behavior and broader start or complete flows, while the live repo now exposes the narrower azq agenda command family."
+    ],
+    "requirements": [
+      "Add automated tests for task normalization into the canonical Agenda schema.",
+      "Add automated tests for task markdown round-trip behavior so canonical task records can be written and read without loss.",
+      "Add automated tests for task id allocation from existing TASK_### files.",
+      "Add automated tests for parent-deliverable validation against canonical Formam deliverable files.",
+      "Add automated tests for canonical DAG JSON round-trip behavior.",
+      "Add automated tests for the main Agenda CLI command flow: agenda build, agenda list, agenda show, and agenda dag.",
+      "Verify canonical backlinks from tasks to exactly one parent deliverable and from deliverable-scoped DAG refreshes to the canonical parent goal artifact.",
+      "Make the regression suite runnable through the repository's normal test command.",
+      "Keep the regression suite centered on the live Stage 3 command surface rather than introducing task execution, task status mutation, or later-stage orchestration behavior."
+    ],
+    "acceptance_criteria": [
+      "Stage 3 has a real automated regression suite under tests/.",
+      "The highest-risk Agenda storage and CLI paths are covered by automated tests.",
+      "The tests prove the canonical file-backed task and DAG model behaves deterministically.",
+      "The Stage 3 regression suite passes through the project's standard test command."
+    ],
+    "suggested_commit_message": "add stage 3 regression tests for canonical agenda storage and cli flows"
+  },
+  {
+    "task_id": "STAGE3-WAVEC-02",
+    "title": "Align Stage 3 documentation with the live Agenda baseline",
+    "goal": "Make the operator-facing documentation describe the live Agenda system accurately, explicitly naming canonical Agenda storage and the current azq agenda command family as the Stage 3 baseline.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "README.md",
+      "AZQ_BOOTSTRAP.md",
+      "AZQ_BUILD_TASKS_STAGE_3.md",
+      "AZQ_IMPLEMENTATION_PLAN.md"
+    ],
+    "depends_on": [
+      "STAGE3-WAVEC-01"
+    ],
+    "context": [
+      "Agenda is now live through canonical file-backed storage under data/agenda/tasks/, data/agenda/dags/, and data/agenda/logs/.",
+      "The main docs still present Agenda as later-stage or not-yet-implemented work, and the Stage 3 build doc still carries stale pre-Wave-A and pre-Wave-B gap language.",
+      "Wave C is the Stage 3 evidence-and-closeout wave, so the docs should reflect the live baseline before Domum or repository-wide health flows arrive."
+    ],
+    "requirements": [
+      "Refactor README.md so the project overview reflects live Agenda behavior rather than only Stage 1 and Stage 2 loops.",
+      "Refactor AZQ_BOOTSTRAP.md so bootstrap and baseline instructions describe canonical Agenda storage and the current Agenda command family correctly where Stage 3 is discussed.",
+      "Refactor AZQ_BUILD_TASKS_STAGE_3.md so its language matches the implemented Agenda baseline rather than the earlier pre-implementation gap list and older azq task or azq dag framing.",
+      "Refactor AZQ_IMPLEMENTATION_PLAN.md so it no longer claims Agenda is only specified in docs and not yet implemented in code.",
+      "Explicitly define data/agenda/tasks/, data/agenda/dags/, and data/agenda/logs/ as the canonical Stage 3 system of record.",
+      "Remove or rewrite wording that implies Agenda is still only aspirational or that broader start or complete behavior is already live if the code does not support it.",
+      "Keep the language aligned with the repository's existing craft and stage vocabulary."
+    ],
+    "acceptance_criteria": [
+      "The main operator-facing docs describe file-backed Agenda tasks and DAGs as the canonical Stage 3 storage model.",
+      "The docs no longer imply Agenda is only a future design target.",
+      "A new operator can read the docs and understand how Agenda records are stored, inspected, and reached from the current azq agenda command surface."
+    ],
+    "suggested_commit_message": "align stage 3 documentation with live agenda baseline"
+  }
+]
