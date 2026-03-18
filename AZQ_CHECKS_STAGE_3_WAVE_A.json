@@ -1,0 +1,275 @@
+{
+  "version": 1,
+  "name": "AZQ Stage 3 Wave A Checks",
+  "purpose": "Define task-specific automated checks for Stage 3 Wave A so the Codex runner can evaluate the Agenda storage-and-schema foundation work without hardcoding Stage 3 logic into the runner.",
+  "defaults": {
+    "retry_cap": 3,
+    "baseline_checks": [
+      {
+        "name": "compileall",
+        "type": "shell",
+        "command": "python -m compileall azq",
+        "required": true,
+        "description": "Verify the azq package still compiles after the Wave A patch."
+      },
+      {
+        "name": "existing_regression_suite",
+        "type": "shell",
+        "command": "python -m unittest discover -s tests -v",
+        "required": true,
+        "description": "Verify the existing Stage 1 and Stage 2 regression suite still passes."
+      },
+      {
+        "name": "agenda_storage_import",
+        "type": "shell",
+        "command": "python -c \"import azq.agenda.storage\"",
+        "required": true,
+        "description": "Verify the Agenda storage facade imports cleanly."
+      }
+    ]
+  },
+  "tasks": {
+    "STAGE3-WAVEA-01": {
+      "description": "Create Agenda package scaffolding and storage facade.",
+      "checks": [
+        {
+          "name": "agenda_package_files_exist",
+          "type": "shell",
+          "command": "test -f azq/agenda/__init__.py && test -f azq/agenda/storage.py",
+          "required": true,
+          "description": "Verify the Agenda package and storage facade files exist."
+        },
+        {
+          "name": "agenda_package_imports_cleanly",
+          "type": "shell",
+          "command": "python -c \"import azq.agenda; import azq.agenda.storage\"",
+          "required": true,
+          "description": "Verify the new Agenda package imports without error."
+        }
+      ],
+      "human_checks": [
+        "The initial Agenda storage facade stays small and import-safe rather than becoming an implementation blob immediately.",
+        "No Agenda CLI command behavior was introduced in this scaffolding task."
+      ]
+    },
+    "STAGE3-WAVEA-02": {
+      "description": "Add canonical Agenda path constants and directory helpers.",
+      "checks": [
+        {
+          "name": "agenda_paths_module_exists",
+          "type": "shell",
+          "command": "test -f azq/agenda/paths.py",
+          "required": true,
+          "description": "Verify the dedicated Agenda paths module exists."
+        },
+        {
+          "name": "agenda_paths_helpers_exist",
+          "type": "python",
+          "required": true,
+          "description": "Verify the Agenda paths module exposes the expected canonical path helpers.",
+          "code": "from azq.agenda import paths\nfor name in ['TASKS_DIR', 'DAGS_DIR', 'LOGS_DIR', 'ensure_agenda_dirs', 'task_file_path', 'dag_file_path', 'task_log_file_path', 'list_task_files']:\n    assert hasattr(paths, name), name"
+        },
+        {
+          "name": "agenda_paths_helpers_behave",
+          "type": "python",
+          "required": true,
+          "description": "Verify the Agenda path helpers create canonical directories and resolve deterministic file paths.",
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.agenda import paths\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    paths.DATA_DIR = tmp_path / 'data'\n    paths.AGENDA_DIR = paths.DATA_DIR / 'agenda'\n    paths.TASKS_DIR = paths.AGENDA_DIR / 'tasks'\n    paths.DAGS_DIR = paths.AGENDA_DIR / 'dags'\n    paths.LOGS_DIR = paths.AGENDA_DIR / 'logs'\n    paths.ensure_agenda_dirs()\n    assert paths.TASKS_DIR.is_dir()\n    assert paths.DAGS_DIR.is_dir()\n    assert paths.LOGS_DIR.is_dir()\n    assert paths.task_file_path('TASK_001').name == 'TASK_001.md'\n    assert paths.dag_file_path('FINIS_001').name == 'GOAL_FINIS_001_DAG.json'\n    assert paths.task_log_file_path('TASK_001').name == 'TASK_001_LOG.md'"
+        }
+      ],
+      "human_checks": [
+        "Path ownership lives in the focused paths module rather than being scattered through storage helpers.",
+        "The canonical Stage 3 directories remain explicit and inspectable."
+      ]
+    },
+    "STAGE3-WAVEA-03": {
+      "description": "Define the canonical normalized task-record schema.",
+      "checks": [
+        {
+          "name": "agenda_task_schema_helper_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify the Agenda schema module exposes a task normalization helper.",
+          "code": "from azq.agenda import schemas\nassert hasattr(schemas, 'normalize_task_record') or hasattr(schemas, 'normalize_task'), 'missing task normalization helper'"
+        },
+        {
+          "name": "agenda_task_schema_normalizes_required_fields",
+          "type": "python",
+          "required": true,
+          "description": "Verify a partial Agenda task record normalizes into the canonical Stage 3 task schema.",
+          "code": "from azq.agenda import schemas\nhelper = getattr(schemas, 'normalize_task_record', None) or getattr(schemas, 'normalize_task', None)\nrecord = helper({'task_id': 'TASK_001', 'deliverable_id': 'DELIV_001', 'description': 'First task'})\nfor field in ['task_id', 'deliverable_id', 'description', 'dependencies', 'status', 'execution_notes', 'created']:\n    assert field in record, field\nassert record['task_id'] == 'TASK_001'\nassert record['deliverable_id'] == 'DELIV_001'\nassert isinstance(record['dependencies'], list)"
+        }
+      ],
+      "human_checks": [
+        "Task normalization stays separate from DAG normalization.",
+        "The normalized task record remains deliverable-centered rather than drifting into later command behavior."
+      ]
+    },
+    "STAGE3-WAVEA-04": {
+      "description": "Implement markdown task-record serialization, parsing, and repository reads.",
+      "checks": [
+        {
+          "name": "agenda_task_storage_module_exists",
+          "type": "shell",
+          "command": "test -f azq/agenda/task_storage.py",
+          "required": true,
+          "description": "Verify the dedicated Agenda task-storage module exists."
+        },
+        {
+          "name": "agenda_task_storage_helpers_exist",
+          "type": "python",
+          "required": true,
+          "description": "Verify the task-storage module exposes the expected canonical task helpers.",
+          "code": "from azq.agenda import task_storage\nfor name in ['serialize_task_record', 'parse_task_record', 'load_all_tasks', 'load_task', 'next_task_id']:\n    assert hasattr(task_storage, name), name\nassert hasattr(task_storage, 'load_tasks_for_deliverable') or hasattr(task_storage, 'load_deliverable_tasks')"
+        },
+        {
+          "name": "agenda_task_round_trip",
+          "type": "python",
+          "required": true,
+          "description": "Verify a canonical Agenda task record can round-trip through markdown serialization and parsing.",
+          "code": "from azq.agenda import task_storage\nrecord = {'task_id': 'TASK_001', 'deliverable_id': 'DELIV_001', 'description': 'Round trip task', 'dependencies': ['TASK_000'], 'status': 'ready', 'execution_notes': 'Visible note', 'created': '2026-03-18'}\ntext = task_storage.serialize_task_record(record)\nparsed = task_storage.parse_task_record(text)\nfor field in ['task_id', 'deliverable_id', 'description', 'dependencies', 'status', 'execution_notes', 'created']:\n    assert parsed[field] == record[field], field"
+        },
+        {
+          "name": "agenda_task_repository_helpers_behave",
+          "type": "python",
+          "required": true,
+          "description": "Verify Agenda task repository helpers can write, read, group, and allocate task ids from canonical task files.",
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.agenda import task_storage\nrecord_1 = {'task_id': 'TASK_001', 'deliverable_id': 'DELIV_001', 'description': 'First task', 'dependencies': [], 'status': 'ready', 'execution_notes': '', 'created': '2026-03-18'}\nrecord_2 = {'task_id': 'TASK_002', 'deliverable_id': 'DELIV_001', 'description': 'Second task', 'dependencies': ['TASK_001'], 'status': 'ready', 'execution_notes': '', 'created': '2026-03-18'}\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    task_storage.DATA_DIR = tmp_path / 'data'\n    task_storage.AGENDA_DIR = task_storage.DATA_DIR / 'agenda'\n    task_storage.TASKS_DIR = task_storage.AGENDA_DIR / 'tasks'\n    task_storage.DAGS_DIR = task_storage.AGENDA_DIR / 'dags'\n    task_storage.LOGS_DIR = task_storage.AGENDA_DIR / 'logs'\n    task_storage.ensure_agenda_dirs()\n    write_helper = getattr(task_storage, 'write_task', None) or getattr(task_storage, 'save_task', None)\n    assert write_helper is not None, 'missing task write helper'\n    write_helper(record_1)\n    write_helper(record_2)\n    assert task_storage.load_task('TASK_001')['description'] == 'First task'\n    assert [item['task_id'] for item in task_storage.load_all_tasks()] == ['TASK_001', 'TASK_002']\n    group_helper = getattr(task_storage, 'load_tasks_for_deliverable', None) or getattr(task_storage, 'load_deliverable_tasks', None)\n    assert group_helper is not None, 'missing deliverable task grouping helper'\n    assert [item['task_id'] for item in group_helper('DELIV_001')] == ['TASK_001', 'TASK_002']\n    assert task_storage.next_task_id() == 'TASK_003'"
+        }
+      ],
+      "human_checks": [
+        "Task storage stays in a dedicated module rather than growing the public facade into a grab bag.",
+        "The task-record format is readable and diff-friendly from the filesystem."
+      ]
+    },
+    "STAGE3-WAVEA-05": {
+      "description": "Add canonical deliverable-parent validation for Agenda tasks.",
+      "checks": [
+        {
+          "name": "agenda_deliverable_validation_helper_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify Agenda exposes a deliverable-parent validation helper.",
+          "code": "from azq.agenda import task_storage\nassert hasattr(task_storage, 'validate_parent_deliverable') or hasattr(task_storage, 'validate_deliverable_parent'), 'missing deliverable validation helper'"
+        },
+        {
+          "name": "agenda_deliverable_validation_checks_exact_parent",
+          "type": "python",
+          "required": true,
+          "description": "Verify Agenda deliverable-parent validation succeeds for a present canonical deliverable and fails for a missing one.",
+          "code": "from unittest.mock import patch\nfrom azq.agenda import task_storage\nhelper = getattr(task_storage, 'validate_parent_deliverable', None) or getattr(task_storage, 'validate_deliverable_parent', None)\nassert helper is not None, 'missing deliverable validation helper'\nwith patch('azq.formam.storage.load_deliverable', return_value={'deliverable_id': 'DELIV_001', 'goal_id': 'FINIS_001', 'title': 'Parent deliverable', 'artifact_description': '', 'dependencies': [], 'status': 'drafted', 'created': ''}):\n    result = helper('DELIV_001')\n    assert result['deliverable_id'] == 'DELIV_001'\nwith patch('azq.formam.storage.load_deliverable', return_value=None):\n    try:\n        helper('DELIV_999')\n    except Exception:\n        pass\n    else:\n        raise AssertionError('missing deliverable should fail validation')"
+        }
+      ],
+      "human_checks": [
+        "Deliverable-parent validation should use the Formam storage boundary rather than recreating deliverable truth inside Agenda.",
+        "Missing or malformed parent deliverables should fail clearly before any later Wave B task creation behavior occurs."
+      ]
+    },
+    "STAGE3-WAVEA-06": {
+      "description": "Define the canonical normalized task-DAG schema.",
+      "checks": [
+        {
+          "name": "agenda_dag_schema_helper_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify the Agenda schema module exposes a DAG normalization helper.",
+          "code": "from azq.agenda import schemas\nassert hasattr(schemas, 'normalize_dag_record') or hasattr(schemas, 'normalize_task_dag_record') or hasattr(schemas, 'normalize_dag'), 'missing DAG normalization helper'"
+        },
+        {
+          "name": "agenda_dag_schema_normalizes_required_fields",
+          "type": "python",
+          "required": true,
+          "description": "Verify a partial Agenda DAG record normalizes into the canonical Stage 3 DAG schema.",
+          "code": "from azq.agenda import schemas\nhelper = getattr(schemas, 'normalize_dag_record', None) or getattr(schemas, 'normalize_task_dag_record', None) or getattr(schemas, 'normalize_dag', None)\nrecord = helper({'goal_id': 'FINIS_001', 'deliverable_ids': ['DELIV_001']})\nfor field in ['goal_id', 'deliverable_ids', 'task_ids', 'dependency_edges', 'status', 'created', 'notes']:\n    assert field in record, field\nassert record['goal_id'] == 'FINIS_001'\nassert isinstance(record['deliverable_ids'], list)\nassert isinstance(record['task_ids'], list)\nassert isinstance(record['dependency_edges'], list)"
+        }
+      ],
+      "human_checks": [
+        "DAG normalization remains distinct from task-record normalization.",
+        "The DAG schema stays sparse and inspectable rather than pretending to be a smart planner."
+      ]
+    },
+    "STAGE3-WAVEA-07": {
+      "description": "Implement canonical DAG artifact serialization and repository helpers.",
+      "checks": [
+        {
+          "name": "agenda_dag_storage_module_exists",
+          "type": "shell",
+          "command": "test -f azq/agenda/dag_storage.py",
+          "required": true,
+          "description": "Verify the dedicated Agenda DAG-storage module exists."
+        },
+        {
+          "name": "agenda_dag_storage_helpers_exist",
+          "type": "python",
+          "required": true,
+          "description": "Verify the DAG-storage module exposes canonical DAG read, write, and round-trip helpers.",
+          "code": "from azq.agenda import dag_storage\nfor name in ['serialize_dag_record', 'parse_dag_record', 'load_dag', 'write_dag']:\n    assert hasattr(dag_storage, name), name"
+        },
+        {
+          "name": "agenda_dag_round_trip",
+          "type": "python",
+          "required": true,
+          "description": "Verify a canonical Agenda DAG record can round-trip through the DAG serialization helpers.",
+          "code": "from azq.agenda import dag_storage\nrecord = {'goal_id': 'FINIS_001', 'deliverable_ids': ['DELIV_001'], 'task_ids': ['TASK_001'], 'dependency_edges': [{'from': 'TASK_001', 'to': 'TASK_002'}], 'status': 'draft', 'created': '2026-03-18', 'notes': 'Visible graph'}\ntext = dag_storage.serialize_dag_record(record)\nparsed = dag_storage.parse_dag_record(text)\nfor field in ['goal_id', 'deliverable_ids', 'task_ids', 'dependency_edges', 'status', 'created', 'notes']:\n    assert field in parsed, field\nassert parsed['goal_id'] == 'FINIS_001'"
+        },
+        {
+          "name": "agenda_dag_repository_helpers_behave",
+          "type": "python",
+          "required": true,
+          "description": "Verify Agenda DAG storage helpers can write and read one canonical DAG artifact in the expected location.",
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.agenda import dag_storage\nrecord = {'goal_id': 'FINIS_001', 'deliverable_ids': ['DELIV_001'], 'task_ids': ['TASK_001'], 'dependency_edges': [], 'status': 'draft', 'created': '2026-03-18', 'notes': ''}\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    dag_storage.DATA_DIR = tmp_path / 'data'\n    dag_storage.AGENDA_DIR = dag_storage.DATA_DIR / 'agenda'\n    dag_storage.TASKS_DIR = dag_storage.AGENDA_DIR / 'tasks'\n    dag_storage.DAGS_DIR = dag_storage.AGENDA_DIR / 'dags'\n    dag_storage.LOGS_DIR = dag_storage.AGENDA_DIR / 'logs'\n    dag_storage.ensure_agenda_dirs()\n    path = dag_storage.write_dag(record)\n    assert path.is_file(), 'dag file was not written'\n    assert path.name == 'GOAL_FINIS_001_DAG.json'\n    loaded = dag_storage.load_dag('FINIS_001')\n    assert loaded['goal_id'] == 'FINIS_001'\n    assert loaded['deliverable_ids'] == ['DELIV_001']"
+        }
+      ],
+      "human_checks": [
+        "DAG storage logic stays in a focused module rather than being mixed into task-record storage.",
+        "Any dependency-edge derivation logic belongs with DAG storage or DAG shaping, not in the general storage facade."
+      ]
+    },
+    "STAGE3-WAVEA-08": {
+      "description": "Implement canonical task-log storage helpers.",
+      "checks": [
+        {
+          "name": "agenda_log_storage_module_exists",
+          "type": "shell",
+          "command": "test -f azq/agenda/log_storage.py",
+          "required": true,
+          "description": "Verify the dedicated Agenda log-storage module exists."
+        },
+        {
+          "name": "agenda_log_storage_helpers_exist",
+          "type": "python",
+          "required": true,
+          "description": "Verify the log-storage module exposes canonical task-log helpers.",
+          "code": "from azq.agenda import log_storage\nassert hasattr(log_storage, 'task_log_file_path') or hasattr(log_storage, 'log_file_path')\nassert hasattr(log_storage, 'write_task_log') or hasattr(log_storage, 'create_task_log') or hasattr(log_storage, 'append_task_log_entry')"
+        },
+        {
+          "name": "agenda_log_storage_writes_visible_artifact",
+          "type": "python",
+          "required": true,
+          "description": "Verify Agenda log storage can create a visible task-local log artifact in the canonical logs directory.",
+          "code": "from pathlib import Path\nfrom tempfile import TemporaryDirectory\nfrom azq.agenda import log_storage\nwith TemporaryDirectory() as tmp:\n    tmp_path = Path(tmp)\n    log_storage.DATA_DIR = tmp_path / 'data'\n    log_storage.AGENDA_DIR = log_storage.DATA_DIR / 'agenda'\n    log_storage.TASKS_DIR = log_storage.AGENDA_DIR / 'tasks'\n    log_storage.DAGS_DIR = log_storage.AGENDA_DIR / 'dags'\n    log_storage.LOGS_DIR = log_storage.AGENDA_DIR / 'logs'\n    if hasattr(log_storage, 'ensure_agenda_dirs'):\n        log_storage.ensure_agenda_dirs()\n    else:\n        log_storage.LOGS_DIR.mkdir(parents=True, exist_ok=True)\n    helper = getattr(log_storage, 'write_task_log', None) or getattr(log_storage, 'create_task_log', None) or getattr(log_storage, 'append_task_log_entry', None)\n    assert helper is not None, 'missing log write helper'\n    try:\n        result = helper('TASK_001', 'started', 'Initial log entry')\n    except TypeError:\n        result = helper({'task_id': 'TASK_001'}, 'started', 'Initial log entry')\n    path = getattr(log_storage, 'task_log_file_path', None)\n    if path is not None:\n        log_path = path('TASK_001')\n    else:\n        log_path = log_storage.log_file_path('TASK_001')\n    assert log_path.is_file(), 'task log file was not written'\n    text = log_path.read_text(encoding='utf-8')\n    assert 'TASK_001' in text or 'Initial log entry' in text"
+        }
+      ],
+      "human_checks": [
+        "Task-log storage should remain a supporting artifact layer rather than becoming the primary source of task truth.",
+        "Wave A log helpers should stay separate from execution orchestration and later artifact/archive behavior."
+      ]
+    },
+    "STAGE3-WAVEA-09": {
+      "description": "Reduce azq.agenda.storage to a thin public facade.",
+      "checks": [
+        {
+          "name": "agenda_storage_facade_exposes_wave_a_surface",
+          "type": "python",
+          "required": true,
+          "description": "Verify the Agenda storage facade exposes the public Wave A helper surface from the focused modules.",
+          "code": "from azq.agenda import storage\nfor name in ['ensure_agenda_dirs', 'task_file_path', 'dag_file_path', 'task_log_file_path']:\n    assert hasattr(storage, name), name\nassert hasattr(storage, 'normalize_task_record') or hasattr(storage, 'normalize_task')\nassert hasattr(storage, 'normalize_dag_record') or hasattr(storage, 'normalize_task_dag_record') or hasattr(storage, 'normalize_dag')\nfor name in ['serialize_task_record', 'parse_task_record', 'load_all_tasks', 'load_task', 'next_task_id']:\n    assert hasattr(storage, name), name\nfor name in ['serialize_dag_record', 'parse_dag_record', 'load_dag', 'write_dag']:\n    assert hasattr(storage, name), name\nassert hasattr(storage, 'write_task_log') or hasattr(storage, 'create_task_log') or hasattr(storage, 'append_task_log_entry')"
+        }
+      ],
+      "human_checks": [
+        "Treat storage facade thinness as an architectural judgment call; avoid turning it into brittle grep policing.",
+        "The focused modules should own paths, schemas, task storage, DAG storage, and log storage concerns even if the facade re-exports them."
+      ]
+    }
+  }
+}
