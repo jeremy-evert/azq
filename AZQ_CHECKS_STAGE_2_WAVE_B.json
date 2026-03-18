@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "name": "AZQ Stage 2 Wave B Checks",
+  "purpose": "Define task-specific automated checks for Stage 2 Wave B so the Codex runner can evaluate the first Formam command-layer work without hardcoding task logic into the runner.",
+  "defaults": {
+    "retry_cap": 3,
+    "baseline_checks": [
+      {
+        "name": "compileall",
+        "type": "shell",
+        "command": "python -m compileall azq",
+        "required": true,
+        "description": "Verify the azq package still compiles after the patch."
+      },
+      {
+        "name": "unit_tests",
+        "type": "shell",
+        "command": "python -m unittest discover -s tests -v",
+        "required": true,
+        "description": "Verify the existing regression suite still passes after the patch."
+      },
+      {
+        "name": "formam_storage_import",
+        "type": "shell",
+        "command": "python -c \"import azq.formam.storage\"",
+        "required": true,
+        "description": "Verify the Formam storage module still imports cleanly."
+      }
+    ]
+  },
+  "tasks": {
+    "STAGE2-WAVEB-01": {
+      "description": "Implement azq form build as a thin command-layer writer.",
+      "checks": [
+        {
+          "name": "form_build_module_exists",
+          "type": "shell",
+          "command": "test -f azq/formam/build.py",
+          "required": true,
+          "description": "Verify azq/formam/build.py exists."
+        },
+        {
+          "name": "form_build_entrypoint_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify the build module exposes a command-layer entrypoint.",
+          "code": "from azq.formam import build\nassert any(hasattr(build, name) for name in ['build_form', 'build_deliverables_for_goal', 'form_build']), 'missing Formam build entrypoint'"
+        },
+        {
+          "name": "form_build_writes_canonical_deliverable_and_map",
+          "type": "python",
+          "required": true,
+          "description": "Verify the build path can validate a parent goal, allocate an id, and write one deliverable plus one goal map through storage helpers.",
+          "code": "from unittest.mock import patch\nfrom azq.formam import build\nentry = getattr(build, 'build_form', None) or getattr(build, 'build_deliverables_for_goal', None) or getattr(build, 'form_build', None)\nassert entry is not None, 'build entrypoint not found'\nwritten_deliverables = []\nwritten_maps = []\nwith patch('azq.formam.build.validate_parent_goal', return_value={'goal_id': 'FINIS_001', 'title': 'Parent goal', 'status': 'active', 'created': '2026-03-17', 'description': 'desc', 'derived_from': []}), patch('azq.formam.build.next_deliverable_id', return_value='DELIV_001'), patch('azq.formam.build.write_deliverable', side_effect=lambda record: written_deliverables.append(dict(record))), patch('azq.formam.build.load_deliverables_for_goal', return_value=[]), patch('azq.formam.build.write_goal_map', side_effect=lambda record: written_maps.append(dict(record))):\n    entry('FINIS_001')\nassert written_deliverables, 'no deliverable was written'\nassert written_maps, 'no goal map was written'\nassert written_deliverables[0]['deliverable_id'] == 'DELIV_001'\nassert written_deliverables[0]['goal_id'] == 'FINIS_001'\nassert written_maps[0]['goal_id'] == 'FINIS_001'"
+        }
+      ],
+      "human_checks": [
+        "The build behavior stays intentionally small and deterministic rather than drifting into Agenda-style planning.",
+        "The command module delegates persistence and file-format decisions to azq/formam/storage.py."
+      ]
+    },
+    "STAGE2-WAVEB-02": {
+      "description": "Implement azq form list as a thin presentation layer.",
+      "checks": [
+        {
+          "name": "form_deliverables_module_exists",
+          "type": "shell",
+          "command": "test -f azq/formam/deliverables.py",
+          "required": true,
+          "description": "Verify azq/formam/deliverables.py exists."
+        },
+        {
+          "name": "form_list_entrypoint_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify the deliverables module exposes a listing entrypoint.",
+          "code": "from azq.formam import deliverables\nassert any(hasattr(deliverables, name) for name in ['list_deliverables', 'show_deliverables']), 'missing deliverable listing entrypoint'"
+        },
+        {
+          "name": "form_list_reads_canonical_deliverables",
+          "type": "python",
+          "required": true,
+          "description": "Verify the list command prints canonical deliverables and preserves the no-deliverables case.",
+          "code": "import io\nfrom contextlib import redirect_stdout\nfrom unittest.mock import patch\nfrom azq.formam import deliverables\nentry = getattr(deliverables, 'list_deliverables', None) or getattr(deliverables, 'show_deliverables', None)\nassert entry is not None, 'listing entrypoint not found'\nbuf = io.StringIO()\nwith patch('azq.formam.deliverables.load_all_deliverables', return_value=[]):\n    with redirect_stdout(buf):\n        entry()\nassert 'No deliverables' in buf.getvalue()\nbuf = io.StringIO()\nwith patch('azq.formam.deliverables.load_all_deliverables', return_value=[{'deliverable_id': 'DELIV_001', 'goal_id': 'FINIS_001', 'title': 'Visible artifact', 'artifact_description': 'desc', 'dependencies': [], 'status': 'drafted', 'created': '2026-03-17'}]):\n    with redirect_stdout(buf):\n        entry()\nout = buf.getvalue()\nassert 'DELIV_001' in out\nassert 'FINIS_001' in out\nassert 'Visible artifact' in out\nassert 'drafted' in out"
+        }
+      ],
+      "human_checks": [
+        "deliverables.py stays presentation-only rather than becoming a second repository layer.",
+        "The terminal output is simple, readable, and centered on deliverables."
+      ]
+    },
+    "STAGE2-WAVEB-03": {
+      "description": "Implement azq form show with exact-id deliverable inspection.",
+      "checks": [
+        {
+          "name": "form_show_entrypoint_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify the deliverables module exposes an exact-id inspection entrypoint.",
+          "code": "from azq.formam import deliverables\nassert any(hasattr(deliverables, name) for name in ['show_deliverable', 'inspect_deliverable']), 'missing deliverable show entrypoint'"
+        },
+        {
+          "name": "form_show_loads_exact_deliverable_and_prints_fields",
+          "type": "python",
+          "required": true,
+          "description": "Verify the show command loads one canonical deliverable by exact id and prints the key fields.",
+          "code": "import io\nfrom contextlib import redirect_stdout\nfrom unittest.mock import patch\nfrom azq.formam import deliverables\nentry = getattr(deliverables, 'show_deliverable', None) or getattr(deliverables, 'inspect_deliverable', None)\nassert entry is not None, 'show entrypoint not found'\nrecord = {'deliverable_id': 'DELIV_001', 'goal_id': 'FINIS_001', 'title': 'Inspect me', 'artifact_description': 'Visible artifact description', 'dependencies': ['DELIV_000'], 'status': 'drafted', 'created': '2026-03-17'}\nbuf = io.StringIO()\nwith patch('azq.formam.deliverables.load_deliverable', return_value=record):\n    with redirect_stdout(buf):\n        entry('DELIV_001')\nout = buf.getvalue()\nassert 'DELIV_001' in out\nassert 'FINIS_001' in out\nassert 'Inspect me' in out\nassert 'Visible artifact description' in out\nassert 'DELIV_000' in out"
+        },
+        {
+          "name": "form_show_missing_id_fails_cleanly",
+          "type": "python",
+          "required": true,
+          "description": "Verify the show command handles a missing exact deliverable id cleanly.",
+          "code": "import io\nfrom contextlib import redirect_stdout\nfrom unittest.mock import patch\nfrom azq.formam import deliverables\nentry = getattr(deliverables, 'show_deliverable', None) or getattr(deliverables, 'inspect_deliverable', None)\nassert entry is not None, 'show entrypoint not found'\nbuf = io.StringIO()\nwith patch('azq.formam.deliverables.load_deliverable', return_value=None):\n    with redirect_stdout(buf):\n        entry('DELIV_999')\nout = buf.getvalue()\nassert 'not found' in out.lower()"
+        }
+      ],
+      "human_checks": [
+        "Exact-id lookup stays exact and does not drift into fuzzy search.",
+        "The inspection output stays artifact-focused rather than task-focused."
+      ]
+    },
+    "STAGE2-WAVEB-04": {
+      "description": "Implement azq form map as a thin command-layer map refresher.",
+      "checks": [
+        {
+          "name": "form_maps_module_exists",
+          "type": "shell",
+          "command": "test -f azq/formam/maps.py",
+          "required": true,
+          "description": "Verify azq/formam/maps.py exists."
+        },
+        {
+          "name": "form_map_entrypoint_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify the maps module exposes a map refresh entrypoint.",
+          "code": "from azq.formam import maps\nassert any(hasattr(maps, name) for name in ['build_goal_map', 'refresh_goal_map', 'form_map']), 'missing goal-map entrypoint'"
+        },
+        {
+          "name": "form_map_builds_from_goal_deliverables",
+          "type": "python",
+          "required": true,
+          "description": "Verify the map command validates the parent goal, loads deliverables for that goal, and writes one canonical map.",
+          "code": "from unittest.mock import patch\nfrom azq.formam import maps\nentry = getattr(maps, 'build_goal_map', None) or getattr(maps, 'refresh_goal_map', None) or getattr(maps, 'form_map', None)\nassert entry is not None, 'map entrypoint not found'\nwritten_maps = []\nwith patch('azq.formam.maps.validate_parent_goal', return_value={'goal_id': 'FINIS_001', 'title': 'Parent goal', 'status': 'active', 'created': '2026-03-17', 'description': '', 'derived_from': []}), patch('azq.formam.maps.load_deliverables_for_goal', return_value=[{'deliverable_id': 'DELIV_001', 'goal_id': 'FINIS_001', 'title': 'One', 'artifact_description': 'desc', 'dependencies': [], 'status': 'drafted', 'created': '2026-03-17'}, {'deliverable_id': 'DELIV_002', 'goal_id': 'FINIS_001', 'title': 'Two', 'artifact_description': 'desc', 'dependencies': ['DELIV_001'], 'status': 'drafted', 'created': '2026-03-17'}]), patch('azq.formam.maps.write_goal_map', side_effect=lambda record: written_maps.append(dict(record))):\n    entry('FINIS_001')\nassert written_maps, 'no goal map was written'\nassert written_maps[0]['goal_id'] == 'FINIS_001'\nassert 'DELIV_001' in written_maps[0]['deliverable_ids']\nassert 'DELIV_002' in written_maps[0]['deliverable_ids']"
+        }
+      ],
+      "human_checks": [
+        "maps.py remains a thin command-layer module over storage helpers.",
+        "The map output stays conservative and human-readable rather than inventing speculative planning structure."
+      ]
+    },
+    "STAGE2-WAVEB-05": {
+      "description": "Wire Formam commands into the CLI.",
+      "checks": [
+        {
+          "name": "cli_contains_form_branch_and_usage",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('azq/cli.py').read_text(encoding='utf-8')\nfor snippet in [\n    'azq form build <goal_id>',\n    'azq form list',\n    'azq form show <deliverable_id>',\n    'azq form map <goal_id>',\n    'elif cmd == \"form\":'\n]:\n    assert snippet in text, snippet\nPY",
+          "required": true,
+          "description": "Verify the CLI advertises and routes the first Formam command family."
+        },
+        {
+          "name": "cli_form_branch_dispatches_to_modules",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('azq/cli.py').read_text(encoding='utf-8')\nfor snippet in [\n    'from azq.formam.build import',\n    'from azq.formam.deliverables import',\n    'from azq.formam.maps import'\n]:\n    assert snippet in text, snippet\nassert 'ensure_finis_storage_ready()' in text\nPY",
+          "required": true,
+          "description": "Verify the CLI wires Formam command dispatch through dedicated modules and preserves Finis migration readiness."
+        },
+        {
+          "name": "cli_form_help_smoke",
+          "type": "python",
+          "required": true,
+          "description": "Verify the CLI form branch prints usage cleanly when called without a Formam subcommand.",
+          "code": "import io\nfrom contextlib import redirect_stdout\nfrom unittest.mock import patch\nfrom azq import cli\nbuf = io.StringIO()\nwith patch('sys.argv', ['azq', 'form']):\n    with redirect_stdout(buf):\n        cli.main()\nout = buf.getvalue().lower()\nassert 'form' in out\nassert 'build' in out\nassert 'list' in out\nassert 'show' in out\nassert 'map' in out"
+        }
+      ],
+      "human_checks": [
+        "The CLI wiring stays narrow and does not smuggle in Agenda, doctor, or status behavior.",
+        "The first public Formam loop feels consistent with the existing terminal command style."
+      ]
+    }
+  }
+}
