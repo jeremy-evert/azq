@@ -6,7 +6,8 @@ tasks can build on one shared definition of the Formam data locations.
 """
 
 from pathlib import Path
-from typing import Any
+import re
+from typing import Any, Optional
 
 DATA_DIR = Path("data")
 FORM_DIR = DATA_DIR / "form"
@@ -18,6 +19,7 @@ MAP_FILE_PREFIX = "GOAL_"
 MAP_FILE_SUFFIX = "_MAP.md"
 MAP_FILE_GLOB = f"{MAP_FILE_PREFIX}*{MAP_FILE_SUFFIX}"
 ARTIFACT_DESCRIPTION_HEADING = "## Artifact Description"
+DELIVERABLE_ID_PATTERN = re.compile(r"^DELIV_(\d+)$")
 
 
 def ensure_form_dirs() -> tuple[Path, Path]:
@@ -67,6 +69,14 @@ def list_goal_map_files() -> list[Path]:
     return sorted(path for path in MAPS_DIR.glob(MAP_FILE_GLOB) if path.is_file())
 
 
+def _deliverable_id_number(deliverable_id: str) -> Optional[int]:
+    """Extract the numeric suffix from a canonical DELIV deliverable id."""
+    match = DELIVERABLE_ID_PATTERN.fullmatch(deliverable_id)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
 def normalize_deliverable_record(
     deliverable_record: dict[str, Any],
 ) -> dict[str, Any]:
@@ -97,6 +107,8 @@ def normalize_deliverable_record(
         "status": deliverable_record.get("status", "drafted"),
         "created": deliverable_record.get("created", ""),
     }
+
+
 def serialize_deliverable_markdown(deliverable_record: dict[str, Any]) -> str:
     """Serialize a canonical deliverable record into diff-friendly Markdown."""
     record = normalize_deliverable_record(deliverable_record)
@@ -230,6 +242,52 @@ def deliverable_from_markdown(markdown_text: str) -> dict[str, Any]:
     return parse_deliverable_markdown(markdown_text)
 
 
+def load_deliverable(deliverable_id: str) -> Optional[dict[str, Any]]:
+    """Load one canonical deliverable record by exact deliverable id."""
+    deliverable_path = deliverable_file_path(deliverable_id)
+    if not deliverable_path.is_file():
+        return None
+    return parse_deliverable_markdown(deliverable_path.read_text(encoding="utf-8"))
+
+
+def load_all_deliverables() -> list[dict[str, Any]]:
+    """Load all canonical deliverable files in deterministic order."""
+    deliverables: list[dict[str, Any]] = []
+    for deliverable_path in list_deliverable_files():
+        deliverables.append(
+            parse_deliverable_markdown(deliverable_path.read_text(encoding="utf-8"))
+        )
+    return deliverables
+
+
+def load_goal_deliverables(goal_id: str) -> list[dict[str, Any]]:
+    """Load canonical deliverables whose goal_id matches exactly."""
+    return [
+        deliverable
+        for deliverable in load_all_deliverables()
+        if deliverable["goal_id"] == goal_id
+    ]
+
+
+def load_deliverables_for_goal(goal_id: str) -> list[dict[str, Any]]:
+    """Backward-compatible helper for exact goal_id deliverable lookup."""
+    return load_goal_deliverables(goal_id)
+
+
+def next_deliverable_id() -> str:
+    """Compute the next stable DELIV id from canonical deliverable files."""
+    highest_deliverable_number = 0
+
+    for deliverable_path in list_deliverable_files():
+        deliverable_number = _deliverable_id_number(deliverable_path.stem)
+        if deliverable_number is not None:
+            highest_deliverable_number = max(
+                highest_deliverable_number, deliverable_number
+            )
+
+    return f"DELIV_{highest_deliverable_number + 1:03d}"
+
+
 __all__ = [
     "DATA_DIR",
     "FORM_DIR",
@@ -241,6 +299,7 @@ __all__ = [
     "MAP_FILE_SUFFIX",
     "MAP_FILE_GLOB",
     "ARTIFACT_DESCRIPTION_HEADING",
+    "DELIVERABLE_ID_PATTERN",
     "ensure_form_dirs",
     "ensure_deliverables_dir",
     "ensure_maps_dir",
@@ -248,6 +307,7 @@ __all__ = [
     "goal_map_file_path",
     "list_deliverable_files",
     "list_goal_map_files",
+    "_deliverable_id_number",
     "normalize_deliverable_record",
     "serialize_deliverable_record",
     "serialize_deliverable_markdown",
@@ -255,4 +315,9 @@ __all__ = [
     "parse_deliverable_record",
     "parse_deliverable_markdown",
     "deliverable_from_markdown",
+    "load_deliverable",
+    "load_all_deliverables",
+    "load_goal_deliverables",
+    "load_deliverables_for_goal",
+    "next_deliverable_id",
 ]
