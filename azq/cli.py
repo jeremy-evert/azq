@@ -81,6 +81,10 @@ def main():
         print("  goal add")
         print("  goal close <id>")
         print("  goal archive <id>")
+        print("  azq form build <goal_id>")
+        print("  azq form list")
+        print("  azq form show <deliverable_id>")
+        print("  azq form map <goal_id>")
 
         return
 
@@ -194,6 +198,57 @@ def main():
 
             from azq.finis.goal_manager import archive_goal
             archive_goal(sys.argv[3])
+
+    # ---------------------------------------------
+    # Formam engine
+    # ---------------------------------------------
+
+    elif cmd == "form":
+
+        if len(sys.argv) < 3:
+            print("Usage: azq form [build|list|show|map]")
+            return
+
+        sub = sys.argv[2]
+
+        if sub == "build":
+
+            if len(sys.argv) < 4:
+                print("Usage: azq form build <goal_id>")
+                return
+
+            ensure_finis_storage_ready()
+
+            from azq.formam.build import build_form
+            build_form(sys.argv[3])
+
+        elif sub == "list":
+
+            from azq.formam.deliverables import list_deliverables
+            list_deliverables()
+
+        elif sub == "show":
+
+            if len(sys.argv) < 4:
+                print("Usage: azq form show <deliverable_id>")
+                return
+
+            from azq.formam.deliverables import show_deliverable
+            show_deliverable(sys.argv[3])
+
+        elif sub == "map":
+
+            if len(sys.argv) < 4:
+                print("Usage: azq form map <goal_id>")
+                return
+
+            ensure_finis_storage_ready()
+
+            from azq.formam.maps import form_map
+            form_map(sys.argv[3])
+
+        else:
+            print("Usage: azq form [build|list|show|map]")
 
     else:
 
