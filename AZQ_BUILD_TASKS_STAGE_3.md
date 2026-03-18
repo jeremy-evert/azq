@@ -8,40 +8,24 @@ The goal of Stage 3 is simple:
 
 > turn canonical deliverables into executable tasks with visible dependency order and durable work logs.
 
-This checklist is intentionally grounded in the **current live tree**.
-The repository does **not** currently use `src/azq/...`; the live code is under `azq/`.
+This checklist is grounded in the **current live repository**, not an older imagined baseline.
+The live code is under `azq/`, not `src/azq/...`.
 
-The live Stage 3 baseline now includes:
+The current baseline already includes:
 
-* `azq/cli.py` as a thin top-level dispatcher
-* `azq/scintilla/cli.py`
-* `azq/finis/cli.py`
-* `azq/formam/cli.py`
-* `azq/formam/deliverable_storage.py`
-* `azq/formam/map_storage.py`
-* `azq/formam/paths.py`
-* `azq/formam/schemas.py`
-* `data/finis/goals/`
-* `data/form/deliverables/`
-* `data/form/maps/`
+* canonical Finis goal storage under `data/finis/goals/`
+* canonical Formam deliverable storage under `data/form/deliverables/`
+* canonical Formam goal maps under `data/form/maps/`
+* a split CLI routed through engine-specific command layers
 
-This checklist therefore starts from a repo where Stage 1 and Stage 2 are already live.
-It should still be practical enough to use while actually committing Stage 3 work.
-
-**Stage 3 planning note:**
-
-* `AZQ_IMPLEMENTATION_PLAN.md` still describes an older baseline where Formam is not yet implemented and recommended paths still use `src/azq/...`
-* this checklist favors the live repository reality instead:
-
-  * Stage 1 Finis storage is already canonical and file-backed
-  * Stage 2 Formam storage and commands are already canonical and file-backed
-  * the top-level CLI is already split through engine-specific routers
+That means Stage 3 starts from a repo where Stage 1 and Stage 2 are already real.
+Agenda should therefore be built as the next visible craft layer, not as a speculative rewrite of earlier work.
 
 ---
 
 ## Stage 3 Outcome
 
-Stage 3 is complete when canonical Agenda artifacts exist on disk and the CLI can build, inspect, start, and complete tasks without bypassing the deliverable layer or introducing artifact/archive behavior early.
+Stage 3 is complete when canonical Agenda artifacts exist on disk and the CLI can build, inspect, start, and complete tasks without bypassing the deliverable layer.
 
 At the end of Stage 3:
 
@@ -54,15 +38,24 @@ At the end of Stage 3:
 * `azq task start <task_id>` can transition one canonical task into active work and write a log entry
 * `azq task complete <task_id>` can transition one canonical task to completion and write a log entry
 * every task points back to exactly one canonical deliverable
-* no artifact publication, archive behavior, or repository-wide doctor/status behavior is introduced before the later stages
 
-That is the **action layer** described in the implementation plan and the state model.
+Stage 3 stops at the **actionable** layer.
+
+It does **not** introduce:
+
+* artifact publication
+* archive engine behavior
+* repo-wide doctor/status theatrics
+* premature Stage 4 or Stage 5 concerns
+
+The job here is not to make Agenda clever.
+The job is to make the work graph real.
 
 ---
 
 ## Current Stage 3 Gaps
 
-The current implementation has these concrete mismatches with the Stage 3 objective:
+The current implementation has these concrete gaps relative to the Stage 3 objective:
 
 * no `azq/agenda/` package exists in the live repository
 * no `data/agenda/tasks/` directory exists
@@ -119,7 +112,8 @@ Stage 3 DAG rules:
 * `deliverable_ids` must only reference deliverables for that exact parent goal
 * `task_ids` must only reference canonical tasks descended from those deliverables
 * `dependency_edges` must remain inspectable and deterministic
-* the first implementation may generate sparse graphs, but the resulting file must still be useful to a human operator
+* the first implementation may generate **sparse** graphs and stub tasks
+* `dag build` should prefer visible, inspectable correctness over clever planning
 
 This keeps the first Agenda graph visible rather than magical.
 
@@ -160,8 +154,8 @@ This keeps work evidence inspectable before later artifact and archive layers ex
   * `data/agenda/tasks/`
   * `data/agenda/dags/`
   * `data/agenda/logs/`
-* state clearly that the live code is under `azq/`, not `src/azq/`
-* state clearly that Stage 3 builds on already-live Finis and Formam storage rather than reopening them
+* state clearly that Stage 3 builds on already-live Finis and Formam storage
+* state clearly that Stage 3 stops at the actionable layer
 
 **Definition of done:**
 
@@ -169,7 +163,7 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 
 ---
 
-### 2. Create Agenda package and storage scaffolding
+### 2. Create Agenda package scaffolding
 
 **Files:**
 
@@ -179,7 +173,7 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 **Work:**
 
 * create the new Agenda package
-* add a storage module that will own Agenda path, schema, and persistence decisions
+* add a storage facade module for Stage 3
 * keep the first commit limited to scaffolding and import-safe module boundaries
 
 **Definition of done:**
@@ -188,10 +182,11 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 
 ---
 
-### 3. Add canonical Agenda path constants and directory helpers
+### 3. Extract Agenda path and directory helpers into focused modules
 
 **Files:**
 
+* `azq/agenda/paths.py` (new)
 * `azq/agenda/storage.py`
 
 **Work:**
@@ -204,27 +199,29 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 * add helpers to:
 
   * ensure all three directories exist
-  * map a `task_id` like `TASK_001` to a Markdown file path
-  * map a `goal_id` like `FINIS_001` to a DAG file path such as `GOAL_FINIS_001_DAG.json`
-  * map a `task_id` like `TASK_001` to a log file path such as `TASK_001_LOG.md`
+  * map a `task_id` like `TASK_001` to a task file path
+  * map a `goal_id` like `FINIS_001` to a DAG file path
+  * map a `task_id` like `TASK_001` to a log file path
   * list task files in stable order
+* keep path ownership out of general storage logic
 
 **Definition of done:**
 
-* one module owns all Agenda storage path decisions
+* one focused module owns all Agenda path decisions
 
 ---
 
-### 4. Define the canonical task record model
+### 4. Extract canonical task schema helpers into a focused module
 
 **Files:**
 
+* `azq/agenda/schemas.py` (new)
 * `azq/agenda/storage.py`
 
 **Work:**
 
-* add normalization helpers that convert partial or generated task data into the Stage 3 schema
-* ensure every normalized record contains:
+* add normalization helpers that convert partial or generated task data into the Stage 3 task schema
+* ensure every normalized task record contains:
 
   * `task_id`
   * `deliverable_id`
@@ -233,66 +230,45 @@ This keeps work evidence inspectable before later artifact and archive layers ex
   * `status`
   * `execution_notes`
   * `created`
-* decide and document fallback behavior for missing generated fields:
-
-  * missing `dependencies`
-  * missing `status`
-  * missing `execution_notes`
-  * missing `created`
+* decide and document fallback behavior for missing generated fields
 
 **Definition of done:**
 
-* one function can take incomplete task-shaped data and return a complete Stage 3 task record
+* one focused module can normalize incomplete task-shaped data into canonical task records
 
 ---
 
-### 5. Implement task file read/write format
+### 5. Implement task storage helpers in a dedicated task-storage module
 
 **Files:**
 
+* `azq/agenda/task_storage.py` (new)
 * `azq/agenda/storage.py`
 
 **Work:**
 
 * choose a diff-friendly on-disk format for `TASK_###.md`
 * implement serializer and parser helpers
-* ensure each task file is human-readable and preserves normalized fields clearly
-* keep the format simple enough for later artifact and archive code to consume without transitional glue
+* add repository helpers to:
 
-**Definition of done:**
-
-* a normalized task can be written to and read from a single Markdown file without loss of required Stage 3 fields
-
----
-
-### 6. Implement repository-level task reads from file storage
-
-**Files:**
-
-* `azq/agenda/storage.py`
-
-**Work:**
-
-* add functions to:
-
-  * load all tasks from `data/agenda/tasks/`
+  * load all tasks
   * load one task by exact `task_id`
   * load all tasks for one exact `deliverable_id`
-  * compute the next stable `TASK_###` id from existing file-based tasks
+  * compute the next stable `TASK_###` id from existing file-backed tasks
 * ensure sort order is deterministic
-* ensure lookup is exact-match only on `task_id` and `deliverable_id`
+* ensure lookup is exact-match only
 
 **Definition of done:**
 
-* file storage alone can support task listing, exact lookup, and id allocation
+* task records can be normalized, written, read, listed, and allocated without bloating the storage facade
 
 ---
 
-### 7. Add canonical deliverable-parent validation helpers
+### 6. Add canonical deliverable-parent validation helpers
 
 **Files:**
 
-* `azq/agenda/storage.py`
+* `azq/agenda/task_storage.py`
 * possibly `azq/formam/storage.py`
 
 **Work:**
@@ -308,10 +284,11 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 
 ---
 
-### 8. Define the canonical DAG record model
+### 7. Extract canonical DAG schema helpers into a focused module
 
 **Files:**
 
+* `azq/agenda/schemas.py`
 * `azq/agenda/storage.py`
 
 **Work:**
@@ -330,33 +307,39 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 
 **Definition of done:**
 
-* one function can take incomplete DAG-shaped data and return a complete Stage 3 DAG record
+* one focused module can normalize incomplete DAG-shaped data into canonical DAG records
 
 ---
 
-### 9. Implement DAG file read/write format
+### 8. Implement DAG storage helpers in a dedicated DAG-storage module
 
 **Files:**
 
+* `azq/agenda/dag_storage.py` (new)
 * `azq/agenda/storage.py`
 
 **Work:**
 
 * choose a simple, inspectable on-disk JSON format for `GOAL_<goal_id>_DAG.json`
 * implement serializer and parser helpers
-* ensure the file preserves normalized DAG fields clearly
-* keep the resulting JSON simple enough for humans to inspect and later code to extend
+* add repository helpers to:
+
+  * load one DAG by exact `goal_id`
+  * write one canonical DAG record
+  * derive stable dependency-edge structures from task relationships
+* keep dependency-edge derivation beside DAG logic rather than burying it in a generic facade
 
 **Definition of done:**
 
-* a normalized DAG record can be written to and read from one JSON file without loss of required Stage 3 fields
+* DAG records can be normalized, written, read, and inspected without turning `storage.py` into a grab bag
 
 ---
 
-### 10. Add canonical task-log write helpers
+### 9. Implement task-log helpers in a dedicated log-storage module
 
 **Files:**
 
+* `azq/agenda/log_storage.py` (new)
 * `azq/agenda/storage.py`
 
 **Work:**
@@ -366,12 +349,30 @@ This keeps work evidence inspectable before later artifact and archive layers ex
   * create one task log file for a canonical task
   * append a visible `started` entry
   * append a visible `completed` entry
-* keep the log format human-readable and append-only in the first implementation
+* keep the log format human-readable and append-only
 * keep log writing separate from later artifact publication logic
 
 **Definition of done:**
 
-* Stage 3 can leave durable work-log evidence without introducing Stage 4 archive behavior
+* Stage 3 can leave durable work-log evidence without introducing later artifact or archive behavior
+
+---
+
+### 10. Keep `azq/agenda/storage.py` as a thin facade
+
+**Files:**
+
+* `azq/agenda/storage.py`
+
+**Work:**
+
+* re-export the public Agenda storage helpers from the focused modules
+* keep the facade readable and stable for the command layer
+* avoid recreating a monolithic storage file that will need Wave D surgery later
+
+**Definition of done:**
+
+* `azq/agenda/storage.py` is the public boundary, not the implementation blob
 
 ---
 
@@ -380,7 +381,8 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 **Files:**
 
 * `azq/agenda/dags.py` (new)
-* `azq/agenda/storage.py`
+* `azq/agenda/task_storage.py`
+* `azq/agenda/dag_storage.py`
 
 **Work:**
 
@@ -388,9 +390,9 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 * load canonical deliverables for that exact goal from Formam storage
 * generate one or more initial canonical tasks for those deliverables
 * derive a first visible dependency graph conservatively from deliverable relationships
+* allow the first implementation to generate sparse task sets and sparse graphs when certainty is low
 * write the resulting canonical task files
 * write the resulting canonical DAG file
-* keep the first implementation inspectable and conservative rather than “smart”
 
 **Definition of done:**
 
@@ -445,7 +447,8 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 **Files:**
 
 * `azq/agenda/tasks.py`
-* `azq/agenda/storage.py`
+* `azq/agenda/task_storage.py`
+* `azq/agenda/log_storage.py`
 
 **Work:**
 
@@ -466,7 +469,8 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 **Files:**
 
 * `azq/agenda/tasks.py`
-* `azq/agenda/storage.py`
+* `azq/agenda/task_storage.py`
+* `azq/agenda/log_storage.py`
 
 **Work:**
 
@@ -551,7 +555,7 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 * define `data/agenda/tasks/`, `data/agenda/dags/`, and `data/agenda/logs/` as active Agenda storage
 * clarify that tasks descend from deliverables rather than replacing them
 * align examples with canonical `TASK_###` and `GOAL_<goal_id>_DAG.json` artifacts
-* clarify that task logs provide durable work evidence before artifact publication exists
+* clarify that task logs provide durable work evidence before any later-stage publication behavior exists
 
 **Definition of done:**
 
@@ -582,6 +586,7 @@ If you want these as sensible commit waves rather than 18 single-file nibbles, u
 This keeps each wave reviewable while still respecting atomicity.
 
 Wave A is intentionally broad because Agenda needs task records, DAG records, log records, and exact deliverable validation in place before command wiring can safely create or mutate anything.
+But it is also intentionally **pre-split** so path logic, schema logic, task storage, DAG storage, and log storage do not collapse into one swollen `storage.py`.
 
 Wave B stays narrow by focusing only on the first executable loop:
 
@@ -618,3 +623,11 @@ Stage 3 is done when all of the following are true:
 ---
 
 ## Closing
+
+Stage 3 is where AZQ turns deliverable structure into visible executable work.
+
+Do it carefully and you get a real action layer.
+Do it carelessly and you get a task manager wearing a philosopher’s coat.
+
+Agenda should not be clever first.
+It should be legible, file-backed, and true.
