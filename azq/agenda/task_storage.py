@@ -353,6 +353,7 @@ def save_task(task_record: dict[str, Any]) -> Path:
     return write_task(task_record)
 
 
+# Public task-storage helpers re-exported by ``azq.agenda.storage``.
 __all__ = [
     "CanonicalDeliverableValidationError",
     "ensure_tasks_dir",

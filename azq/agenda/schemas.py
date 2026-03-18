@@ -233,6 +233,7 @@ def normalize_dag_record(dag_record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# Public schema helpers re-exported by ``azq.agenda.storage``.
 __all__ = [
     "TASK_ID_PATTERN",
     "GRAPH_ID_SUFFIX",

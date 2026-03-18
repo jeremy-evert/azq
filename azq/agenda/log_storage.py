@@ -146,6 +146,7 @@ def append_completed_task_log(
     return append_task_log_entry(task_or_record, "completed", note, timestamp=timestamp)
 
 
+# Public task-log helpers re-exported by ``azq.agenda.storage``.
 __all__ = [
     "LOG_HEADER_SUFFIX",
     "ENTRIES_HEADING",

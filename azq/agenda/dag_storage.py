@@ -118,6 +118,7 @@ def save_dag(dag_record: dict[str, Any]) -> Path:
     return write_dag(dag_record)
 
 
+# Public DAG-storage helpers re-exported by ``azq.agenda.storage``.
 __all__ = [
     "ensure_dags_dir",
     "dag_file_path",

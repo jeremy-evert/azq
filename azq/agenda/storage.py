@@ -1,157 +1,26 @@
-"""Filesystem-backed Agenda storage facade.
+"""Thin public facade for the Agenda Wave A storage surface.
 
-Stage 3 starts with a single visible storage boundary for Agenda so narrower
-task, DAG, and log storage modules can grow behind this facade later without
-changing the package import surface. Canonical path ownership and task/DAG
-schema primitives live in focused sibling modules and are re-exported here
-where useful.
+Focused modules own canonical paths, schema normalization, task persistence,
+DAG persistence, and task-log artifacts. This module stays intentionally small
+and re-exports that public surface for later command layers.
 """
 
-from azq.agenda.dag_storage import (
-    dag_from_json,
-    dag_to_json,
-    load_all_dags,
-    load_dag,
-    load_goal_dag,
-    parse_dag_json,
-    parse_dag_record,
-    save_dag,
-    serialize_dag_json,
-    serialize_dag_record,
-    write_dag,
-)
-from azq.agenda.log_storage import (
-    append_completed_task_log,
-    append_started_task_log,
-    append_task_log_entry,
-    create_task_log,
-    ensure_task_log,
-    list_task_log_files,
-    log_file_path,
-    write_task_log,
-)
-from azq.agenda.task_storage import (
-    CanonicalDeliverableValidationError,
-    load_all_tasks,
-    load_deliverable_tasks,
-    load_task,
-    load_tasks_for_deliverable,
-    next_task_id,
-    parse_task_markdown,
-    parse_task_record,
-    save_task,
-    serialize_task_markdown,
-    serialize_task_record,
-    task_from_markdown,
-    task_to_markdown,
-    validate_canonical_deliverable,
-    validate_parent_deliverable,
-    write_task,
-)
-from azq.agenda.paths import (
-    AGENDA_DIR,
-    DAGS_DIR,
-    DAG_FILE_PREFIX,
-    DAG_FILE_GLOB,
-    DAG_FILE_SUFFIX,
-    DATA_DIR,
-    LOGS_DIR,
-    TASKS_DIR,
-    TASK_FILE_PREFIX,
-    TASK_FILE_GLOB,
-    TASK_FILE_SUFFIX,
-    TASK_LOG_FILE_GLOB,
-    TASK_LOG_FILE_SUFFIX,
-    dag_file_path,
-    ensure_agenda_dirs,
-    ensure_dags_dir,
-    ensure_logs_dir,
-    ensure_tasks_dir,
-    list_dag_files,
-    list_task_files,
-    task_file_path,
-    task_log_file_path,
-)
-from azq.agenda.schemas import (
-    DEPENDENCIES_HEADING,
-    DESCRIPTION_HEADING,
-    EXECUTION_NOTES_HEADING,
-    GRAPH_ID_SUFFIX,
-    TASK_ID_PATTERN,
-    TASK_INTENT_HEADING,
-    canonical_graph_id,
-    normalize_dag_record,
-    normalize_task_record,
-    task_id_number,
-)
+from azq.agenda import dag_storage as _dag_storage
+from azq.agenda import log_storage as _log_storage
+from azq.agenda import paths as _paths
+from azq.agenda import schemas as _schemas
+from azq.agenda import task_storage as _task_storage
+from azq.agenda.dag_storage import *  # noqa: F401,F403
+from azq.agenda.log_storage import *  # noqa: F401,F403
+from azq.agenda.paths import *  # noqa: F401,F403
+from azq.agenda.schemas import *  # noqa: F401,F403
+from azq.agenda.task_storage import *  # noqa: F401,F403
 
 
 __all__ = [
-    "DATA_DIR",
-    "AGENDA_DIR",
-    "TASKS_DIR",
-    "DAGS_DIR",
-    "LOGS_DIR",
-    "TASK_FILE_PREFIX",
-    "TASK_FILE_SUFFIX",
-    "TASK_FILE_GLOB",
-    "DAG_FILE_PREFIX",
-    "DAG_FILE_GLOB",
-    "DAG_FILE_SUFFIX",
-    "TASK_LOG_FILE_GLOB",
-    "TASK_LOG_FILE_SUFFIX",
-    "TASK_ID_PATTERN",
-    "GRAPH_ID_SUFFIX",
-    "TASK_INTENT_HEADING",
-    "DEPENDENCIES_HEADING",
-    "DESCRIPTION_HEADING",
-    "EXECUTION_NOTES_HEADING",
-    "CanonicalDeliverableValidationError",
-    "ensure_agenda_dirs",
-    "ensure_tasks_dir",
-    "ensure_dags_dir",
-    "ensure_logs_dir",
-    "task_file_path",
-    "dag_file_path",
-    "task_log_file_path",
-    "log_file_path",
-    "ensure_task_log",
-    "list_dag_files",
-    "list_task_log_files",
-    "list_task_files",
-    "task_id_number",
-    "canonical_graph_id",
-    "normalize_task_record",
-    "normalize_dag_record",
-    "serialize_dag_record",
-    "serialize_dag_json",
-    "dag_to_json",
-    "parse_dag_record",
-    "parse_dag_json",
-    "dag_from_json",
-    "serialize_task_record",
-    "serialize_task_markdown",
-    "task_to_markdown",
-    "parse_task_record",
-    "parse_task_markdown",
-    "task_from_markdown",
-    "validate_canonical_deliverable",
-    "validate_parent_deliverable",
-    "load_dag",
-    "load_goal_dag",
-    "load_all_dags",
-    "load_task",
-    "load_all_tasks",
-    "load_tasks_for_deliverable",
-    "load_deliverable_tasks",
-    "next_task_id",
-    "write_dag",
-    "write_task",
-    "append_task_log_entry",
-    "write_task_log",
-    "create_task_log",
-    "append_started_task_log",
-    "append_completed_task_log",
-    "save_dag",
-    "save_task",
+    *_paths.__all__,
+    *_schemas.__all__,
+    *_task_storage.__all__,
+    *_dag_storage.__all__,
+    *_log_storage.__all__,
 ]

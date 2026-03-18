@@ -82,6 +82,7 @@ def list_dag_files() -> list[Path]:
     return sorted(path for path in DAGS_DIR.glob(DAG_FILE_GLOB) if path.is_file())
 
 
+# Public Agenda path helpers re-exported by ``azq.agenda.storage``.
 __all__ = [
     "DATA_DIR",
     "AGENDA_DIR",
