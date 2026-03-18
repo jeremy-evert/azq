@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "name": "AZQ Stage 3 Wave B Checks",
+  "purpose": "Define task-specific automated checks for Stage 3 Wave B so the Codex runner can evaluate the first Agenda command-layer work without hardcoding Stage 3 logic into the runner.",
+  "defaults": {
+    "retry_cap": 3,
+    "baseline_checks": [
+      {
+        "name": "compileall",
+        "type": "shell",
+        "command": "python -m compileall azq",
+        "required": true,
+        "description": "Verify the azq package still compiles after the patch."
+      },
+      {
+        "name": "existing_regression_suite",
+        "type": "shell",
+        "command": "python -m unittest discover -s tests -v",
+        "required": true,
+        "description": "Verify the existing Stage 1 and Stage 2 regression suite still passes."
+      },
+      {
+        "name": "agenda_storage_import",
+        "type": "shell",
+        "command": "python -c \"import azq.agenda.storage\"",
+        "required": true,
+        "description": "Verify the Agenda storage facade still imports cleanly."
+      }
+    ]
+  },
+  "tasks": {
+    "STAGE3-WAVEB-01": {
+      "description": "Implement azq agenda build as a thin command-layer writer.",
+      "checks": [
+        {
+          "name": "agenda_build_module_exists",
+          "type": "shell",
+          "command": "test -f azq/agenda/build.py",
+          "required": true,
+          "description": "Verify azq/agenda/build.py exists."
+        },
+        {
+          "name": "agenda_build_entrypoint_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify the build module exposes a command-layer entrypoint.",
+          "code": "from azq.agenda import build\nassert any(hasattr(build, name) for name in ['build_agenda', 'build_tasks_for_deliverable', 'agenda_build']), 'missing Agenda build entrypoint'"
+        },
+        {
+          "name": "agenda_build_writes_canonical_task",
+          "type": "python",
+          "required": true,
+          "description": "Verify the build path can validate a parent deliverable, allocate an id, and write one canonical task through shared Agenda storage helpers.",
+          "code": "from unittest.mock import patch\nfrom azq.agenda import build\nentry = getattr(build, 'build_agenda', None) or getattr(build, 'build_tasks_for_deliverable', None) or getattr(build, 'agenda_build', None)\nassert entry is not None, 'build entrypoint not found'\nwritten_tasks = []\nparent = {'deliverable_id': 'DELIV_001', 'goal_id': 'FINIS_001', 'title': 'Visible parent deliverable', 'artifact_description': 'Parent artifact description', 'dependencies': [], 'status': 'drafted', 'created': '2026-03-18'}\nwith patch('azq.agenda.build.validate_parent_deliverable', return_value=parent), patch('azq.agenda.build.next_task_id', return_value='TASK_001'), patch('azq.agenda.build.write_task', side_effect=lambda record: written_tasks.append(dict(record))):\n    entry('DELIV_001')\nassert written_tasks, 'no task was written'\nassert written_tasks[0]['task_id'] == 'TASK_001'\nassert written_tasks[0]['deliverable_id'] == 'DELIV_001'\nassert written_tasks[0]['description'], 'task description should not be blank'\nassert written_tasks[0].get('created', '') != ''"
+        }
+      ],
+      "human_checks": [
+        "The build behavior stays intentionally small and deterministic rather than drifting into task execution, orchestration, or agent-loop behavior.",
+        "If the implementation uses a title field because the live Wave A schema still normalizes one, that is acceptable as long as the canonical description field remains populated and operator-visible."
+      ]
+    },
+    "STAGE3-WAVEB-02": {
+      "description": "Implement azq agenda list as a thin presentation layer.",
+      "checks": [
+        {
+          "name": "agenda_tasks_module_exists",
+          "type": "shell",
+          "command": "test -f azq/agenda/tasks.py",
+          "required": true,
+          "description": "Verify azq/agenda/tasks.py exists."
+        },
+        {
+          "name": "agenda_list_entrypoint_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify the tasks module exposes a listing entrypoint.",
+          "code": "from azq.agenda import tasks\nassert any(hasattr(tasks, name) for name in ['list_tasks', 'show_tasks']), 'missing task listing entrypoint'"
+        },
+        {
+          "name": "agenda_list_reads_canonical_tasks",
+          "type": "python",
+          "required": true,
+          "description": "Verify the list command prints canonical tasks and preserves the no-tasks case.",
+          "code": "import io\nfrom contextlib import redirect_stdout\nfrom unittest.mock import patch\nfrom azq.agenda import tasks\nentry = getattr(tasks, 'list_tasks', None) or getattr(tasks, 'show_tasks', None)\nassert entry is not None, 'listing entrypoint not found'\nbuf = io.StringIO()\nwith patch('azq.agenda.tasks.load_all_tasks', return_value=[]):\n    with redirect_stdout(buf):\n        entry()\nassert 'No tasks' in buf.getvalue()\nbuf = io.StringIO()\nrecord = {'task_id': 'TASK_001', 'deliverable_id': 'DELIV_001', 'title': '', 'description': 'Visible task description', 'dependencies': [], 'status': 'ready', 'execution_notes': '', 'created': '2026-03-18'}\nwith patch('azq.agenda.tasks.load_all_tasks', return_value=[record]):\n    with redirect_stdout(buf):\n        entry()\nout = buf.getvalue()\nassert 'TASK_001' in out\nassert 'DELIV_001' in out\nassert 'Visible task description' in out\nassert 'ready' in out"
+        }
+      ],
+      "human_checks": [
+        "tasks.py stays presentation-only rather than becoming a second repository layer.",
+        "The terminal output is simple, readable, and centered on canonical task records rather than execution state changes."
+      ]
+    },
+    "STAGE3-WAVEB-03": {
+      "description": "Implement azq agenda show with exact-id task inspection.",
+      "checks": [
+        {
+          "name": "agenda_show_entrypoint_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify the tasks module exposes an exact-id inspection entrypoint.",
+          "code": "from azq.agenda import tasks\nassert any(hasattr(tasks, name) for name in ['show_task', 'inspect_task']), 'missing task show entrypoint'"
+        },
+        {
+          "name": "agenda_show_loads_exact_task_and_prints_fields",
+          "type": "python",
+          "required": true,
+          "description": "Verify the show command loads one canonical task by exact id and prints the key fields.",
+          "code": "import io\nfrom contextlib import redirect_stdout\nfrom unittest.mock import patch\nfrom azq.agenda import tasks\nentry = getattr(tasks, 'show_task', None) or getattr(tasks, 'inspect_task', None)\nassert entry is not None, 'show entrypoint not found'\nrecord = {'task_id': 'TASK_001', 'deliverable_id': 'DELIV_001', 'title': '', 'description': 'Inspect this task', 'dependencies': ['TASK_000'], 'status': 'ready', 'execution_notes': 'Visible note', 'created': '2026-03-18'}\nbuf = io.StringIO()\nwith patch('azq.agenda.tasks.load_task', return_value=record):\n    with redirect_stdout(buf):\n        entry('TASK_001')\nout = buf.getvalue()\nassert 'TASK_001' in out\nassert 'DELIV_001' in out\nassert 'Inspect this task' in out\nassert 'TASK_000' in out\nassert 'Visible note' in out"
+        },
+        {
+          "name": "agenda_show_missing_id_fails_cleanly",
+          "type": "python",
+          "required": true,
+          "description": "Verify the show command handles a missing exact task id cleanly.",
+          "code": "import io\nfrom contextlib import redirect_stdout\nfrom unittest.mock import patch\nfrom azq.agenda import tasks\nentry = getattr(tasks, 'show_task', None) or getattr(tasks, 'inspect_task', None)\nassert entry is not None, 'show entrypoint not found'\nbuf = io.StringIO()\nwith patch('azq.agenda.tasks.load_task', return_value=None):\n    with redirect_stdout(buf):\n        entry('TASK_999')\nout = buf.getvalue()\nassert 'not found' in out.lower()"
+        }
+      ],
+      "human_checks": [
+        "Exact-id lookup stays exact and does not drift into fuzzy search.",
+        "The inspection output stays task-focused and does not smuggle in start, complete, or log-writing behavior."
+      ]
+    },
+    "STAGE3-WAVEB-04": {
+      "description": "Implement azq agenda dag as a thin command-layer DAG refresher.",
+      "checks": [
+        {
+          "name": "agenda_dags_module_exists",
+          "type": "shell",
+          "command": "test -f azq/agenda/dags.py",
+          "required": true,
+          "description": "Verify azq/agenda/dags.py exists."
+        },
+        {
+          "name": "agenda_dag_entrypoint_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify the dags module exposes a DAG refresh entrypoint.",
+          "code": "from azq.agenda import dags\nassert any(hasattr(dags, name) for name in ['build_agenda_dag', 'agenda_dag', 'build_dag_for_deliverable']), 'missing agenda dag entrypoint'"
+        },
+        {
+          "name": "agenda_dag_builds_from_deliverable_tasks",
+          "type": "python",
+          "required": true,
+          "description": "Verify the dag command validates the parent deliverable, loads tasks for that deliverable, and writes one canonical goal-level DAG artifact.",
+          "code": "from unittest.mock import patch\nfrom azq.agenda import dags\nentry = getattr(dags, 'build_agenda_dag', None) or getattr(dags, 'agenda_dag', None) or getattr(dags, 'build_dag_for_deliverable', None)\nassert entry is not None, 'dag entrypoint not found'\nwritten_dags = []\nparent = {'deliverable_id': 'DELIV_001', 'goal_id': 'FINIS_001', 'title': 'Parent deliverable', 'artifact_description': 'desc', 'dependencies': [], 'status': 'drafted', 'created': '2026-03-18'}\ntasks_for_deliverable = [\n    {'task_id': 'TASK_001', 'deliverable_id': 'DELIV_001', 'description': 'First task', 'dependencies': [], 'status': 'ready', 'execution_notes': '', 'created': '2026-03-18'},\n    {'task_id': 'TASK_002', 'deliverable_id': 'DELIV_001', 'description': 'Second task', 'dependencies': ['TASK_001'], 'status': 'ready', 'execution_notes': '', 'created': '2026-03-18'}\n]\nwith patch('azq.agenda.dags.validate_parent_deliverable', return_value=parent), patch('azq.agenda.dags.load_tasks_for_deliverable', return_value=tasks_for_deliverable), patch('azq.agenda.dags.write_dag', side_effect=lambda record: written_dags.append(dict(record))):\n    entry('DELIV_001')\nassert written_dags, 'no dag was written'\nassert written_dags[0]['goal_id'] == 'FINIS_001'\nassert 'DELIV_001' in written_dags[0]['deliverable_ids']\nassert 'TASK_001' in written_dags[0]['task_ids']\nassert 'TASK_002' in written_dags[0]['task_ids']"
+        }
+      ],
+      "human_checks": [
+        "The command remains deliverable-scoped at the CLI layer even though the canonical artifact written on disk is still goal-level.",
+        "Dependency-edge derivation should stay conservative and inspectable rather than inventing a planner or orchestration layer."
+      ]
+    },
+    "STAGE3-WAVEB-05": {
+      "description": "Wire Agenda commands into the CLI.",
+      "checks": [
+        {
+          "name": "agenda_cli_modules_exist",
+          "type": "shell",
+          "command": "test -f azq/agenda/cli.py && test -f azq/agenda/router.py",
+          "required": true,
+          "description": "Verify the Agenda CLI and router modules exist."
+        },
+        {
+          "name": "agenda_cli_dispatch_entrypoint_exists",
+          "type": "python",
+          "required": true,
+          "description": "Verify the Agenda CLI surface exposes a dispatch entrypoint through the router.",
+          "code": "from azq.agenda import cli, router\nassert hasattr(cli, 'dispatch'), 'missing agenda cli dispatch'\nassert hasattr(router, 'dispatch'), 'missing agenda router dispatch'"
+        },
+        {
+          "name": "agenda_cli_branch_dispatches_to_modules",
+          "type": "python",
+          "required": true,
+          "description": "Verify the Agenda CLI dispatch routes build, list, show, and dag to dedicated modules.",
+          "code": "from unittest.mock import patch\nfrom azq.agenda import build as build_mod, cli, dags as dags_mod, tasks as tasks_mod\nbuild_name = next(name for name in ['build_agenda', 'build_tasks_for_deliverable', 'agenda_build'] if hasattr(build_mod, name))\nshow_name = next(name for name in ['show_task', 'inspect_task'] if hasattr(tasks_mod, name))\ndag_name = next(name for name in ['agenda_dag', 'build_agenda_dag', 'build_dag_for_deliverable'] if hasattr(dags_mod, name))\nwith patch.object(build_mod, build_name) as build_entry:\n    assert cli.dispatch(['agenda', 'build', 'DELIV_001']) is True\n    build_entry.assert_called_once_with('DELIV_001')\nwith patch.object(tasks_mod, 'list_tasks') as list_entry:\n    assert cli.dispatch(['agenda', 'list']) is True\n    list_entry.assert_called_once_with()\nwith patch.object(tasks_mod, show_name) as show_entry:\n    assert cli.dispatch(['agenda', 'show', 'TASK_001']) is True\n    show_entry.assert_called_once_with('TASK_001')\nwith patch.object(dags_mod, dag_name) as dag_entry:\n    assert cli.dispatch(['agenda', 'dag', 'DELIV_001']) is True\n    dag_entry.assert_called_once_with('DELIV_001')"
+        },
+        {
+          "name": "top_level_cli_routes_agenda_and_prints_help",
+          "type": "python",
+          "required": true,
+          "description": "Verify the top-level CLI routes Agenda commands through the new router and prints Agenda help cleanly.",
+          "code": "import io\nfrom contextlib import redirect_stdout\nfrom unittest.mock import patch\nfrom azq import cli\nbuf = io.StringIO()\nwith patch('sys.argv', ['azq', 'agenda']):\n    with redirect_stdout(buf):\n        cli.main()\nout = buf.getvalue().lower()\nassert 'agenda' in out\nassert 'build' in out\nassert 'list' in out\nassert 'show' in out\nassert 'dag' in out\nwith patch('azq.cli.dispatch_scintilla', return_value=False), patch('azq.cli.dispatch_finis', return_value=False), patch('azq.cli.dispatch_formam', return_value=False), patch('azq.cli.dispatch_agenda', return_value=True) as dispatch_agenda:\n    with patch('sys.argv', ['azq', 'agenda', 'list']):\n        cli.main()\ndispatch_agenda.assert_called_once()"
+        }
+      ],
+      "human_checks": [
+        "The CLI wiring stays narrow and does not smuggle in task start, task complete, status, doctor, or task-runner behavior.",
+        "The first public Agenda loop feels consistent with the live router-based terminal command style rather than the older direct-branch CLI framing still present in some docs."
+      ]
+    }
+  }
+}
