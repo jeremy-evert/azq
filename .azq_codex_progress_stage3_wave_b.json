@@ -9,6 +9,11 @@
       "status": "passed_checks",
       "updated_at": "2026-03-18T16:47:20-05:00",
       "note": "Passed checks on attempt 3."
+    },
+    "STAGE3-WAVEB-03": {
+      "status": "passed_checks",
+      "updated_at": "2026-03-18T16:51:04-05:00",
+      "note": "Passed checks on attempt 1."
     }
   },
   "history": [
@@ -75,6 +80,22 @@
       "task_id": "STAGE3-WAVEB-02",
       "attempt": 3,
       "timestamp": "2026-03-18T16:47:20-05:00",
+      "stage": 3,
+      "wave": "wave_b"
+    },
+    {
+      "event": "codex_submitted",
+      "task_id": "STAGE3-WAVEB-03",
+      "attempt": 1,
+      "timestamp": "2026-03-18T16:50:01-05:00",
+      "stage": 3,
+      "wave": "wave_b"
+    },
+    {
+      "event": "passed_checks",
+      "task_id": "STAGE3-WAVEB-03",
+      "attempt": 1,
+      "timestamp": "2026-03-18T16:51:04-05:00",
       "stage": 3,
       "wave": "wave_b"
     }
