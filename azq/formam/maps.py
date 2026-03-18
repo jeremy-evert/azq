@@ -3,17 +3,63 @@
 from datetime import date
 from typing import Any, Optional
 
-from azq.formam.storage import (
-    derive_goal_map_dependency_edges,
+from azq.formam.deliverable_storage import (
     load_deliverables_for_goal,
-    load_goal_map,
     validate_parent_goal,
+)
+from azq.formam.map_storage import (
+    load_goal_map,
     write_goal_map,
 )
 
 DEFAULT_GOAL_MAP_NOTES = (
     "Canonical Formam goal map generated from current deliverable relationships."
 )
+
+
+def derive_goal_map_dependency_edges(
+    deliverables: list[dict[str, Any]],
+) -> list[str]:
+    """Derive stable human-readable edges from canonical deliverable dependencies.
+
+    Edges stay conservative:
+    - only exact deliverable ids present in ``deliverables`` become edges
+    - self-references are ignored
+    - duplicate edges collapse while preserving deterministic order
+    """
+
+    deliverable_ids = {
+        str(deliverable.get("deliverable_id", "")).strip()
+        for deliverable in deliverables
+        if str(deliverable.get("deliverable_id", "")).strip()
+    }
+
+    dependency_edges: list[str] = []
+    seen_edges: set[str] = set()
+
+    for deliverable in deliverables:
+        deliverable_id = str(deliverable.get("deliverable_id", "")).strip()
+        if not deliverable_id:
+            continue
+
+        dependencies = list(deliverable.get("dependencies", []) or [])
+        for dependency in dependencies:
+            dependency_id = str(dependency).strip()
+            if (
+                not dependency_id
+                or dependency_id == deliverable_id
+                or dependency_id not in deliverable_ids
+            ):
+                continue
+
+            edge = f"{dependency_id} -> {deliverable_id}"
+            if edge in seen_edges:
+                continue
+
+            seen_edges.add(edge)
+            dependency_edges.append(edge)
+
+    return dependency_edges
 
 
 def build_goal_map_record(
@@ -79,6 +125,7 @@ def form_map(goal_id: str) -> dict[str, Any]:
 
 __all__ = [
     "DEFAULT_GOAL_MAP_NOTES",
+    "derive_goal_map_dependency_edges",
     "build_goal_map_record",
     "refresh_goal_map",
     "build_goal_map",

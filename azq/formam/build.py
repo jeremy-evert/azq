@@ -9,7 +9,7 @@ from azq.formam.deliverable_storage import (
     validate_parent_goal,
     write_deliverable,
 )
-from azq.formam.storage import load_goal_map, write_goal_map
+from azq.formam.map_storage import load_goal_map, write_goal_map
 
 INITIAL_GOAL_MAP_NOTES = (
     "Initial Formam stub map generated from canonical deliverables."

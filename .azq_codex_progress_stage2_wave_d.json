@@ -9,6 +9,11 @@
       "status": "passed_checks",
       "updated_at": "2026-03-18T10:43:42-05:00",
       "note": "attempt 3"
+    },
+    "STAGE2-WAVED-03": {
+      "status": "passed_checks",
+      "updated_at": "2026-03-18T11:25:22-05:00",
+      "note": "attempt 1"
     }
   },
   "history": [
@@ -45,6 +50,17 @@
       "task_id": "STAGE2-WAVED-02",
       "attempt": 3,
       "at": "2026-03-18T10:43:42-05:00"
+    },
+    {
+      "event": "start_task",
+      "task_id": "STAGE2-WAVED-03",
+      "at": "2026-03-18T11:18:53-05:00"
+    },
+    {
+      "event": "passed_checks",
+      "task_id": "STAGE2-WAVED-03",
+      "attempt": 1,
+      "at": "2026-03-18T11:25:22-05:00"
     }
   ]
 }

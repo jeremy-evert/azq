@@ -7,6 +7,7 @@ from .deliverable_storage import (
     next_deliverable_id,
     write_deliverable,
 )
+from .map_storage import load_all_goal_maps, load_goal_map, write_goal_map
 from .paths import (
     DATA_DIR,
     DELIVERABLES_DIR,
@@ -27,6 +28,9 @@ __all__ = [
     "load_all_deliverables",
     "load_deliverable",
     "load_deliverables_for_goal",
+    "load_all_goal_maps",
+    "load_goal_map",
     "next_deliverable_id",
     "write_deliverable",
+    "write_goal_map",
 ]
