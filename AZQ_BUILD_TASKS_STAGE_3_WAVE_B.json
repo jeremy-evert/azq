@@ -20,11 +20,13 @@
       "Validate the parent deliverable by exact deliverable_id through the canonical Agenda or Formam validation helper.",
       "Allocate the next stable TASK_### id through the existing Agenda storage helpers.",
       "Generate one deterministic stub task record from the validated deliverable data.",
+      "Ensure the generated canonical task record uses the Stage 3 task schema, especially description rather than an invented title field.",
       "Write one canonical task file through the existing Agenda storage helpers.",
       "Keep the behavior minimal, inspectable, and free of execution-engine behavior, agent loops, or speculative orchestration logic."
     ],
     "acceptance_criteria": [
       "A valid canonical deliverable can produce one TASK_###.md file under data/agenda/tasks/.",
+      "The written task record conforms to the canonical Stage 3 task schema used by the Stage 3 build document.",
       "build.py delegates persistence and file-format decisions to the existing Agenda storage helpers rather than writing files ad hoc.",
       "The first build behavior remains intentionally small, deterministic, and human-readable."
     ],
@@ -50,7 +52,8 @@
       "Create azq/agenda/tasks.py.",
       "Add a read-only listing function such as list_tasks().",
       "Load canonical tasks through the existing Agenda storage helpers.",
-      "Display at least task_id, deliverable_id, title, and status.",
+      "Display at least task_id, deliverable_id, status, and a short readable description.",
+      "Use the canonical description field rather than assuming a title field exists on Agenda task records.",
       "Keep the output simple, stable, and terminal-readable.",
       "Preserve a clear no-tasks message when canonical Agenda storage is empty."
     ],
@@ -80,7 +83,8 @@
     "requirements": [
       "Add a reader such as show_task(task_id).",
       "Load one task by exact task_id through the existing Agenda storage helpers.",
-      "Print the canonical task fields clearly, including deliverable_id, title, description, dependencies, status, execution_notes, and created.",
+      "Print the canonical task fields clearly, including deliverable_id, description, dependencies, status, execution_notes, and created.",
+      "Do not assume an Agenda task title field unless the live schema explicitly adds one.",
       "Handle missing task ids with a readable exact-id failure message.",
       "Keep output centered on canonical task inspection rather than execution behavior."
     ],
@@ -94,7 +98,7 @@
   {
     "task_id": "STAGE3-WAVEB-04",
     "title": "Implement azq agenda dag as a thin command-layer DAG refresher",
-    "goal": "Make azq/agenda/dags.py generate or refresh a canonical Agenda DAG from the current deliverable-scoped task records for one exact deliverable without broadening into execution flow.",
+    "goal": "Make azq/agenda/dags.py generate or refresh a canonical Agenda DAG from the current deliverable-scoped task records for one exact deliverable while still writing the canonical goal-level DAG artifact for that deliverable's parent goal.",
     "files_to_create": [
       "azq/agenda/dags.py"
     ],
@@ -112,12 +116,13 @@
       "Add a command-layer entrypoint such as build_agenda_dag(deliverable_id) or agenda_dag(deliverable_id).",
       "Validate the parent deliverable by exact deliverable_id through the canonical validation helper.",
       "Load canonical tasks for that exact deliverable through the existing Agenda storage helpers.",
-      "Write or refresh one canonical GOAL_<goal_id>_DAG.json file through the existing Agenda DAG storage helpers using the deliverable's parent goal.",
+      "Resolve the parent goal from the validated deliverable and write or refresh one canonical GOAL_<goal_id>_DAG.json file through the existing Agenda DAG storage helpers.",
       "If dependency edges are derived automatically, derive them conservatively from existing task dependency lists rather than inventing planning structure.",
       "Do not introduce task execution, agent loops, log mutation, or smart orchestration behavior."
     ],
     "acceptance_criteria": [
       "A deliverable with canonical parent records can produce or refresh one visible DAG artifact.",
+      "The command is deliverable-scoped at the CLI layer but writes the canonical goal-level DAG artifact for the resolved parent goal.",
       "DAG regeneration depends on canonical task records for the exact deliverable and the parent goal resolved from that deliverable.",
       "dags.py remains a thin command-layer module over shared storage helpers."
     ],
