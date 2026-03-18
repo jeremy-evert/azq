@@ -24,6 +24,11 @@
       "status": "passed_checks",
       "updated_at": "2026-03-17T19:27:47-05:00",
       "note": "attempt 2"
+    },
+    "STAGE2-WAVEA-06": {
+      "status": "passed_checks",
+      "updated_at": "2026-03-17T19:30:59-05:00",
+      "note": "attempt 2"
     }
   },
   "history": [
@@ -87,6 +92,23 @@
       "task_id": "STAGE2-WAVEA-05",
       "attempt": 2,
       "at": "2026-03-17T19:27:47-05:00"
+    },
+    {
+      "event": "start_task",
+      "task_id": "STAGE2-WAVEA-06",
+      "at": "2026-03-17T19:29:06-05:00"
+    },
+    {
+      "event": "repair_loop",
+      "task_id": "STAGE2-WAVEA-06",
+      "attempt": 1,
+      "at": "2026-03-17T19:30:16-05:00"
+    },
+    {
+      "event": "passed_checks",
+      "task_id": "STAGE2-WAVEA-06",
+      "attempt": 2,
+      "at": "2026-03-17T19:30:59-05:00"
     }
   ]
 }

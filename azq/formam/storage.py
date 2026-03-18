@@ -9,6 +9,8 @@ from pathlib import Path
 import re
 from typing import Any, Optional
 
+from azq.finis import storage as finis_storage
+
 DATA_DIR = Path("data")
 FORM_DIR = DATA_DIR / "form"
 DELIVERABLES_DIR = FORM_DIR / "deliverables"
@@ -20,6 +22,25 @@ MAP_FILE_SUFFIX = "_MAP.md"
 MAP_FILE_GLOB = f"{MAP_FILE_PREFIX}*{MAP_FILE_SUFFIX}"
 ARTIFACT_DESCRIPTION_HEADING = "## Artifact Description"
 DELIVERABLE_ID_PATTERN = re.compile(r"^DELIV_(\d+)$")
+
+
+class CanonicalGoalValidationError(ValueError):
+    """Raised when a Formam parent goal cannot be validated canonically."""
+
+    def __init__(
+        self,
+        goal_id: str,
+        message: str,
+        *,
+        code: str,
+        active_only: bool = False,
+        goal_record: Optional[dict[str, Any]] = None,
+    ) -> None:
+        super().__init__(message)
+        self.goal_id = goal_id
+        self.code = code
+        self.active_only = active_only
+        self.goal_record = goal_record
 
 
 def ensure_form_dirs() -> tuple[Path, Path]:
@@ -274,6 +295,50 @@ def load_deliverables_for_goal(goal_id: str) -> list[dict[str, Any]]:
     return load_goal_deliverables(goal_id)
 
 
+def validate_canonical_goal(
+    goal_id: str, *, active_only: bool = False
+) -> dict[str, Any]:
+    """Validate an exact canonical parent goal through the Finis storage layer.
+
+    The ``active_only`` flag is explicit so future command modules can inspect
+    or opt into the stricter rule instead of inheriting hidden policy.
+    """
+
+    canonical_goal_id = str(goal_id).strip()
+    if not canonical_goal_id:
+        raise CanonicalGoalValidationError(
+            canonical_goal_id,
+            "Deliverable parent goal_id is required.",
+            code="missing_goal_id",
+            active_only=active_only,
+        )
+
+    goal_record = finis_storage.load_goal(canonical_goal_id)
+    if goal_record is None:
+        raise CanonicalGoalValidationError(
+            canonical_goal_id,
+            f"Cannot create deliverable: canonical parent goal {canonical_goal_id} does not exist.",
+            code="missing_goal",
+            active_only=active_only,
+        )
+
+    if active_only and goal_record.get("status") != "active":
+        raise CanonicalGoalValidationError(
+            canonical_goal_id,
+            f"Cannot create deliverable: canonical parent goal {canonical_goal_id} is not active.",
+            code="inactive_goal",
+            active_only=True,
+            goal_record=goal_record,
+        )
+
+    return goal_record
+
+
+def validate_parent_goal(goal_id: str, *, active_only: bool = False) -> dict[str, Any]:
+    """Validate an exact canonical parent goal before any Formam write occurs."""
+    return validate_canonical_goal(goal_id, active_only=active_only)
+
+
 def next_deliverable_id() -> str:
     """Compute the next stable DELIV id from canonical deliverable files."""
     highest_deliverable_number = 0
@@ -319,5 +384,8 @@ __all__ = [
     "load_all_deliverables",
     "load_goal_deliverables",
     "load_deliverables_for_goal",
+    "CanonicalGoalValidationError",
+    "validate_canonical_goal",
+    "validate_parent_goal",
     "next_deliverable_id",
 ]
