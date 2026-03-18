@@ -6,6 +6,7 @@ tasks can build on one shared definition of the Formam data locations.
 """
 
 from pathlib import Path
+from typing import Any
 
 DATA_DIR = Path("data")
 FORM_DIR = DATA_DIR / "form"
@@ -65,6 +66,38 @@ def list_goal_map_files() -> list[Path]:
     return sorted(path for path in MAPS_DIR.glob(MAP_FILE_GLOB) if path.is_file())
 
 
+def normalize_deliverable_record(
+    deliverable_record: dict[str, Any],
+) -> dict[str, Any]:
+    """Convert partial deliverable-shaped data into the Stage 2 schema.
+
+    Fallbacks stay conservative so stub deliverables remain explicit rather
+    than silently gaining invented structure:
+    - ``artifact_description`` becomes an empty string when missing
+    - ``dependencies`` always becomes a list
+    - ``status`` defaults to ``drafted``
+    - ``created`` becomes an empty string when missing
+    """
+
+    dependencies = deliverable_record.get("dependencies")
+    if dependencies is None:
+        canonical_dependencies: list[Any] = []
+    elif isinstance(dependencies, list):
+        canonical_dependencies = list(dependencies)
+    else:
+        canonical_dependencies = [dependencies]
+
+    return {
+        "deliverable_id": deliverable_record.get("deliverable_id", ""),
+        "goal_id": deliverable_record.get("goal_id", ""),
+        "title": deliverable_record.get("title", ""),
+        "artifact_description": deliverable_record.get("artifact_description", ""),
+        "dependencies": canonical_dependencies,
+        "status": deliverable_record.get("status", "drafted"),
+        "created": deliverable_record.get("created", ""),
+    }
+
+
 __all__ = [
     "DATA_DIR",
     "FORM_DIR",
@@ -82,4 +115,5 @@ __all__ = [
     "goal_map_file_path",
     "list_deliverable_files",
     "list_goal_map_files",
+    "normalize_deliverable_record",
 ]
