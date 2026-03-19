@@ -1,8 +1,8 @@
 from pathlib import Path
 import json
+from azq.scintilla.storage import ensure_scintilla_dirs, spark_file_path
 
-OUT = Path("data/scintilla/sparks")
-OUT.mkdir(parents=True, exist_ok=True)
+ensure_scintilla_dirs()
 
 
 def run(transcript_file):
@@ -25,9 +25,9 @@ def run(transcript_file):
             )
 
     name = Path(transcript_file).stem
-    outfile = OUT / f"{name}.json"
+    outfile = spark_file_path(name)
 
-    with open(outfile, "w") as f:
+    with open(outfile, "w", encoding="utf-8") as f:
         json.dump(sparks, f, indent=2)
 
     print(f"Sparks: {outfile}")

@@ -1,21 +1,17 @@
-import json
-from pathlib import Path
-
-
-SPARK_DIR = Path("data/scintilla/sparks")
+from azq.scintilla.storage import list_spark_files, load_spark_file
 
 
 def search_sparks(text):
 
     text = text.lower()
 
-    files = sorted(SPARK_DIR.glob("*.json"))
+    files = list_spark_files()
 
     matches = []
 
     for f in files:
 
-        data = json.loads(f.read_text())
+        data = load_spark_file(f)
 
         for s in data:
 

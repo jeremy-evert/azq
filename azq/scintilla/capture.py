@@ -6,10 +6,11 @@ from pathlib import Path
 from datetime import datetime
 import sys
 
+from azq.scintilla.storage import audio_file_path, ensure_scintilla_dirs
+
 TARGET_RATE = 16000
 
-OUT = Path("data/scintilla/audio")
-OUT.mkdir(parents=True, exist_ok=True)
+ensure_scintilla_dirs()
 
 
 def find_input_device():
@@ -115,7 +116,7 @@ def record():
         audio = resample_poly(audio, TARGET_RATE, device_rate)
 
     filename = datetime.now().strftime("%Y-%m-%d_%H%M%S") + ".wav"
-    path = OUT / filename
+    path = audio_file_path(Path(filename).stem)
 
     audio_int16 = (audio * 32767).astype(np.int16)
     write(path, TARGET_RATE, audio_int16)

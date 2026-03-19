@@ -1,9 +1,9 @@
 from pathlib import Path
 import whisper
 import torch
+from azq.scintilla.storage import ensure_scintilla_dirs, transcript_file_path
 
-OUT = Path("data/scintilla/transcripts")
-OUT.mkdir(parents=True, exist_ok=True)
+ensure_scintilla_dirs()
 
 print("Loading Whisper model...")
 
@@ -82,9 +82,9 @@ def run(audio_file):
     # ---------------------------------------------
 
     name = audio_file.stem
-    outfile = OUT / f"{name}.txt"
+    outfile = transcript_file_path(name)
 
-    with open(outfile, "w") as f:
+    with open(outfile, "w", encoding="utf-8") as f:
         f.write(transcript)
 
     print(f"Transcript saved → {outfile}")

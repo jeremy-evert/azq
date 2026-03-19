@@ -1,18 +1,10 @@
-from pathlib import Path
-
-
-AUDIO_DIR = Path("data/scintilla/audio")
-TRANSCRIPT_DIR = Path("data/scintilla/transcripts")
-SPARK_DIR = Path("data/scintilla/sparks")
+from azq.scintilla.storage import spark_artifact_paths
 
 
 def delete_spark(spark_id):
 
-    files = [
-        AUDIO_DIR / f"{spark_id}.wav",
-        TRANSCRIPT_DIR / f"{spark_id}.txt",
-        SPARK_DIR / f"{spark_id}.json",
-    ]
+    artifacts = spark_artifact_paths(spark_id)
+    files = [artifacts["audio"], artifacts["transcript"], artifacts["sparks"]]
 
     removed = False
 
