@@ -16,16 +16,30 @@ The goal of this plan is to move from the current Stage 3 baseline to a coherent
 
 ```text
 spark -> goal -> deliverable -> task -> artifact -> archive
-```
+````
 
-The build order is intentionally strict:
+The build order is intentionally strict, but it now reflects the actual planning loop AZQ is meant to support:
 
 1. preserve the canonical Finis, Formam, and Agenda baselines
-2. implement Domum
-3. add doctor/status
-4. remove destructive delete paths
+2. deepen Finis so it can shape sparks into better goals with LLM assistance
+3. deepen Formam so it can shape goals into useful deliverables and maps with LLM assistance
+4. deepen Agenda so it can shape deliverables into commit-sized tasks, dedupe them, build dependency graphs, and prepare Codex execution
+5. implement Domum
+6. add doctor/status
+7. remove destructive delete paths
 
-That order connects doctrine to code and prevents AZQ from becoming a task manager before it becomes a craft system. fileciteturn11file5turn11file12
+That order keeps doctrine and practice aligned.
+
+AZQ is not meant to be only a filesystem ledger.
+It is meant to be a craft system where the existing engines do real shaping work:
+
+* **Finis** should help define goals
+* **Formam** should help define deliverables and maps
+* **Agenda** should help define tasks and execution structure
+* **Domum** should steward what has been built
+
+There is no new public craft layer in this plan.
+If internal helper code is borrowed from other projects or scripts, it should be absorbed into the existing engine structure rather than exposed as a sixth public engine.
 
 ---
 
@@ -39,9 +53,15 @@ All implementation work should obey the following rules:
 * keep each engine small and filesystem-driven
 * add read commands before aggressive write automation when a stage is new
 * do not allow later-stage objects without a traceable parent
-* keep the CLI aligned with the craft stages and filesystem pipeline fileciteturn10file2turn10file1turn10file4
+* keep the CLI aligned with the craft stages and filesystem pipeline
+* treat LLM output as a proposal artifact until it is accepted into canonical craft storage
+* keep confidence checks, retries, and escalation explicit rather than magical
+* keep one canonical planning path rather than multiple overlapping helper scripts
+* make Codex-facing task sets deterministic, inspectable, and diff-friendly
+* prefer one visible source of truth over hidden in-memory orchestration
 
-These principles are not decoration. They are the guardrails that keep the implementation aligned with the charter and state model. fileciteturn10file2turn10file8
+These principles are not decoration.
+They are the guardrails that keep the implementation aligned with the charter and state model.
 
 ---
 
@@ -68,7 +88,7 @@ The current repository already supports:
 * `azq agenda list`
 * `azq agenda show <task_id>`
 * `azq agenda dag <deliverable_id>`
-* `azq goal archive <id>` fileciteturn11file5
+* `azq goal archive <id>`
 
 This means AZQ can currently complete the first three live craft layers:
 
@@ -76,18 +96,20 @@ This means AZQ can currently complete the first three live craft layers:
 capture -> spark -> goal -> deliverable -> map -> task -> dag
 ```
 
-That is enough to reach an actionable Stage 3 baseline, but not enough for the intended five-engine architecture. fileciteturn10file0turn10file5
+That is enough to reach an actionable Stage 3 baseline, but not enough for the intended five-engine architecture or for the actual LLM-assisted planning workflow Jeremy uses in other places.
 
 ### Structural mismatches to resolve
 
 The main mismatches between doctrine and implementation are:
 
-* some operator-facing docs still describe canonical Finis, Formam, and Agenda storage as future-only work rather than the live baseline
-* the live storage layers now exist, but operator-facing docs still need to teach them accurately without falling back to older pre-implementation framing
-* the CLI does not yet match the full long-range command model for archive, status, and doctor, and the live Stage 3 operator surface is `azq agenda ...` rather than the older split `task` and `dag` families fileciteturn10file1turn10file5
-* `azq spark rm` still teaches destructive deletion in a system whose state model explicitly prefers archive over prune and rejects silent loss fileciteturn10file8turn11file5
-* there is no archive layer yet protecting prior artifacts fileciteturn10file4turn11file5
-* there is no repository-wide health or maturity reader even though the state model defines both fileciteturn10file8
+* `finis` currently stores and lists goals, but it does not yet deeply shape sparks into refined goals with questioning, narrowing, or tractability judgment
+* `formam` currently builds stub deliverables and maps, but it does not yet expand, prioritize, or refine deliverables with LLM help
+* `agenda` currently builds stub tasks and goal-level DAGs, but it does not yet decompose deliverables into commit-sized tasks, dedupe them, or prepare them cleanly for Codex
+* planning scripts that already perform expansion, decomposition, DAG generation, and dedupe exist outside the AZQ engine structure
+* the implementation plan must absorb that existing functionality into the proper craft engines instead of waiting for archive and health stages to somehow produce it
+* `azq spark rm` still teaches destructive deletion in a system whose state model explicitly prefers archive over prune and rejects silent loss
+* there is no archive layer yet protecting prior artifacts
+* there is no repository-wide health or maturity reader even though the state model defines both
 
 ---
 
@@ -99,7 +121,7 @@ Move `finis` from transitional JSON storage to first-class goal files so the on-
 
 ### Why first
 
-Finis is already live, but its storage model contradicts the architectural documents. Later engines need stable goal records, stable IDs, explicit status fields, and traceable backlinks. Without that, Formam sits on mud. fileciteturn10file4turn10file8
+Finis is already live, but its storage model contradicts the architectural documents. Later engines need stable goal records, stable IDs, explicit status fields, and traceable backlinks. Without that, Formam sits on mud.
 
 ### Scope
 
@@ -150,7 +172,7 @@ Introduce the form-building stage that turns goals into deliverables and depende
 
 ### Why second
 
-The craft doctrine is explicit: form comes before execution. If AZQ creates tasks before deliverables, it collapses into undisciplined activity tracking. fileciteturn10file2turn10file6
+The craft doctrine is explicit: form comes before execution. If AZQ creates tasks before deliverables, it collapses into undisciplined activity tracking.
 
 ### Scope
 
@@ -178,7 +200,7 @@ The craft doctrine is explicit: form comes before execution. If AZQ creates task
 * one or more deliverables may descend from a goal
 * every deliverable must point back to exactly one goal initially
 * maps should remain human-readable, even if later exported to JSON
-* Formam should define boundaries of work, not task lists fileciteturn10file3turn10file8
+* Formam should define boundaries of work, not task lists
 
 ### Recommended initial implementation
 
@@ -193,7 +215,7 @@ The craft doctrine is explicit: form comes before execution. If AZQ creates task
 * deliverables can be listed and inspected from the CLI
 * every deliverable has a valid parent goal
 * no task commands are introduced before deliverables exist
-* the repository can truthfully reach `formed` from visible files fileciteturn10file8
+* the repository can truthfully reach `formed` from visible files
 
 ---
 
@@ -205,7 +227,7 @@ Turn deliverables into executable tasks with visible work logs and dependency or
 
 ### Why third
 
-Agenda is only useful once Formam has defined what should exist. Tasks must serve deliverables rather than replace them. fileciteturn10file3turn11file13
+Agenda is only useful once Formam has defined what should exist. Tasks must serve deliverables rather than replace them.
 
 ### Live baseline
 
@@ -238,7 +260,7 @@ Agenda is only useful once Formam has defined what should exist. Tasks must serv
 * task dependencies must be inspectable on disk
 * task-log evidence must remain inspectable on disk
 * task completion should not imply artifact publication automatically
-* blocked work must become a first-class visible state, not a vague feeling fileciteturn10file8
+* blocked work must become a first-class visible state, not a vague feeling
 
 ### Current command framing
 
@@ -257,19 +279,236 @@ The older `azq task ...`, `azq dag ...`, `task start`, and `task complete` frami
 * canonical DAG artifacts and task-log artifacts exist under `data/agenda/`
 * no task exists without a valid deliverable parent
 * repository state can reach `actionable` from real artifacts
-* the trace chain `task -> deliverable -> goal` is machine-checkable and human-readable fileciteturn10file8turn11file9
+* the trace chain `task -> deliverable -> goal` is machine-checkable and human-readable
 
 ---
 
-## Stage 4: Implement Domum
+## Stage 4: Deepen Finis Into An LLM-Assisted Goal-Shaping Layer
 
 ### Objective
 
-Add stewardship: archive, prune, and review operations that keep AZQ trustworthy as it accumulates artifacts.
+Extend Finis so it does real goal-shaping work rather than only storing accepted goals.
+
+Finis should be the stage that takes sparks, weighs them, tests their spirit, asks narrowing questions, judges likely usefulness and attainability, and helps the user turn early sparks into better goals.
 
 ### Why fourth
 
-Before adding more mutating behavior, the system needs a safe place for finished and stale material to go. Domum protects inspectability and prevents silent loss. fileciteturn10file2turn11file11
+This is the first missing layer in the actual working loop.
+The repository already captures sparks and stores goals, but it does not yet provide the assisted shaping behavior that the craft model implies Finis should own.
+
+### Scope
+
+* deepen `azq fine` from simple candidate promotion into guided goal shaping
+* allow Finis to inspect one or more spark bundles and propose:
+
+  * candidate goals
+  * goal summaries
+  * tractability notes
+  * usefulness notes
+  * suggested narrowing questions
+  * optional manifesto or intent drafts tied to a goal
+* keep the accepted canonical goal record under `data/finis/goals/`
+* add proposal artifacts under Finis rather than inventing a new public craft engine
+
+### Recommended internal file work
+
+* add `azq/finis/analysis.py`
+* add `azq/finis/questions.py`
+* add `azq/finis/llm.py`
+* add `azq/finis/proposals.py`
+* extend `azq/finis/cli.py` and `azq/finis/router.py`
+* create proposal homes such as:
+
+  * `data/finis/proposals/`
+  * `data/finis/notes/`
+
+These proposal paths are implementation details of Finis, not a new public craft layer.
+
+### Design constraints
+
+* Finis should not silently overwrite accepted goals with LLM output
+* proposals should remain inspectable and diff-friendly
+* the user should be able to reject, revise, or accept a proposed goal
+* narrowing questions should be visible rather than hidden in a monolithic chat transcript
+* usefulness and attainability should be framed as judgment aids, not false certainty
+* any manifesto or intent draft remains a Finis artifact attached to the goal context rather than a new standalone engine
+
+### Recommended first commands
+
+The exact names may vary, but the live command surface should eventually support behavior equivalent to:
+
+* `azq fine`
+* `azq fine inspect <spark_id>`
+* `azq fine shape <spark_id>`
+* `azq fine questions <spark_id or goal_id>`
+
+The important thing is that the public craft story stays the same: Finis shapes goals.
+
+### Exit criteria
+
+* Finis can read sparks and propose better goals with visible reasoning
+* Finis can ask narrowing questions before the user accepts a goal
+* accepted goals remain canonical Markdown goal records
+* proposal and note artifacts live inside Finis rather than in ad hoc helper folders
+* the move from spark to goal becomes materially more useful than simple storage
+
+---
+
+## Stage 5: Deepen Formam Into An LLM-Assisted Deliverable-Shaping Layer
+
+### Objective
+
+Extend Formam so it can take a goal and help shape it into useful deliverables, expanded deliverables, and maps that distinguish what must be built now from what can wait.
+
+### Why fifth
+
+Once Finis can shape better goals, Formam becomes the natural place to shape those goals into artifact boundaries and structured plans.
+This is where the existing deliverable-expansion scripts belong conceptually.
+
+### Scope
+
+* deepen `azq form build <goal_id>` from stub generation into assisted deliverable shaping
+* add deliverable expansion, prioritization, and map refinement
+* absorb the existing deliverable-expansion logic into Formam internals
+* allow Formam to generate:
+
+  * proposed deliverables
+  * expanded deliverable descriptions
+  * priority ordering
+  * first-now versus later distinctions
+  * map refinements and dependency notes
+* keep canonical accepted deliverables and maps under `data/form/`
+
+### Recommended internal file work
+
+* add `azq/formam/expand.py`
+* add `azq/formam/prioritize.py`
+* add `azq/formam/llm.py`
+* add `azq/formam/proposals.py`
+* extend `azq/formam/build.py`, `azq/formam/maps.py`, and router/CLI wiring
+* create proposal homes such as:
+
+  * `data/form/proposals/`
+  * `data/form/expansions/`
+
+These are Formam internals, not a new public engine.
+
+### Design constraints
+
+* Formam should define artifact boundaries, not jump directly to task lists
+* expanded deliverables should remain inspectable proposal artifacts until accepted
+* map generation should stay visible and file-backed
+* Formam should help narrow scope, not endlessly widen it
+* prioritization should support “build now” versus “wait until later”
+* deliverable generation should preserve traceability back to the parent goal
+
+### Recommended first commands
+
+The exact names may vary, but the public behavior should remain inside Formam and support capabilities equivalent to:
+
+* `azq form build <goal_id>`
+* `azq form expand <goal_id or deliverable_id>`
+* `azq form prioritize <goal_id>`
+* `azq form map <goal_id>`
+
+### Exit criteria
+
+* Formam can produce more useful deliverables than a single stub file
+* deliverable expansions and prioritization are visible on disk
+* accepted deliverables remain canonical records under `data/form/deliverables/`
+* goal maps become meaningful planning artifacts rather than placeholders
+* the move from goal to deliverable becomes materially more useful than simple stub generation
+
+---
+
+## Stage 6: Deepen Agenda Into An LLM-Assisted Task-And-Codex Layer
+
+### Objective
+
+Extend Agenda so it can take deliverables and shape them into commit-sized tasks, dedupe them, build dependency graphs, and prepare them for Codex execution.
+
+This is where the existing task decomposition, dedupe, DAG, and Codex-preparation scripts belong conceptually.
+
+### Why sixth
+
+Agenda is the natural home for executable work.
+The current Stage 3 baseline proves the file-backed task system.
+The next step is to make Agenda smart enough to generate and prepare the right work rather than only store one stub task.
+
+### Scope
+
+* deepen `azq agenda build <deliverable_id>` from stub-task generation into assisted task shaping
+* absorb task decomposition logic, DAG building logic, and dedupe logic into Agenda internals
+* add Codex preparation and reporting as Agenda-owned execution support
+* allow Agenda to generate:
+
+  * commit-sized task proposals
+  * dependency graphs
+  * execution levels
+  * deduped task sets
+  * Codex-ready task subsets
+  * execution reports
+
+### Recommended internal file work
+
+* add `azq/agenda/decompose.py`
+* add `azq/agenda/dedupe.py`
+* add `azq/agenda/dag_builder.py`
+* add `azq/agenda/codex.py`
+* add `azq/agenda/llm.py`
+* add `azq/agenda/proposals.py`
+* extend `azq/agenda/build.py`, `azq/agenda/dags.py`, and router/CLI wiring
+* create proposal and execution homes such as:
+
+  * `data/agenda/proposals/`
+  * `data/agenda/reports/`
+  * `data/agenda/runs/`
+
+These remain Agenda internals, not a new public engine.
+
+### Design constraints
+
+* Agenda should decompose one deliverable at a time into tasks that fit into roughly half an hour and one commit message
+* generated tasks should remain proposal artifacts until accepted into canonical `data/agenda/tasks/`
+* dedupe should be explicit and reversible
+* DAG generation should remain deterministic from task inputs and outputs
+* Codex preparation should not destroy the full task set
+* execution reports should remain durable and inspectable on disk
+* Agenda should own the bridge from deliverable to executable work rather than relying on scattered side scripts
+
+### Recommended first commands
+
+The exact names may vary, but the public behavior should stay under Agenda and support capabilities equivalent to:
+
+* `azq agenda build <deliverable_id>`
+* `azq agenda expand <deliverable_id>`
+* `azq agenda dedupe <deliverable_id>`
+* `azq agenda dag <deliverable_id>`
+* `azq agenda codex prepare <deliverable_id>`
+* `azq agenda codex run <deliverable_id>`
+* `azq agenda codex report <deliverable_id>`
+
+The important point is that task shaping and Codex preparation remain inside Agenda as part of the public craft flow.
+
+### Exit criteria
+
+* Agenda can produce commit-sized task proposals from a deliverable
+* Agenda can dedupe task proposals and build deterministic DAG artifacts
+* accepted tasks remain canonical records under `data/agenda/tasks/`
+* Codex execution can be prepared from Agenda-owned artifacts without manual copy-paste glue
+* the move from deliverable to executable work becomes materially more useful than single-task stub writing
+
+---
+
+## Stage 7: Implement Domum
+
+### Objective
+
+Add stewardship: archive, prune, and review operations that keep AZQ trustworthy as it accumulates craft artifacts.
+
+### Why seventh
+
+Before adding more mutating behavior, the system needs a safe place for finished and stale material to go. Domum protects inspectability and prevents silent loss.
 
 ### Scope
 
@@ -279,6 +518,7 @@ Before adding more mutating behavior, the system needs a safe place for finished
 
   * `data/archive/sparks/`
   * `data/archive/goals/`
+  * `data/archive/deliverables/`
   * `data/archive/tasks/`
   * `data/archive/artifacts/`
 * create `data/reports/` if review output becomes first-class
@@ -294,7 +534,8 @@ Before adding more mutating behavior, the system needs a safe place for finished
 * archive actions should write a reason or manifest
 * prune should be policy-based, not silent deletion
 * review should summarize recent state transitions from visible files
-* archive failure must be non-destructive: active artifacts remain in place if the move is incomplete fileciteturn11file4turn11file18
+* archive failure must be non-destructive: active artifacts remain in place if the move is incomplete
+* Domum should steward accepted craft records and accepted supporting artifacts, not confuse proposals with canonical active records
 
 ### Recommended initial implementation
 
@@ -312,15 +553,15 @@ Before adding more mutating behavior, the system needs a safe place for finished
 
 ---
 
-## Stage 5: Add Doctor and Status
+## Stage 8: Add Doctor and Status
 
 ### Objective
 
 Add repository-wide read commands that report maturity and health without mutating state.
 
-### Why fifth
+### Why eighth
 
-`status` and `doctor` should describe the actual system, not a hypothetical one. They are more useful after the major object layers and archive paths exist. fileciteturn10file1turn10file8
+`status` and `doctor` should describe the actual system, not a hypothetical one. They are more useful after the major object layers and archive paths exist.
 
 ### Scope
 
@@ -371,7 +612,7 @@ Add repository-wide read commands that report maturity and health without mutati
 
 ---
 
-## Stage 6: Remove Destructive Delete Paths
+## Stage 9: Remove Destructive Delete Paths
 
 ### Objective
 
@@ -379,7 +620,7 @@ Eliminate silent permanent deletion from the live system.
 
 ### Why last
 
-Permanent deletion should only be removed after archive and health mechanisms exist. Otherwise the system loses a capability before a safer replacement is in place. fileciteturn11file1turn11file18
+Permanent deletion should only be removed after archive and health mechanisms exist. Otherwise the system loses a capability before a safer replacement is in place.
 
 ### Scope
 
@@ -415,9 +656,13 @@ These tasks should be done alongside the stages above rather than treated as a s
 * add tests for each state transition
 * normalize ID parsing and validation across engines
 * keep CLI help synchronized with the command model
-* add fixtures under `tests/fixtures/` for migration and health checks
+* add fixtures under `tests/fixtures/` for migration, planning, and health checks
 * document file formats as they stabilize
 * make backlinks mandatory wherever the state model requires them
+* keep one canonical public API per subsystem
+* keep confidence checks, retries, and escalation behavior inspectable
+* ensure proposal artifacts clearly distinguish proposal state from accepted canonical state
+* absorb external helper scripts into existing engine homes instead of preserving overlapping parallel workflows indefinitely
 
 ### Priority test coverage
 
@@ -425,9 +670,12 @@ Start with tests for:
 
 * Finis migration from `goals.json` to goal files
 * parent-child integrity across `goal -> deliverable -> task`
+* Finis proposal shaping and narrowing-question behavior
+* Formam deliverable expansion and prioritization behavior
+* Agenda decomposition determinism, dedupe determinism, and DAG determinism
 * archive non-destructiveness
 * `doctor` detection of orphaned and malformed artifacts
-* command runs that fail after partial work and must preserve durable evidence fileciteturn11file4turn11file9
+* command runs that fail after partial work and must preserve durable evidence
 
 ---
 
@@ -470,7 +718,45 @@ Result:
 
 * AZQ can become `actionable` from explicit deliverables
 
-### Milestone 4: Stewardship Layer
+### Milestone 4: Intelligent Goal Shaping
+
+Deliver:
+
+* Finis LLM-assisted goal shaping
+* narrowing questions
+* tractability and usefulness notes
+* proposal artifacts attached to Finis
+
+Result:
+
+* AZQ can move from spark to better goals rather than only storing accepted titles
+
+### Milestone 5: Intelligent Deliverable Shaping
+
+Deliver:
+
+* Formam deliverable expansion
+* prioritization
+* useful map refinement
+
+Result:
+
+* AZQ can move from goals to useful deliverables rather than only writing stubs
+
+### Milestone 6: Intelligent Task And Codex Preparation
+
+Deliver:
+
+* Agenda task decomposition
+* task dedupe
+* deterministic DAG generation
+* Codex preparation and reporting
+
+Result:
+
+* AZQ can move from deliverables to executable work without relying on side scripts
+
+### Milestone 7: Stewardship Layer
 
 Deliver:
 
@@ -482,7 +768,7 @@ Result:
 
 * AZQ can preserve history instead of deleting it
 
-### Milestone 5: Repository Introspection
+### Milestone 8: Repository Introspection
 
 Deliver:
 
@@ -494,7 +780,7 @@ Result:
 
 * AZQ can explain its own condition from disk
 
-### Milestone 6: Delete-Free Craft Loop
+### Milestone 9: Delete-Free Craft Loop
 
 Deliver:
 
@@ -511,7 +797,8 @@ Result:
 
 AZQ reaches the intended five-engine baseline when all of the following are true:
 
-* each engine has a code module and a minimal working CLI surface
+* each engine has a code module and a working CLI surface
+* Finis, Formam, and Agenda do real shaping work with visible LLM-assisted proposal artifacts
 * each craft stage writes durable artifacts to its own filesystem home
 * every later-stage object has a traceable earlier-stage parent
 * archive exists before destructive removal disappears
@@ -519,8 +806,8 @@ AZQ reaches the intended five-engine baseline when all of the following are true
 * the practical command flow matches the doctrinal pipeline
 * the repository can move from `empty` to `kept` without violating the state model
 
-At that point, AZQ is no longer a partial capture-and-goals prototype.
-It is a coherent five-engine craft system.
+At that point, AZQ is no longer only a partial capture-and-goals prototype.
+It is a coherent five-engine craft system where the engines mean what their names imply.
 
 ---
 
@@ -533,7 +820,18 @@ Implement the stages in order.
 Do not skip form.
 Do not let tasks outrun structure.
 Do not add deletion before stewardship.
-Do not add hidden state where durable files should suffice.
+Do not add a new public engine when the existing craft layers should own the work.
+Do not leave the best planning behavior trapped in side scripts when it belongs inside Finis, Formam, and Agenda.
 
 If this order is respected, doctrine and code will converge.
 If it is ignored, AZQ will decay into the kind of system it was designed not to become.
+
+```
+
+This version keeps the public story clean:
+
+- **Finis** becomes the LLM-assisted goal-shaping layer
+- **Formam** becomes the LLM-assisted deliverable-shaping layer
+- **Agenda** becomes the LLM-assisted task-and-Codex layer
+- **Domum** stays stewardship, archive, review, and later status/doctor support
+- **Indago stays offstage** and only contributes internal implementation ideas if needed.
