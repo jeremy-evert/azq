@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "name": "AZQ Stage 3 Wave D Checks",
+  "purpose": "Define task-specific automated checks for Stage 3 Wave D so the Codex runner can evaluate the bounded pre-Stage-4 cleanup wave without hardcoding one exact refactor shape into the runner.",
+  "defaults": {
+    "retry_cap": 3,
+    "baseline_checks": [
+      {
+        "name": "compileall",
+        "type": "shell",
+        "command": "python -m compileall azq",
+        "required": true,
+        "description": "Verify the azq package still compiles after the Wave D cleanup."
+      },
+      {
+        "name": "stage_regression_suite",
+        "type": "shell",
+        "command": "python -m unittest discover -s tests -v",
+        "required": true,
+        "description": "Verify the current Stage 1 through Stage 3 regression suite still passes."
+      },
+      {
+        "name": "agenda_and_scintilla_imports",
+        "type": "shell",
+        "command": "python - <<'PY'\nimport azq.agenda.storage\nimport azq.agenda.build\nimport azq.agenda.dags\nimport azq.agenda.task_storage\nimport azq.scintilla.cli\nimport azq.scintilla.sparks\nimport azq.scintilla.spark_view\nimport azq.scintilla.spark_search\nimport azq.scintilla.spark_delete\nPY",
+        "required": true,
+        "description": "Verify the current Agenda and Scintilla public modules still import cleanly."
+      }
+    ]
+  },
+  "tasks": {
+    "STAGE3-WAVED-01": {
+      "description": "Stabilize Agenda task-lineage resolution behind one shared exact-id policy.",
+      "checks": [
+        {
+          "name": "agenda_lineage_module_exists",
+          "type": "shell",
+          "command": "test -f azq/agenda/lineage.py",
+          "required": true,
+          "description": "Verify the new Agenda lineage module exists."
+        },
+        {
+          "name": "agenda_lineage_imports_and_exposes_resolution_helper",
+          "type": "python",
+          "required": true,
+          "description": "Verify the new Agenda lineage module imports cleanly and exposes at least one lineage-resolution helper.",
+          "code": "import azq.agenda.lineage as lineage\nhelper_names = [\n    'resolve_task_lineage',\n    'resolve_task_ancestry',\n    'resolve_task_goal_lineage',\n    'resolve_deliverable_goal_lineage'\n]\nassert any(hasattr(lineage, name) for name in helper_names), helper_names"
+        },
+        {
+          "name": "agenda_lineage_modules_still_import_cleanly",
+          "type": "shell",
+          "command": "python - <<'PY'\nimport azq.agenda.lineage\nimport azq.agenda.build\nimport azq.agenda.task_storage\nimport azq.agenda.dags\nimport azq.agenda.storage\nPY",
+          "required": true,
+          "description": "Verify the touched Agenda modules still import cleanly after the lineage cleanup."
+        }
+      ],
+      "human_checks": [
+        "Lineage truth should now be clearly owned by one explicit Agenda seam rather than reconstructed separately in build, read, and DAG code paths.",
+        "The cleanup should preserve the live policy that deliverable_id remains the direct canonical parent backlink for tasks unless the implementation explicitly and coherently documents a different live policy.",
+        "Avoid replacing a small lineage seam with a broad shared repository abstraction or new Stage 4 reader behavior."
+      ]
+    },
+    "STAGE3-WAVED-02": {
+      "description": "Extract Scintilla storage and exact-id artifact helpers into a focused module.",
+      "checks": [
+        {
+          "name": "scintilla_storage_module_exists",
+          "type": "shell",
+          "command": "test -f azq/scintilla/storage.py",
+          "required": true,
+          "description": "Verify the focused Scintilla storage module exists."
+        },
+        {
+          "name": "scintilla_storage_exposes_expected_helper_shapes",
+          "type": "python",
+          "required": true,
+          "description": "Verify the new Scintilla storage module exposes shared path and exact-id helper surfaces without overfitting to one exact function name.",
+          "code": "import azq.scintilla.storage as storage\npath_names = ['AUDIO_DIR', 'TRANSCRIPT_DIR', 'SPARK_DIR']\nlookup_names = ['spark_artifact_paths', 'get_spark_artifact_paths', 'resolve_spark_artifacts', 'resolve_spark_paths']\nlist_names = ['list_spark_files', 'list_sparks', 'iter_spark_files']\nfor name in path_names:\n    assert hasattr(storage, name), name\nassert any(hasattr(storage, name) for name in lookup_names), lookup_names\nassert any(hasattr(storage, name) for name in list_names), list_names"
+        },
+        {
+          "name": "scintilla_modules_still_import_cleanly",
+          "type": "shell",
+          "command": "python - <<'PY'\nimport azq.scintilla.storage\nimport azq.scintilla.sparks\nimport azq.scintilla.spark_view\nimport azq.scintilla.spark_search\nimport azq.scintilla.spark_delete\nPY",
+          "required": true,
+          "description": "Verify the touched Scintilla modules still import cleanly after helper extraction."
+        }
+      ],
+      "human_checks": [
+        "Path ownership and exact spark artifact resolution should now feel centralized rather than duplicated across list, view, search, and delete modules.",
+        "The current live Scintilla command surface should remain intact. This task should not quietly introduce archive or stewardship semantics.",
+        "If some duplication remains for pragmatic reasons, the shared helper seam should still own the main exact-id artifact bundle reconstruction."
+      ]
+    },
+    "STAGE3-WAVED-03": {
+      "description": "Align top-level CLI help and high-signal docs to the live Stage 3 surface.",
+      "checks": [
+        {
+          "name": "top_level_cli_help_teaches_live_surface",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('azq/cli.py').read_text(encoding='utf-8')\nfor snippet in [\n    'spark <id>',\n    'goal add',\n    'agenda build <deliverable_id>',\n    'agenda list',\n    'agenda show <task_id>',\n    'agenda dag <deliverable_id>'\n]:\n    assert snippet in text, snippet\nassert 'Stage 2 command listing' not in text, 'stale Stage 2 help label still present'\nPY",
+          "required": true,
+          "description": "Verify azq/cli.py help text reflects the live Stage 3 surface instead of an older Stage 2 snapshot."
+        },
+        {
+          "name": "high_signal_docs_teach_live_package_root_and_stage3_commands",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\nchecks = {\n    'README.md': ['azq agenda build', 'azq agenda list', 'azq agenda show', 'azq agenda dag', 'data/agenda/tasks/', 'data/agenda/dags/', 'data/agenda/logs/'],\n    'AZQ_BOOTSTRAP.md': ['azq agenda build', 'azq agenda list', 'azq agenda show', 'azq agenda dag', 'data/agenda/tasks/', 'data/agenda/dags/', 'data/agenda/logs/'],\n    'AZQ_COMMAND_MODEL.md': ['azq/', 'azq agenda'],\n    'AZQ_ENGINE_SPEC.md': ['azq agenda'],\n    'AZQ_FILESYSTEM_MODEL.md': ['azq/'],\n    'AZQ_IMPLEMENTATION_PLAN.md': ['azq/']\n}\nfor filename, snippets in checks.items():\n    text = Path(filename).read_text(encoding='utf-8')\n    for snippet in snippets:\n        assert snippet in text, f'{filename}: missing {snippet}'\nPY",
+          "required": true,
+          "description": "Verify the highest-signal docs teach the live package root and current Stage 3 command family."
+        },
+        {
+          "name": "docs_do_not_present_stale_command_family_as_live_surface",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\nfiles = [\n    'README.md',\n    'AZQ_BOOTSTRAP.md',\n    'AZQ_COMMAND_MODEL.md',\n    'AZQ_ENGINE_SPEC.md',\n    'AZQ_FILESYSTEM_MODEL.md'\n]\nfor filename in files:\n    text = Path(filename).read_text(encoding='utf-8')\n    forbidden = [\n        'azq task start <task_id>',\n        'azq task complete <task_id>',\n        'azq dag build <goal_id>',\n        'azq dag show <goal_id>',\n        'azq goal create',\n        'azq goals review',\n        'azq spark show <id>',\n        'src/azq/'\n    ]\n    for snippet in forbidden:\n        assert snippet not in text, f'{filename}: stale live-surface snippet still present: {snippet}'\nPY",
+          "required": true,
+          "description": "Verify the targeted high-signal docs no longer present stale command families or stale package-root wording as the live surface."
+        }
+      ],
+      "human_checks": [
+        "The doc updates should read like grounded operator guidance rather than a brittle find-and-replace sweep.",
+        "Future-stage ideas may remain in planning docs, but they should be clearly separated from the current live Stage 1 through Stage 3 surface.",
+        "If any historical command language remains for context, it should not be easy to confuse with live behavior."
+      ]
+    },
+    "STAGE3-WAVED-04": {
+      "description": "Add a compact Scintilla regression slice for shared read-surface behavior.",
+      "checks": [
+        {
+          "name": "stage3_wave_d_test_file_exists",
+          "type": "shell",
+          "command": "test -f tests/test_stage3_wave_d.py",
+          "required": true,
+          "description": "Verify the Stage 3 Wave D regression test file exists."
+        },
+        {
+          "name": "stage3_wave_d_regression_suite_discovery_run",
+          "type": "shell",
+          "command": "python -m unittest discover -s tests -v",
+          "required": true,
+          "description": "Verify the repository's standard unittest discovery command still succeeds with the new Wave D tests present."
+        },
+        {
+          "name": "stage3_wave_d_test_file_covers_scintilla_seams",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path('tests/test_stage3_wave_d.py').read_text(encoding='utf-8').lower()\nrequired_groups = {\n    'spark_list_anchor': ['spark', 'list'],\n    'spark_view_anchor': ['spark', 'view'],\n    'spark_search_anchor': ['spark', 'search'],\n    'spark_exact_id_anchor': ['exact', 'id'],\n    'spark_delete_anchor': ['delete'],\n    'temporary_repo_anchor': ['temporarydirectory']\n}\nfor name, snippets in required_groups.items():\n    missing = [snippet for snippet in snippets if snippet not in text]\n    assert not missing, f'{name}: missing {missing}'\nPY",
+          "required": true,
+          "description": "Verify the Wave D regression slice includes meaningful Scintilla seam coverage anchors without overfitting to one exact internal test style."
+        }
+      ],
+      "human_checks": [
+        "The new tests should exercise the live read surface and exact-id behavior rather than merely asserting that helper functions exist.",
+        "If the delete path remains live, the tests should cover current delete behavior as preservation work, not as an endorsement of future destructive policy.",
+        "The suite should stay small and cleanup-focused rather than sprawling into microphone capture runtime, Whisper performance, or Stage 4 stewardship semantics."
+      ]
+    }
+  }
+}
