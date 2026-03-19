@@ -1,11 +1,11 @@
-# AZQ Manifesto
+# AZQ Philosophy
 
-## A Rule of Craft for Bringing Good Things Into Existence
+## A Philosophy of Craft for Bringing Good Things Into Existence
 
 AZQ is not a task manager.
 
 AZQ is a craft system.
-It exists to help a human being move from fragile thought to durable artifact with as little waste, confusion, and forgetfulness as possible.
+It exists to help a human being move from fragile thought to durable artifact with as little waste, confusion, forgetfulness, and false urgency as possible.
 
 Its purpose is not merely productivity.
 Its purpose is **poiesis**: the bringing-forth of something that did not exist before.
@@ -14,10 +14,11 @@ A good AZQ flow should help a person:
 
 * notice what matters
 * preserve what is fleeting
-* choose what deserves to be pursued
+* choose what deserves pursuit
 * shape work before fragmenting it into tasks
 * execute in an orderly way
 * preserve what has been learned
+* archive without erasing memory
 
 AZQ should feel less like a bureaucratic checklist and more like a well-kept garden, a disciplined workshop, and a trustworthy notebook.
 
@@ -40,7 +41,7 @@ AZQ should favor names that are:
 * beautiful enough to be recalled
 * humble enough to serve the work rather than decorate it
 
-### 2. Work has purpose
+### 2. Work has order
 
 Tasks are not the beginning of craft.
 They are late-stage instruments.
@@ -74,7 +75,7 @@ They should simply make the work clearer.
 
 AZQ should scaffold judgment, not impersonate wisdom.
 
-It may help gather, sort, suggest, compare, or draft.
+It may help gather, sort, suggest, compare, narrow, draft, or decompose.
 But it should not tempt users to surrender purpose, conscience, or discernment.
 
 The human being remains responsible for:
@@ -83,6 +84,7 @@ The human being remains responsible for:
 * rejecting trash
 * recognizing value
 * deciding what deserves to exist
+* accepting or rejecting machine-shaped proposals
 
 ### 5. The system must ship
 
@@ -97,6 +99,34 @@ Ancient thought belongs in AZQ as:
 
 It does **not** belong as ornamental complexity.
 AZQ must remain a working system.
+
+### 6. Proposals are not the same thing as accepted craft
+
+A machine-generated suggestion is not the same thing as a chosen artifact.
+
+AZQ should preserve the difference between:
+
+* what was proposed
+* what was accepted
+* what was executed
+* what was preserved
+
+That distinction is not bureaucracy.
+It is how the system stays trustworthy.
+
+### 7. Engines should deepen, not multiply
+
+AZQ should resist the temptation to solve every new need by adding another public layer.
+
+The right question is usually not:
+
+> What new engine should exist?
+
+The better question is:
+
+> Which existing engine properly owns this kind of shaping work?
+
+If the answer is clear, the system should deepen that engine rather than split the public story into smaller and smaller fragments.
 
 ---
 
@@ -137,7 +167,8 @@ AZQ adapts this pattern from oratory to knowledge work.
 
 From medieval learning comes the conviction that knowledge should be pursued according to **order, manner, and purpose**.
 
-From the trivium comes the reminder that language, logic, and rhetoric are not academic luxuries. They are the foundations of clear thought.
+From the trivium comes the reminder that language, logic, and rhetoric are not academic luxuries.
+They are the foundations of clear thought.
 
 From the quadrivium comes the reminder that structure, ratio, pattern, and time all matter when building systems.
 
@@ -185,6 +216,7 @@ A healthy garden has:
 * pruning
 * seasons
 * harvest
+* wintering
 
 AZQ should have their intellectual equivalents.
 
@@ -216,7 +248,7 @@ Goals and deliverables are garden beds.
 They create local order so growth is not wasted.
 
 A bed does not yet force a plant into a finished product.
-It simply gives shape and containment to growth.
+It gives shape and containment to growth.
 
 ### Paths
 
@@ -229,9 +261,10 @@ A bad path confuses, loops, and hides what matters.
 
 Not every spark deserves a season.
 Not every goal deserves expansion.
-Not every task deserves execution.
+Not every deliverable deserves execution.
+Not every task deserves a run.
 
-A craft system must support graceful deletion, closure, and archiving.
+A craft system must support graceful closure, archiving, and refusal.
 
 ### Seasons
 
@@ -248,6 +281,19 @@ The harvest is not the checked box.
 The harvest is the artifact.
 
 A finished deliverable, a working tool, a published note, a tested module, a teachable explanation: these are harvest.
+
+### Wintering
+
+Not everything active should stay active forever.
+
+Some things should be:
+
+* archived
+* reviewed
+* remembered
+* set aside without being destroyed
+
+A mature system knows how to preserve without hoarding.
 
 ---
 
@@ -292,9 +338,9 @@ To capture fragile ideas quickly and turn them into durable sparks.
 
 ### Philosophical alignment
 
-* **Invention** from rhetoric
+* **invention** from rhetoric
 * **seed stage** from the garden
-* **logos in embryo**
+* logos in embryo
 * the beginning of **technē**
 
 ### Standards
@@ -320,11 +366,15 @@ Its job is capture, not judgment.
 
 This is the stage of judgment.
 Not every spark deserves a life.
-Some are trash. Some are noise. Some are seeds of real work.
+Some are trash.
+Some are noise.
+Some are seeds of real work.
 
 ### Purpose
 
-To ask: **what, if pursued, should come into existence?**
+To ask:
+
+> What, if pursued, should come into existence?
 
 ### Inputs
 
@@ -332,12 +382,18 @@ To ask: **what, if pursued, should come into existence?**
 * transcripts
 * past goals
 * current context
+* user judgment
+* later, machine-shaped proposals
 
 ### Outputs
 
 * goals
 * clarified ends
 * explicit statements of purpose
+* narrowing questions
+* tractability notes
+* usefulness notes
+* intent or manifesto drafts attached to goal work
 
 ### Philosophical alignment
 
@@ -355,11 +411,15 @@ A good goal system should:
 * force clarity without demanding perfection
 * distinguish attraction from obligation
 * separate curiosity from commitment
+* help the user ask whether a goal is worth pursuing now
 
 ### Warning
 
 Goals must not become slogans.
 A goal should point toward a possible artifact or change in the world.
+
+Finis must not become a mere filing cabinet for titles.
+It should become a genuine goal-shaping layer.
 
 ---
 
@@ -382,17 +442,21 @@ To transform goals into deliverables and shape.
 * prior art
 * constraints
 * surrounding systems
+* later, proposal-stage expansions and priorities
 
 ### Outputs
 
 * deliverables
 * forms
-* structural decomposition
-* artifact map
+* artifact maps
+* refined boundaries
+* first-now versus later distinctions
+* expanded deliverable descriptions
+* dependency notes
 
 ### Philosophical alignment
 
-* **Arrangement / Dispositio**
+* **arrangement / dispositio**
 * Aristotelian **formal cause**
 * the laying out of garden beds
 * the design stage of **technē**
@@ -406,12 +470,16 @@ A good form-building stage should:
 * expose dependencies
 * show boundaries between parts
 * allow refinement without confusion
+* help distinguish what must be built now from what can wait
 
 ### Warning
 
 Do not decompose into tasks too early.
 Deliverables are not tasks.
 Form comes before execution.
+
+Formam must not remain forever at the level of a single stub file.
+It should become a true deliverable-shaping layer.
 
 ---
 
@@ -433,19 +501,22 @@ To turn form into action through executable steps.
 * constraints
 * available tools
 * current capacity
+* later, machine-shaped task proposals
 
 ### Outputs
 
 * tasks
 * execution plans
 * DAGs or ordered flows
-* prompts for coding systems
+* deduplicated task sets
+* prompts or execution packets for coding systems
 * work logs
 * completed artifacts
+* execution reports
 
 ### Philosophical alignment
 
-* **Actio / Delivery** adapted to craft
+* **actio / delivery** adapted to craft
 * Aristotelian **efficient cause**
 * cultivation labor in the garden
 * the active hand of **technē**
@@ -460,11 +531,15 @@ A good agenda system should:
 * support repeated interaction with coding tools
 * encourage visible progress
 * remain grounded in deliverables
+* make tasks small enough to execute with clarity
 
 ### Warning
 
 Agenda must remain servant, not tyrant.
 Task systems often become bureaucratic engines that consume the very work they were meant to support.
+
+Agenda should own task shaping, dedupe, dependency order, and Codex preparation.
+Those things should not remain forever scattered in side scripts.
 
 ---
 
@@ -488,6 +563,7 @@ To preserve memory, maintain order, and protect the integrity of the whole syste
 * repositories
 * logs
 * archives
+* lessons learned
 
 ### Outputs
 
@@ -496,10 +572,11 @@ To preserve memory, maintain order, and protect the integrity of the whole syste
 * maintenance reports
 * pruned records
 * retained lessons
+* later, repository-wide status and health views
 
 ### Philosophical alignment
 
-* **Memory** transformed into stewardship
+* **memory** transformed into stewardship
 * the house of knowledge kept in order
 * pruning, composting, and wintering in the garden
 * externalized institutional memory
@@ -513,11 +590,15 @@ A good maintenance stage should:
 * preserve lessons learned
 * reduce entropy
 * support audits and review
+* later support truthful health and maturity reporting
 
 ### Warning
 
 Nothing should accumulate forever merely because it once mattered.
 Preservation without pruning becomes hoarding.
+
+Domum should not be asked to become the missing planning intellect.
+Its role is stewardship, archive, review, and later introspection.
 
 ---
 
@@ -583,7 +664,7 @@ tasks
 artifacts
   ↓
 archives and lessons
-```
+````
 
 Or more poetically:
 
@@ -602,6 +683,10 @@ stewardship
 ```
 
 Both describe the same craft.
+
+The current live baseline is smaller than the full philosophical arc.
+That is acceptable.
+A philosophy should name the whole arc while still telling the truth about what is live now.
 
 ---
 
@@ -624,9 +709,13 @@ Examples:
 * transcript
 * spark file
 * goal file
+* goal note
 * deliverable file
+* deliverable expansion
 * task plan
+* DAG artifact
 * artifact manifest
+* archive manifest
 
 This makes the system inspectable, teachable, and debuggable.
 
@@ -661,6 +750,14 @@ Forms may be revised.
 Tasks may be reordered.
 The architecture should support return, not punish it.
 
+### 9. Keep proposals and accepted artifacts distinct
+
+A system that blurs those two categories will eventually lie to its users.
+
+Suggestion is not acceptance.
+Possibility is not commitment.
+Draft is not record.
+
 ---
 
 ## What AZQ Is Not
@@ -672,6 +769,7 @@ AZQ is not:
 * a machine for manufacturing endless busywork
 * a substitute for judgment
 * an altar to clever abstractions
+* a pretext for multiplying public engines every time a new capability appears
 
 Many systems decay in the same predictable way: they accumulate features faster than they produce value.
 
@@ -687,7 +785,9 @@ If the answer is no, the feature should not exist.
 
 The dignity of AZQ comes from **disciplined usefulness**.
 
-Small tools. Clear stages. Honest artifacts.
+Small tools.
+Clear stages.
+Honest artifacts.
 
 Anything that threatens that clarity should be viewed with suspicion.
 
@@ -736,17 +836,18 @@ The goal is usefulness informed by memory.
 
 ---
 
-## The Manifesto in One Breath
+## The Philosophy in One Breath
 
 AZQ exists to help human beings bring worthy things into existence.
 
 It gathers fragile sparks.
 It asks whether those sparks deserve pursuit.
-It shapes work before fragmenting it into tasks.
-It executes deliberately rather than frantically.
+It shapes better goals before those goals become slogans.
+It shapes deliverables before those deliverables explode into tasks.
+It shapes executable work before that work dissolves into chaos.
 It preserves what matters and lets the rest go.
 
-Its architecture draws quietly from many traditions: the Greek love of craft, the Roman discipline of arrangement, the medieval concern for order and purpose, Bacon's suspicion of empty certainty, and the modern engineer's respect for small tools and durable artifacts.
+Its architecture draws quietly from many traditions: the Greek love of craft, the Roman discipline of arrangement, the medieval concern for order and purpose, Bacon’s suspicion of empty certainty, and the modern engineer’s respect for small tools and durable artifacts.
 
 But these influences are not decorations.
 
@@ -754,7 +855,7 @@ They are simply the accumulated experience of people who spent their lives tryin
 
 If AZQ succeeds, users should not feel like they are using a philosophical system.
 
-They should simply feel that their work has become calmer, clearer, and more directed.
+They should simply feel that their work has become calmer, clearer, more inspectable, and more directed.
 
 The philosophy should remain mostly invisible.
 
@@ -772,7 +873,8 @@ Good structure rarely needs to introduce itself.
 >
 > Name things carefully.
 > Preserve what matters.
-> Prune what does not.
+> Distinguish proposals from commitments.
+> Prune what does not belong.
 > Let beauty support memory.
 > Let craft serve creation.
 
@@ -786,6 +888,11 @@ Study widely.
 Borrow wisely.
 Remove what is unnecessary.
 Ship what works.
+
+Keep the five-engine story intact.
+Let the engines deepen instead of multiplying.
+Do not leave the best shaping behavior stranded in side scripts.
+Do not let doctrine drift away from implementation.
 
 And remember that this work is not about software alone.
 
