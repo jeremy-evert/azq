@@ -30,7 +30,7 @@ spark -> goal -> deliverable -> task -> artifact -> archive
 
 ## Live Baseline
 
-The current repository has the first three live craft layers implemented:
+The current repository has the first four craft layers partially represented, with Stages 1 through 3 exposed as the live operator baseline:
 
 ```text
 capture -> spark -> goal -> deliverable -> map -> task -> dag
@@ -42,7 +42,7 @@ That means:
 * **Respice Finem** is live for goal creation and listing
 * **Strue Formam** is live for canonical deliverable and goal-map storage
 * **Age Agenda** is live for canonical file-backed task, DAG, and task-log storage
-* **Custodi Domum** remains a later architectural stage rather than an active operator
+* **Custodi Domum** remains a later architectural stage rather than an active operator surface
 
 The active Stage 1, Stage 2, and Stage 3 storage model is file-backed.
 Canonical Finis goals live as one file per goal under `data/finis/goals/`.
@@ -120,6 +120,7 @@ azq/
     scintilla/
     finis/
     formam/
+    agenda/
     cli.py
   data/
     scintilla/
@@ -137,7 +138,7 @@ azq/
       logs/
 ```
 
-Code lives in `azq/`.
+The live Python package root is `azq/`.
 Visible craft artifacts live in `data/`.
 
 ---
@@ -155,9 +156,13 @@ Run the current live commands:
 ```bash
 azq capture
 azq sparks
+azq spark <spark_id>
+azq spark search "<text>"
 azq fine
 azq goal add
 azq goals
+azq goal close <goal_id>
+azq goal archive <goal_id>
 azq form build <goal_id>
 azq form list
 azq form show <deliverable_id>
@@ -167,6 +172,9 @@ azq agenda list
 azq agenda show <task_id>
 azq agenda dag <deliverable_id>
 ```
+
+The live Stage 3 operator surface is the narrow `azq agenda ...` family above.
+Some long-range architectural docs still discuss older command families for tasks, DAGs, goal creation, or spark inspection, but those should be read as historical or future-facing context rather than live commands in this repository.
 
 After creating a goal, the durable proof should be a goal file in `data/finis/goals/`, not a write to `data/finis/goals.json`.
 After building form, the durable proof should be a deliverable file in `data/form/deliverables/` and a goal map in `data/form/maps/`.

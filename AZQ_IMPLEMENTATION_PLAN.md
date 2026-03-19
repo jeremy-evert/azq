@@ -119,7 +119,7 @@ Finis is already live, but its storage model contradicts the architectural docum
 
 ### Recommended file work
 
-* add `src/azq/finis/storage.py`
+* add `azq/finis/storage.py`
 * update the Finis command handlers to use that storage layer
 * create `data/finis/goals/`
 * preserve `data/finis/goals.json` as legacy input until migration is stable
@@ -154,7 +154,7 @@ The craft doctrine is explicit: form comes before execution. If AZQ creates task
 
 ### Scope
 
-* add `src/azq/formam/`
+* add or extend `azq/formam/`
 * create `data/form/deliverables/`
 * create `data/form/maps/`
 * implement the first Formam commands:
@@ -273,7 +273,7 @@ Before adding more mutating behavior, the system needs a safe place for finished
 
 ### Scope
 
-* add `src/azq/domum/`
+* add `azq/domum/`
 * create `data/archive/`
 * create archive subdirectories aligned to the state model:
 

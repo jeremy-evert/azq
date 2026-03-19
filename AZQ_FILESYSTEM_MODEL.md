@@ -18,29 +18,23 @@ Anyone browsing the repository should be able to understand how ideas move throu
 
 ```
 azq/
-
-README.md
-AZQ_PHILOSOPHY.md
-AZQ_CRAFT_CHARTER.md
-AZQ_ENGINE_SPEC.md
-AZQ_FILESYSTEM_MODEL.md
-
-src/
-
- data/
-
-logs/
-
-scripts/
-
- tests/
+  README.md
+  AZQ_PHILOSOPHY.md
+  AZQ_CRAFT_CHARTER.md
+  AZQ_ENGINE_SPEC.md
+  AZQ_FILESYSTEM_MODEL.md
+  azq/
+  data/
+  logs/
+  scripts/
+  tests/
 ```
 
 ## Explanation
 
 | Directory  | Purpose                                   |
 | ---------- | ----------------------------------------- |
-| `src/`     | Source code for AZQ engines               |
+| `azq/`     | Source code for AZQ engines               |
 | `data/`    | All artifacts produced by the engines     |
 | `logs/`    | Operational logs                          |
 | `scripts/` | Helper automation and maintenance scripts |
@@ -52,21 +46,16 @@ The repository intentionally separates **code** from **artifacts**.
 
 # Source Code Layout
 
-All engine implementations live under `src/azq`.
+All live engine implementations in this repository live under `azq/`.
 
 ```
-src/
-  azq/
-
-    scintilla/
-    finis/
-    formam/
-    agenda/
-    domum/
-
-    cli.py
-    config.py
-    utils.py
+azq/
+  __init__.py
+  cli.py
+  scintilla/
+  finis/
+  formam/
+  agenda/
 ```
 
 ## Engine Modules
@@ -77,9 +66,9 @@ src/
 | `finis`     | Define goals                    |
 | `formam`    | Build structural deliverables   |
 | `agenda`    | Manage executable tasks         |
-| `domum`     | Maintain and archive the system |
 
 Each module should remain small and focused.
+`domum` remains planned, but it is not present in the live repository tree yet.
 
 ---
 
@@ -310,48 +299,37 @@ Every engine should have test coverage.
 
 ```
 azq/
-
-README.md
-AZQ_PHILOSOPHY.md
-AZQ_CRAFT_CHARTER.md
-AZQ_ENGINE_SPEC.md
-AZQ_FILESYSTEM_MODEL.md
-
-src/azq/
-
-  scintilla/
-  finis/
-  formam/
-  agenda/
-  domum/
-
- data/
-
-  scintilla/
-    audio/
-    transcripts/
-    sparks/
-
-  finis/
-    goals/
-
-  form/
-    deliverables/
-    maps/
-
-  agenda/
-    tasks/
-    dags/
-
-  artifacts/
-
-  archive/
-
-logs/
-
-scripts/
-
-tests/
+  README.md
+  AZQ_PHILOSOPHY.md
+  AZQ_CRAFT_CHARTER.md
+  AZQ_ENGINE_SPEC.md
+  AZQ_FILESYSTEM_MODEL.md
+  azq/
+    __init__.py
+    cli.py
+    scintilla/
+    finis/
+    formam/
+    agenda/
+  data/
+    scintilla/
+      audio/
+      transcripts/
+      sparks/
+    finis/
+      goals/
+    form/
+      deliverables/
+      maps/
+    agenda/
+      tasks/
+      dags/
+      logs/
+    artifacts/
+    archive/
+  logs/
+  scripts/
+  tests/
 ```
 
 ---
@@ -402,6 +380,7 @@ data/form/maps
 
 data/agenda/tasks
 data/agenda/dags
+data/agenda/logs
 
 data/artifacts
 
@@ -412,7 +391,8 @@ scripts
 tests
 ```
 
-This creates a ready‑to‑use scaffold for the entire AZQ pipeline.
+This creates a ready-to-use scaffold for the visible AZQ pipeline in the current repository layout under `azq/`.
+Later stages may add more code modules, but the live package root remains `azq/`.
 
 ---
 

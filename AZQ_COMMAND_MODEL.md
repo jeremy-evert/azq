@@ -22,6 +22,16 @@ spark → goal → deliverable → task → artifact → archive
 
 ```
 
+# Live Baseline vs. Long-Range Model
+
+This document serves two purposes:
+
+- describe the current live operator surface for Stages 1 through 3
+- preserve a longer-range command model for later stages without presenting it as already implemented
+
+In the current repository, the live package root is `azq/`, and the live Stage 3 execution surface is the narrow `azq agenda ...` family.
+Older `azq task ...`, `azq dag ...`, `azq goal create`, and `azq spark show <id>` examples in this document should therefore be read as future-facing command aspirations unless a section explicitly marks them as live.
+
 ---
 
 # CLI Philosophy
@@ -60,7 +70,7 @@ azq capture
 azq sparks
 azq goals
 azq form
-azq task
+azq agenda
 
 ```
 
@@ -76,7 +86,7 @@ Opaque state is avoided.
 
 # CLI Structure
 
-General pattern:
+Long-range pattern:
 
 ```
 
@@ -89,15 +99,17 @@ Examples:
 ```
 
 azq spark list
-azq goal create
+azq goal add
 azq form build
-azq task start
+azq agenda build
 
 ```
 
 ---
 
 # Global Commands
+
+The commands in this section are architectural targets, not part of the current live CLI surface.
 
 These operate across the entire system.
 
@@ -161,6 +173,20 @@ azq review weekly
 
 Gather sparks.
 
+Live now:
+
+```
+
+azq capture
+azq sparks
+azq spark <id>
+azq spark search <text>
+azq spark rm <id>
+
+```
+
+Any additional Scintilla commands in this section are future-facing unless explicitly marked otherwise.
+
 ### Capture
 
 ```
@@ -193,6 +219,8 @@ data/scintilla/sparks/
 
 ### Capture Text
 
+Future-facing:
+
 ```
 
 azq capture text "note"
@@ -216,6 +244,16 @@ Shows recent sparks.
 ---
 
 ### Inspect Spark
+
+Live now:
+
+```
+
+azq spark <id>
+
+```
+
+Future-facing alias:
 
 ```
 
@@ -249,6 +287,20 @@ azq spark rm <id>
 
 Define goals.
 
+Live now:
+
+```
+
+azq fine
+azq goals
+azq goal add
+azq goal close <goal_id>
+azq goal archive <goal_id>
+
+```
+
+Any additional Finis commands in this section are future-facing unless explicitly marked otherwise.
+
 ### List Goals
 
 ```
@@ -261,6 +313,8 @@ azq goals
 
 ### Review Goals
 
+Future-facing:
+
 ```
 
 azq goals review
@@ -270,6 +324,16 @@ azq goals review
 ---
 
 ### Create Goal
+
+Live now:
+
+```
+
+azq goal add
+
+```
+
+Future-facing spelling:
 
 ```
 
@@ -291,6 +355,8 @@ data/finis/goals/
 
 ### Show Goal
 
+Future-facing:
+
 ```
 
 azq goal show <goal_id>
@@ -300,6 +366,8 @@ azq goal show <goal_id>
 ---
 
 ### Link Sparks
+
+Future-facing:
 
 ```
 
@@ -387,7 +455,33 @@ data/form/maps/
 
 Drive the work.
 
+The current Stage 3 operator surface is intentionally narrow and file-backed.
+These are the live commands:
+
+```
+
+azq agenda build <deliverable_id>
+azq agenda list
+azq agenda show <task_id>
+azq agenda dag <deliverable_id>
+
+```
+
+They operate on canonical storage under:
+
+```
+
+data/agenda/tasks/
+data/agenda/dags/
+data/agenda/logs/
+
+```
+
+The `task` and `dag` command families below are long-range aspirations for later stages, not current live commands.
+
 ### Show Agenda
+
+Future-facing:
 
 ```
 
@@ -401,6 +495,8 @@ Overview of current tasks.
 
 ### List Tasks
 
+Future-facing:
+
 ```
 
 azq task list
@@ -410,6 +506,8 @@ azq task list
 ---
 
 ### Start Task
+
+Future-facing:
 
 ```
 
@@ -421,6 +519,8 @@ azq task start <task_id>
 
 ### Complete Task
 
+Future-facing:
+
 ```
 
 azq task complete <task_id>
@@ -430,6 +530,8 @@ azq task complete <task_id>
 ---
 
 ### Build DAG
+
+Future-facing:
 
 ```
 
@@ -448,6 +550,8 @@ data/agenda/dags/
 ---
 
 ### Show DAG
+
+Future-facing:
 
 ```
 
@@ -542,6 +646,22 @@ CLI wrappers may call these.
 
 # Recommended Daily Workflow
 
+Current live Stage 1 through Stage 3 workflow:
+
+```
+
+azq capture
+azq sparks
+azq fine
+azq goal add
+azq form build FINIS_001
+azq agenda build DELIV_001
+azq agenda list
+
+```
+
+Long-range workflow once the broader command model exists:
+
 ```
 
 # gather
@@ -605,4 +725,3 @@ The CLI should therefore remain:
 - small
 - memorable
 - faithful to the craft sequence
-

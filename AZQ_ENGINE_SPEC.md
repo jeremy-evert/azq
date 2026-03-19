@@ -14,6 +14,9 @@ Where the Craft Charter defines principles, the Engine Specification defines:
 
 The specification should remain practical, inspectable, and implementation-neutral where possible.
 
+Where this document names commands, treat Stage 1 through Stage 3 sections as a mix of live behavior and longer-range aspirations.
+The live repository code is under `azq/`, and the current live Stage 3 execution surface is `azq agenda build|list|show|dag`.
+
 ---
 
 # Global Architectural Model
@@ -90,7 +93,7 @@ sparks/YYYY-MM-DD_HHMM.json
 
 azq capture
 azq sparks
-azq spark show <id>
+azq spark <id>
 
 ```
 
@@ -161,11 +164,14 @@ created_date
 ```
 
 azq goals
-azq goals review
-azq goal create
-azq goal archive
+azq fine
+azq goal add
+azq goal close <goal_id>
+azq goal archive <goal_id>
 
 ```
+
+`azq goals review` and `azq goal create` remain reasonable future aliases or later-stage flows, but they are not the current live command spellings.
 
 ## Responsibilities
 
@@ -304,12 +310,15 @@ execution_notes
 
 ```
 
-azq agenda
-azq task start
-azq task complete
-azq task list
+azq agenda build <deliverable_id>
+azq agenda list
+azq agenda show <task_id>
+azq agenda dag <deliverable_id>
 
 ```
+
+These are the live Stage 3 commands today.
+Broader `azq task ...` and `azq dag ...` families belong to a later expansion if the code grows into them.
 
 ## Responsibilities
 

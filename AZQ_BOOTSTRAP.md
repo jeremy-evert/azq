@@ -129,7 +129,7 @@ azq
 Expected result:
 
 * the CLI runs
-* available commands are printed
+* the live Stage 1 through Stage 3 commands are printed
 
 At this point, the repository is **installed** but not yet living.
 
@@ -374,6 +374,7 @@ data/agenda/logs/
 ```
 
 That is a living AZQ instance with inspectable Stage 2 Formam storage and the live Stage 3 Agenda baseline.
+The package code that provides those commands lives under the repository's `azq/` package directory.
 
 It proves:
 
@@ -501,5 +502,8 @@ Bootstrap is not the whole system.
 It is the first pulse.
 
 If AZQ can gather one spark, preserve it, elevate it into one real goal, and show the resulting Formam and Agenda records on disk, then the repository has crossed the line from static code to living craft.
+
+For the current repository, treat `azq agenda ...` as the live execution surface.
+Do not expect older `azq task ...`, `azq dag ...`, or `azq goal create` syntax unless later code adds it explicitly.
 
 That is enough for day one.

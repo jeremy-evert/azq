@@ -7,7 +7,7 @@ from azq.scintilla.router import dispatch as dispatch_scintilla
 
 
 def print_commands() -> None:
-    """Print the shared top-level Stage 2 command listing."""
+    """Print the live Stage 3 top-level command listing."""
     print("Commands:")
     print("  capture")
     print("  sparks")
@@ -19,14 +19,14 @@ def print_commands() -> None:
     print("  goal add")
     print("  goal close <id>")
     print("  goal archive <id>")
-    print("  azq form build <goal_id>")
-    print("  azq form list")
-    print("  azq form show <deliverable_id>")
-    print("  azq form map <goal_id>")
-    print("  azq agenda build <deliverable_id>")
-    print("  azq agenda list")
-    print("  azq agenda show <task_id>")
-    print("  azq agenda dag <deliverable_id>")
+    print("  form build <goal_id>")
+    print("  form list")
+    print("  form show <deliverable_id>")
+    print("  form map <goal_id>")
+    print("  agenda build <deliverable_id>")
+    print("  agenda list")
+    print("  agenda show <task_id>")
+    print("  agenda dag <deliverable_id>")
 
 
 def main():
