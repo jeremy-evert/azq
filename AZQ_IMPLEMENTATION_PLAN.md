@@ -4,13 +4,15 @@
 
 This document translates AZQ doctrine into a staged engineering roadmap.
 
-The repository already implements part of the first two engines:
+The repository already implements the first three craft layers in the current repository layout:
 
 * `scintilla` exists and writes durable spark artifacts
-* `finis` exists, but still uses transitional JSON storage
-* `formam`, `agenda`, and `domum` are specified in documents but not yet implemented in code
+* `finis` exists and now uses canonical file-backed goal storage
+* `formam` exists and writes canonical deliverable and goal-map artifacts
+* `agenda` exists and writes canonical task, DAG, and task-log artifacts
+* `domum` remains planned rather than live
 
-The goal of this plan is to move from the current partial system to a coherent five-engine system without violating the craft order:
+The goal of this plan is to move from the current Stage 3 baseline to a coherent five-engine system without violating the craft order:
 
 ```text
 spark -> goal -> deliverable -> task -> artifact -> archive
@@ -18,12 +20,10 @@ spark -> goal -> deliverable -> task -> artifact -> archive
 
 The build order is intentionally strict:
 
-1. normalize Finis storage
-2. implement Formam
-3. implement Agenda
-4. implement Domum
-5. add doctor/status
-6. remove destructive delete paths
+1. preserve the canonical Finis, Formam, and Agenda baselines
+2. implement Domum
+3. add doctor/status
+4. remove destructive delete paths
 
 That order connects doctrine to code and prevents AZQ from becoming a task manager before it becomes a craft system. fileciteturn11file5turn11file12
 
@@ -60,23 +60,31 @@ The current repository already supports:
 * `azq goals`
 * `azq goal add`
 * `azq goal close <id>`
+* `azq form build <goal_id>`
+* `azq form list`
+* `azq form show <deliverable_id>`
+* `azq form map <goal_id>`
+* `azq agenda build <deliverable_id>`
+* `azq agenda list`
+* `azq agenda show <task_id>`
+* `azq agenda dag <deliverable_id>`
 * `azq goal archive <id>` fileciteturn11file5
 
-This means AZQ can currently complete the first live loop:
+This means AZQ can currently complete the first three live craft layers:
 
 ```text
-capture -> spark -> goal
+capture -> spark -> goal -> deliverable -> map -> task -> dag
 ```
 
-That is enough for bootstrap, but not enough for the intended five-engine architecture. fileciteturn10file0turn10file5
+That is enough to reach an actionable Stage 3 baseline, but not enough for the intended five-engine architecture. fileciteturn10file0turn10file5
 
 ### Structural mismatches to resolve
 
 The main mismatches between doctrine and implementation are:
 
-* `finis` stores all goals in `data/finis/goals.json`, while the filesystem model expects `data/finis/goals/FINIS_*.md` files fileciteturn10file4turn10file5
-* goal persistence logic is duplicated across the current Finis modules rather than flowing through one storage layer fileciteturn10file5
-* the CLI does not yet match the full command model for `form`, `task`, `archive`, `status`, and `doctor` fileciteturn10file1turn10file5
+* some operator-facing docs still describe canonical Finis, Formam, and Agenda storage as future-only work rather than the live baseline
+* the live storage layers now exist, but operator-facing docs still need to teach them accurately without falling back to older pre-implementation framing
+* the CLI does not yet match the full long-range command model for archive, status, and doctor, and the live Stage 3 operator surface is `azq agenda ...` rather than the older split `task` and `dag` families fileciteturn10file1turn10file5
 * `azq spark rm` still teaches destructive deletion in a system whose state model explicitly prefers archive over prune and rejects silent loss fileciteturn10file8turn11file5
 * there is no archive layer yet protecting prior artifacts fileciteturn10file4turn11file5
 * there is no repository-wide health or maturity reader even though the state model defines both fileciteturn10file8
@@ -193,26 +201,25 @@ The craft doctrine is explicit: form comes before execution. If AZQ creates task
 
 ### Objective
 
-Turn deliverables into executable tasks with visible work logs and dependency order.
+Turn deliverables into executable tasks with visible work logs and dependency order, and treat that file-backed Agenda layer as the current live Stage 3 baseline.
 
 ### Why third
 
 Agenda is only useful once Formam has defined what should exist. Tasks must serve deliverables rather than replace them. fileciteturn10file3turn11file13
 
-### Scope
+### Live baseline
 
-* add `src/azq/agenda/`
-* create `data/agenda/tasks/`
-* create `data/agenda/dags/`
-* create `data/agenda/logs/`
-* implement the first Agenda commands:
+* `azq/agenda/`
+* canonical task storage under `data/agenda/tasks/`
+* canonical DAG storage under `data/agenda/dags/`
+* canonical task-log storage under `data/agenda/logs/`
+* the current Agenda commands:
 
-  * `azq task list`
-  * `azq task start <task_id>`
-  * `azq task complete <task_id>`
-  * `azq dag build <goal_id>`
-  * `azq dag show <goal_id>`
-* define a task record format with at least:
+  * `azq agenda build <deliverable_id>`
+  * `azq agenda list`
+  * `azq agenda show <task_id>`
+  * `azq agenda dag <deliverable_id>`
+* a canonical task record format with at least:
 
   * `task_id`
   * `deliverable_id`
@@ -220,26 +227,34 @@ Agenda is only useful once Formam has defined what should exist. Tasks must serv
   * `dependencies`
   * `status`
   * `execution_notes`
+  * `created`
+* a canonical goal-level DAG artifact under `data/agenda/dags/GOAL_<goal_id>_DAG.json`
+* a canonical task-log artifact under `data/agenda/logs/<task_id>_LOG.md`
 
 ### Design constraints
 
 * every task must descend from a deliverable
+* `data/agenda/tasks/`, `data/agenda/dags/`, and `data/agenda/logs/` are the canonical Stage 3 system of record
 * task dependencies must be inspectable on disk
-* in-progress work should leave a log artifact in `data/agenda/logs/`
+* task-log evidence must remain inspectable on disk
 * task completion should not imply artifact publication automatically
 * blocked work must become a first-class visible state, not a vague feeling fileciteturn10file8
 
-### Recommended initial implementation
+### Current command framing
 
-* keep DAGs simple JSON files
-* use Markdown task records for readability
-* write a work log entry when a task starts or completes
-* defer advanced scheduling and prioritization until the basic trace chain is solid
+The current operator surface is intentionally narrow:
+
+* `azq agenda build <deliverable_id>` creates or refreshes canonical tasks for one deliverable
+* `azq agenda list` reads canonical tasks from disk
+* `azq agenda show <task_id>` inspects one canonical task from disk
+* `azq agenda dag <deliverable_id>` refreshes and inspects the parent goal DAG reached from one exact deliverable
+
+The older `azq task ...`, `azq dag ...`, `task start`, and `task complete` framing should not be described as the live Stage 3 command surface unless the code exposes those commands later.
 
 ### Exit criteria
 
 * a deliverable can produce executable task files
-* task start and complete transitions write durable logs
+* canonical DAG artifacts and task-log artifacts exist under `data/agenda/`
 * no task exists without a valid deliverable parent
 * repository state can reach `actionable` from real artifacts
 * the trace chain `task -> deliverable -> goal` is machine-checkable and human-readable fileciteturn10file8turn11file9
@@ -522,4 +537,3 @@ Do not add hidden state where durable files should suffice.
 
 If this order is respected, doctrine and code will converge.
 If it is ignored, AZQ will decay into the kind of system it was designed not to become.
-

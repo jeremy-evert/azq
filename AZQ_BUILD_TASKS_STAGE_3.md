@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This checklist turns **Stage 3: Implement Agenda** from `AZQ_IMPLEMENTATION_PLAN.md` into atomic, commit-sized engineering work for the current repository.
+This checklist records the atomic, commit-sized engineering work that established the live Stage 3 Agenda baseline in the current repository.
 
 The goal of Stage 3 is simple:
 
@@ -11,32 +11,34 @@ The goal of Stage 3 is simple:
 This checklist is grounded in the **current live repository**, not an older imagined baseline.
 The live code is under `azq/`, not `src/azq/...`.
 
-The current baseline already includes:
+The current baseline now includes:
 
 * canonical Finis goal storage under `data/finis/goals/`
 * canonical Formam deliverable storage under `data/form/deliverables/`
 * canonical Formam goal maps under `data/form/maps/`
-* a split CLI routed through engine-specific command layers
+* canonical Agenda task storage under `data/agenda/tasks/`
+* canonical Agenda DAG storage under `data/agenda/dags/`
+* canonical Agenda task-log storage under `data/agenda/logs/`
+* a split CLI routed through engine-specific command layers, including the live `azq agenda` command family
 
-That means Stage 3 starts from a repo where Stage 1 and Stage 2 are already real.
-Agenda should therefore be built as the next visible craft layer, not as a speculative rewrite of earlier work.
+That means Stage 3 no longer needs to be described as a future-only design target.
+Agenda is now the visible craft layer on top of live Stage 1 and Stage 2 storage, and this document should read as an implementation record and closeout reference rather than a speculative rewrite.
 
 ---
 
 ## Stage 3 Outcome
 
-Stage 3 is complete when canonical Agenda artifacts exist on disk and the CLI can build, inspect, start, and complete tasks without bypassing the deliverable layer.
+Stage 3 is complete when canonical Agenda artifacts exist on disk and the current CLI can build and inspect them through the live `azq agenda` command family without bypassing the deliverable layer.
 
 At the end of Stage 3:
 
 * each task lives in its own file under `data/agenda/tasks/`
 * each goal-level task graph lives in its own file under `data/agenda/dags/`
-* each started or completed task leaves durable log evidence under `data/agenda/logs/`
-* `azq dag build <goal_id>` can derive an initial executable structure from canonical deliverables
-* `azq dag show <goal_id>` can inspect one goal-level task graph
-* `azq task list` can enumerate canonical tasks from file storage
-* `azq task start <task_id>` can transition one canonical task into active work and write a log entry
-* `azq task complete <task_id>` can transition one canonical task to completion and write a log entry
+* each task log lives under `data/agenda/logs/` as durable Stage 3 work evidence
+* `azq agenda build <deliverable_id>` can derive an initial executable structure from one canonical deliverable
+* `azq agenda list` can enumerate canonical tasks from file storage
+* `azq agenda show <task_id>` can inspect one canonical task
+* `azq agenda dag <deliverable_id>` can refresh and inspect the current goal-level DAG artifact for that deliverable's parent goal
 * every task points back to exactly one canonical deliverable
 
 Stage 3 stops at the **actionable** layer.
@@ -55,18 +57,14 @@ The job is to make the work graph real.
 
 ## Current Stage 3 Gaps
 
-The current implementation has these concrete gaps relative to the Stage 3 objective:
+The live implementation no longer has the original Stage 3 gaps.
+The remaining closeout gaps are documentation and framing gaps:
 
-* no `azq/agenda/` package exists in the live repository
-* no `data/agenda/tasks/` directory exists
-* no `data/agenda/dags/` directory exists
-* no `data/agenda/logs/` directory exists
-* the CLI exposes no `azq task ...` or `azq dag ...` commands yet
-* no canonical task schema exists in code
-* no canonical DAG schema exists in code
-* no durable task-log format exists in code
-* no task can currently prove a valid deliverable parent
-* the repository can truthfully reach `formed`, but not yet `actionable`, from visible artifacts alone
+* some older docs still describe Agenda as future-only work
+* some older docs still describe the outdated `azq task ...` and `azq dag ...` command split rather than the live `azq agenda ...` family
+* some older docs still frame DAG commands around a direct `goal_id` CLI surface even though the current operator path is `azq agenda build <deliverable_id>` and `azq agenda dag <deliverable_id>`
+* some older docs still imply `task start` and `task complete` are live Stage 3 commands even though that behavior is not exposed by the current CLI
+* Stage 3 closeout must keep teaching `data/agenda/tasks/`, `data/agenda/dags/`, and `data/agenda/logs/` as the canonical system of record
 
 ---
 
@@ -113,7 +111,7 @@ Stage 3 DAG rules:
 * `task_ids` must only reference canonical tasks descended from those deliverables
 * `dependency_edges` must remain inspectable and deterministic
 * the first implementation may generate **sparse** graphs and stub tasks
-* `dag build` should prefer visible, inspectable correctness over clever planning
+* `agenda build` should prefer visible, inspectable correctness over clever planning
 
 This keeps the first Agenda graph visible rather than magical.
 
@@ -376,7 +374,7 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 
 ---
 
-### 11. Implement `azq dag build <goal_id>`
+### 11. Implement `azq agenda build <deliverable_id>`
 
 **Files:**
 
@@ -386,21 +384,21 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 
 **Work:**
 
-* validate the parent goal by exact `goal_id`
-* load canonical deliverables for that exact goal from Formam storage
-* generate one or more initial canonical tasks for those deliverables
-* derive a first visible dependency graph conservatively from deliverable relationships
+* validate the parent deliverable by exact `deliverable_id`
+* load the canonical deliverable from Formam storage
+* generate one or more initial canonical tasks for that deliverable
+* derive or refresh the visible parent-goal DAG conservatively from the deliverable task relationships
 * allow the first implementation to generate sparse task sets and sparse graphs when certainty is low
 * write the resulting canonical task files
 * write the resulting canonical DAG file
 
 **Definition of done:**
 
-* a goal with deliverables can produce visible Stage 3 task and DAG artifacts under `data/agenda/`
+* a deliverable can produce visible Stage 3 task artifacts and refresh the parent goal DAG under `data/agenda/`
 
 ---
 
-### 12. Implement `azq dag show <goal_id>`
+### 12. Implement `azq agenda dag <deliverable_id>`
 
 **Files:**
 
@@ -408,18 +406,18 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 
 **Work:**
 
-* load one canonical DAG by exact `goal_id`
-* print the DAG fields clearly for terminal inspection
-* keep the output centered on task order and dependency structure
-* fail clearly when the DAG file does not exist
+* validate one canonical deliverable by exact `deliverable_id`
+* load or refresh the parent goal DAG artifact from canonical storage
+* print the durable DAG path clearly for terminal inspection
+* fail clearly when the parent deliverable does not exist
 
 **Definition of done:**
 
-* one goal-level DAG can be inspected from the command layer by exact parent goal id
+* one goal-level DAG can be refreshed and inspected from the command layer through the live deliverable-scoped operator path
 
 ---
 
-### 13. Implement `azq task list`
+### 13. Implement `azq agenda list`
 
 **Files:**
 
@@ -442,47 +440,41 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 
 ---
 
-### 14. Implement `azq task start <task_id>`
+### 14. Implement `azq agenda show <task_id>`
 
 **Files:**
 
 * `azq/agenda/tasks.py`
-* `azq/agenda/task_storage.py`
-* `azq/agenda/log_storage.py`
 
 **Work:**
 
 * load one canonical task by exact `task_id`
-* rewrite only that task file with a started status such as `in_progress`
-* append a visible `started` log entry under `data/agenda/logs/`
-* keep the transition narrow and inspectable
-* do not publish artifacts or archive anything in this task
+* print the task fields clearly for terminal inspection
+* keep the output narrow, readable, and faithful to the canonical task record
+* fail clearly when the task file does not exist
 
 **Definition of done:**
 
-* starting one task updates canonical task state and leaves durable log evidence
+* one canonical task can be inspected from the live command layer without mutating state
 
 ---
 
-### 15. Implement `azq task complete <task_id>`
+### 15. Preserve canonical task-log artifacts as on-disk Stage 3 evidence
 
 **Files:**
 
-* `azq/agenda/tasks.py`
-* `azq/agenda/task_storage.py`
 * `azq/agenda/log_storage.py`
 
 **Work:**
 
-* load one canonical task by exact `task_id`
-* rewrite only that task file with a completed status
-* append a visible `completed` log entry under `data/agenda/logs/`
-* keep the transition narrow and inspectable
-* do not publish artifacts or archive anything in this task
+* keep the log format append-only and human-readable
+* ensure task-log helpers keep writing under `data/agenda/logs/`
+* keep task-log evidence on disk even though the current operator surface does not expose `task start` or `task complete`
+* avoid coupling task logs to later artifact-publication or archive behavior
 
 **Definition of done:**
 
-* completing one task updates canonical task state and leaves durable log evidence
+* Stage 3 preserves durable log evidence on disk without teaching a wider live CLI surface than the repository actually exposes
 
 ---
 
@@ -498,11 +490,10 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 
 * add command help for:
 
-  * `azq task list`
-  * `azq task start <task_id>`
-  * `azq task complete <task_id>`
-  * `azq dag build <goal_id>`
-  * `azq dag show <goal_id>`
+  * `azq agenda build <deliverable_id>`
+  * `azq agenda list`
+  * `azq agenda show <task_id>`
+  * `azq agenda dag <deliverable_id>`
 * route those commands through the same engine-router style already used by Scintilla, Finis, and Formam
 * keep command handling narrow and consistent with the live CLI style
 
@@ -528,11 +519,10 @@ This keeps work evidence inspectable before later artifact and archive layers ex
   * exact deliverable-parent validation
   * DAG JSON round-trip read/write
   * task-log append helpers
-  * `dag build` writing canonical tasks and a canonical DAG
-  * `dag show` loading one canonical DAG
-  * `task list` reading canonical tasks
-  * `task start` updating task state and writing a log entry
-  * `task complete` updating task state and writing a log entry
+  * `agenda build` writing canonical tasks and a canonical DAG
+  * `agenda dag` refreshing and loading one canonical DAG through an exact `deliverable_id`
+  * `agenda list` reading canonical tasks
+  * `agenda show` reading one canonical task
 * keep tests focused on structure invariants and CLI-visible behavior
 
 **Definition of done:**
@@ -554,7 +544,7 @@ This keeps work evidence inspectable before later artifact and archive layers ex
 * update docs that still present Agenda as doctrine only
 * define `data/agenda/tasks/`, `data/agenda/dags/`, and `data/agenda/logs/` as active Agenda storage
 * clarify that tasks descend from deliverables rather than replacing them
-* align examples with canonical `TASK_###` and `GOAL_<goal_id>_DAG.json` artifacts
+* align examples with canonical `TASK_###`, `GOAL_<goal_id>_DAG.json`, and `TASK_###_LOG.md` artifacts
 * clarify that task logs provide durable work evidence before any later-stage publication behavior exists
 
 **Definition of done:**
@@ -591,10 +581,9 @@ But it is also intentionally **pre-split** so path logic, schema logic, task sto
 Wave B stays narrow by focusing only on the first executable loop:
 
 * derive a DAG from visible deliverables
-* inspect the DAG
+* inspect the DAG through the live `agenda` surface
 * list tasks
-* start tasks
-* complete tasks
+* inspect one task
 
 Wave C closes Stage 3 by turning the live Agenda behavior into a tested and documented baseline before later artifact, archive, status, and doctor work arrives.
 
@@ -606,12 +595,11 @@ Stage 3 is done when all of the following are true:
 
 * each task is stored as one `TASK_###.md` file
 * each goal-level DAG is stored as one `GOAL_<goal_id>_DAG.json` file
-* each started or completed task has durable log evidence under `data/agenda/logs/`
-* `azq dag build <goal_id>` writes only canonical file-backed Agenda artifacts
-* `azq dag show <goal_id>` reads from canonical Agenda storage
-* `azq task list` reads from canonical Agenda storage
-* `azq task start <task_id>` rewrites one canonical task file and appends one canonical log entry
-* `azq task complete <task_id>` rewrites one canonical task file and appends one canonical log entry
+* each task log is stored under `data/agenda/logs/` as durable Stage 3 work evidence
+* `azq agenda build <deliverable_id>` writes only canonical file-backed Agenda artifacts
+* `azq agenda dag <deliverable_id>` reads and refreshes canonical Agenda DAG storage
+* `azq agenda list` reads from canonical Agenda storage
+* `azq agenda show <task_id>` reads one canonical task from canonical Agenda storage
 * every task points back to a valid canonical deliverable
 * task records expose `task_id`, `deliverable_id`, `description`, `dependencies`, `status`, `execution_notes`, and `created`
 * DAG records expose `goal_id`, `deliverable_ids`, `task_ids`, `dependency_edges`, `status`, `created`, and `notes`

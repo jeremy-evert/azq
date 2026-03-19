@@ -12,10 +12,11 @@ In AZQ terms, a repository is **living** when:
 4. the filesystem contains durable evidence of the flow
 
 A repository becomes **formed** once Formam has written at least one deliverable and one goal map under canonical Stage 2 storage.
+If Agenda artifacts are also present under canonical Stage 3 storage, the repository can continue on to `actionable`.
 
 The bootstrap is intentionally minimal.
 It is not a full setup guide for every later engine.
-It is the shortest path to a living repository, with a small Stage 2 check so operators can confirm the live Formam baseline as well.
+It is the shortest path to a living repository, with small Stage 2 and Stage 3 checks so operators can confirm the live Formam and Agenda baselines as well.
 
 ---
 
@@ -34,11 +35,12 @@ That corresponds to the currently implemented subset of AZQ:
 * **Cole Scintilla** is operational
 * **Respice Finem** is operational in its current form
 * **Strue Formam** is operational for canonical deliverable and goal-map storage
-* **Age Agenda** and **Custodi Domum** remain later-stage work
+* **Age Agenda** is operational for canonical task, DAG, and task-log storage
+* **Custodi Domum** remains later-stage work
 
 So the goal of bootstrap is modest and precise:
 
-> prove that AZQ can gather one spark, turn it into one goal, and expose the canonical Formam storage that Stage 2 now uses.
+> prove that AZQ can gather one spark, turn it into one goal, and expose the canonical Formam and Agenda storage that the current repository now uses.
 
 ---
 
@@ -53,6 +55,9 @@ data/scintilla/sparks/
 data/finis/goals/
 data/form/deliverables/
 data/form/maps/
+data/agenda/tasks/
+data/agenda/dags/
+data/agenda/logs/
 ```
 
 That moves the repository from `empty` to at least `purposed`, and to `formed` once Formam artifacts are created, in the current state model.
@@ -142,12 +147,15 @@ mkdir -p \
   data/finis/goals \
   data/form/deliverables \
   data/form/maps \
+  data/agenda/tasks \
+  data/agenda/dags \
+  data/agenda/logs \
   logs \
   scripts \
   tests
 ```
 
-This step keeps the filesystem aligned with the current working subset while remaining compatible with the broader filesystem model. Formam's canonical Stage 2 storage lives under `data/form/deliverables/` and `data/form/maps/`.
+This step keeps the filesystem aligned with the current working subset while remaining compatible with the broader filesystem model. Formam's canonical Stage 2 storage lives under `data/form/deliverables/` and `data/form/maps/`. Agenda's canonical Stage 3 storage lives under `data/agenda/tasks/`, `data/agenda/dags/`, and `data/agenda/logs/`.
 
 Quick proof:
 
@@ -302,7 +310,44 @@ At this point, the repository can truthfully reach `formed` in the current state
 
 ---
 
-## 9. Proof Of Life
+## 9. Confirm Canonical Agenda Storage
+
+Agenda is now part of the live baseline.
+Its canonical system of record is:
+
+```text
+data/agenda/tasks/
+data/agenda/dags/
+data/agenda/logs/
+```
+
+Build Agenda artifacts from a canonical deliverable:
+
+```bash
+azq agenda build DELIV_001
+azq agenda list
+azq agenda show TASK_001
+azq agenda dag DELIV_001
+```
+
+If successful, you should be able to inspect artifacts such as:
+
+```text
+data/agenda/tasks/TASK_001.md
+data/agenda/dags/GOAL_FINIS_001_DAG.json
+data/agenda/logs/TASK_001_LOG.md
+```
+
+Those directories are the canonical Stage 3 truth for operator inspection.
+Tasks live one per file under `data/agenda/tasks/`.
+Goal-level DAG artifacts live one per goal under `data/agenda/dags/`, even though the current `azq agenda build` and `azq agenda dag` commands are reached from an exact `deliverable_id`.
+Task-log evidence lives one per task under `data/agenda/logs/`.
+
+At this point, the repository can truthfully reach `actionable` in the current state model.
+
+---
+
+## 10. Proof Of Life
 
 Bootstrap is complete when these commands all work:
 
@@ -311,6 +356,7 @@ azq
 azq sparks
 azq goals
 azq form list
+azq agenda list
 ```
 
 And these visible artifacts exist on disk:
@@ -322,9 +368,12 @@ data/scintilla/sparks/
 data/finis/goals/
 data/form/deliverables/
 data/form/maps/
+data/agenda/tasks/
+data/agenda/dags/
+data/agenda/logs/
 ```
 
-That is a living AZQ instance with inspectable Stage 2 Formam storage.
+That is a living AZQ instance with inspectable Stage 2 Formam storage and the live Stage 3 Agenda baseline.
 
 It proves:
 
@@ -332,11 +381,12 @@ It proves:
 * memory exists
 * purpose exists
 * form exists
+* agenda exists
 * the filesystem proves it
 
 ---
 
-## 10. Smallest Acceptable Bootstrap
+## 11. Smallest Acceptable Bootstrap
 
 If you want the shortest acceptable sequence, it is this:
 
@@ -354,14 +404,15 @@ azq goals
 
 Nothing more is required for the first live loop.
 To verify the live Stage 2 baseline as well, add `azq form build FINIS_001` and inspect the files under `data/form/`.
+To verify the live Stage 3 baseline as well, add `azq agenda build DELIV_001` and inspect the files under `data/agenda/`.
 
 ---
 
-## 11. What Not To Add Yet
+## 12. What Not To Add Yet
 
 Do **not** add these during bootstrap:
 
-* task systems
+* replacement task systems
 * databases
 * web UIs
 * background daemons
@@ -370,12 +421,13 @@ Do **not** add these during bootstrap:
 * new storage layers that hide the visible artifacts
 
 Bootstrap is finished when AZQ can gather one spark and turn it into one goal.
+The current repository can go further than that, but bootstrap should still stay minimal.
 
 That is enough to prove the system is alive.
 
 ---
 
-## 12. Common Failure Cases
+## 13. Common Failure Cases
 
 ### `azq` command does not run
 
@@ -417,21 +469,29 @@ Check:
 * whether `data/form/deliverables/` and `data/form/maps/` are writable
 * whether you used the exact canonical ids such as `FINIS_001` and `DELIV_001`
 
+### Agenda creation fails
+
+Check:
+
+* whether the parent deliverable exists in `data/form/deliverables/`
+* whether `data/agenda/tasks/`, `data/agenda/dags/`, and `data/agenda/logs/` are writable
+* whether you used the exact canonical ids such as `DELIV_001` and `TASK_001`
+
 Bootstrap should fail loudly rather than pretending success.
 
 ---
 
-## 13. After Bootstrap
+## 14. After Bootstrap
 
 Once bootstrap succeeds, the next sensible steps are:
 
 1. keep building real deliverables and goal maps from active goals
-2. implement Agenda tasks and logs on top of canonical Formam records
+2. keep building and inspecting Agenda tasks, DAGs, and logs on top of canonical Formam records
 3. implement Domum archive, prune, and health reporting
 
 But those are **post-bootstrap** concerns.
 
-Bootstrap ends with living capture, living purpose, and a visible path into canonical Formam storage.
+Bootstrap ends with living capture, living purpose, and a visible path into canonical Formam and Agenda storage.
 
 ---
 
@@ -440,6 +500,6 @@ Bootstrap ends with living capture, living purpose, and a visible path into cano
 Bootstrap is not the whole system.
 It is the first pulse.
 
-If AZQ can gather one spark, preserve it, elevate it into one real goal, and show the resulting Formam records on disk, then the repository has crossed the line from static code to living craft.
+If AZQ can gather one spark, preserve it, elevate it into one real goal, and show the resulting Formam and Agenda records on disk, then the repository has crossed the line from static code to living craft.
 
 That is enough for day one.
