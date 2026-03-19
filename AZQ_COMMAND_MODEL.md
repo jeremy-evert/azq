@@ -2,726 +2,640 @@
 
 ## Purpose
 
-This document defines the command-line interface for AZQ.
+This document defines the public command-line model for AZQ.
 
-The command model is the primary way users interact with the system.  
-It exposes the five engines of AZQ as a small, memorable set of commands.
+The command model should do two jobs well:
 
-The CLI must obey the Craft Charter:
+1. describe the **current live operator surface**
+2. define the **future public direction** without pretending future behavior is already implemented
 
-- stages remain distinct
-- commands remain simple
-- every command produces or modifies a visible artifact
-- no command should bypass the craft pipeline
+The CLI is not just a convenience layer.
+It is the most visible expression of the craft sequence:
 
-The command model mirrors the AZQ flow:
+```text
+spark -> goal -> deliverable -> task -> artifact -> archive
+````
 
-```
+That sequence is carried by the five public craft layers:
 
-spark → goal → deliverable → task → artifact → archive
+* **Scintilla** gathers sparks
+* **Finis** shapes goals
+* **Formam** shapes deliverables and maps
+* **Agenda** shapes executable work
+* **Domum** stewards, archives, reviews, and later supports repository health
 
-```
+There is **no sixth public engine** in this command model.
 
-# Live Baseline vs. Long-Range Model
-
-This document serves two purposes:
-
-- describe the current live operator surface for Stages 1 through 3
-- preserve a longer-range command model for later stages without presenting it as already implemented
-
-In the current repository, the live package root is `azq/`, and the live Stage 3 execution surface is the narrow `azq agenda ...` family.
-Older `azq task ...`, `azq dag ...`, `azq goal create`, and `azq spark show <id>` examples in this document should therefore be read as future-facing command aspirations unless a section explicitly marks them as live.
+If helper logic is borrowed from other scripts or projects, it should be absorbed into the existing engine structure rather than exposed as a new public command family.
 
 ---
 
-# CLI Philosophy
+## Command Model Principles
 
-The AZQ CLI follows three rules.
+All public commands should obey these rules:
 
-### 1 — Commands mirror the craft stages
+### 1. Commands mirror the craft stages
 
-Each command group corresponds to an engine.
+The public CLI should reinforce the real craft pipeline:
 
+```text
+Scintilla -> Finis -> Formam -> Agenda -> Domum
 ```
 
-spark
-goal
-form
-task
-archive
+The CLI must not encourage users to skip from vague idea directly to an undifferentiated task pile.
 
-```
+### 2. Live commands and future commands must be clearly separated
 
-This keeps the user mentally aligned with the craft process.
+This document must tell the truth about what the repository exposes **now**.
+
+It may also preserve future command direction, but future commands must be labeled clearly as future-facing.
+The command model should never teach stale or aspirational commands as though they are already live.
+
+### 3. Commands should create or inspect durable artifacts
+
+Public commands should create, inspect, refresh, archive, or validate visible filesystem artifacts under `data/`.
+
+Opaque hidden state is a design smell.
+
+### 4. Existing engine names should own future intelligence
+
+Future LLM-assisted shaping work belongs inside:
+
+* **Finis** for goal shaping
+* **Formam** for deliverable shaping
+* **Agenda** for task shaping, dedupe, DAG work, and Codex preparation
+
+The command model should not split those concerns into unrelated extra public command families.
+
+### 5. Keep the public surface small
+
+A smaller, coherent command model is better than a sprawling maze of almost-synonyms.
 
 ---
 
-### 2 — Commands are short and memorable
+## Current Live Baseline
 
-Commands should feel like natural verbs.
+The current live baseline is the Stage 1 through Stage 3 craft path proven in bootstrap:
 
-Good command design helps memory and reduces friction.
-
-Examples:
-
+```text
+spark -> goal -> deliverable -> task -> dag
 ```
 
+The current live commands are:
+
+```text
 azq capture
 azq sparks
+azq spark <id>
+azq spark search <text>
+azq spark rm <id>
+azq fine
 azq goals
-azq form
-azq agenda
-
-```
-
----
-
-### 3 — Commands create durable artifacts
-
-Every command should modify or generate files in `data/`.
-
-Opaque state is avoided.
-
----
-
-# CLI Structure
-
-Long-range pattern:
-
-```
-
-azq <resource> <verb> [arguments]
-
-```
-
-Examples:
-
-```
-
-azq spark list
 azq goal add
-azq form build
-azq agenda build
-
+azq goal close <id>
+azq goal archive <id>
+azq form build <goal_id>
+azq form list
+azq form show <deliverable_id>
+azq form map <goal_id>
+azq agenda build <deliverable_id>
+azq agenda list
+azq agenda show <task_id>
+azq agenda dag <deliverable_id>
 ```
+
+The current canonical storage homes are:
+
+```text
+data/scintilla/audio/
+data/scintilla/transcripts/
+data/scintilla/sparks/
+data/finis/goals/
+data/form/deliverables/
+data/form/maps/
+data/agenda/tasks/
+data/agenda/dags/
+data/agenda/logs/
+```
+
+That is the live operator truth today.
 
 ---
 
-# Global Commands
+## Public CLI Shape
 
-The commands in this section are architectural targets, not part of the current live CLI surface.
+The public CLI should continue to use this top-level pattern:
 
-These operate across the entire system.
-
+```text
+azq <stage or singular object> [subcommand] [arguments]
 ```
 
-azq status
-azq doctor
-azq review
-azq version
+Examples from the live system:
 
+```text
+azq capture
+azq sparks
+azq spark <id>
+azq goal add
+azq form build <goal_id>
+azq agenda build <deliverable_id>
 ```
 
-### azq status
+The command model intentionally mixes:
 
-Shows pipeline status across stages.
+* **short top-level stage commands** for frequent use
+* **singular object subcommands** when an operation targets a specific object
 
-Example output:
-
-```
-
-sparks:       37
-goals:        5 active
-deliverables: 12
-tasks:        9 open
-
-```
+That hybrid shape is acceptable as long as it stays coherent.
 
 ---
-
-### azq doctor
-
-Checks repository health.
-
-Validates:
-
-- directory structure
-- missing files
-- corrupted artifacts
-- configuration problems
-
----
-
-### azq review
-
-Produces a summary of recent activity.
-
-Typical use:
-
-```
-
-azq review
-azq review weekly
-
-```
-
----
-
-# Engine Commands
 
 ## 1. Cole Scintilla
 
 Gather sparks.
 
-Live now:
+### Purpose
 
-```
+Scintilla is the intake layer.
+It captures or inspects early thought and preserves spark artifacts visibly on disk.
 
+### Live commands
+
+```text
 azq capture
 azq sparks
 azq spark <id>
 azq spark search <text>
 azq spark rm <id>
-
 ```
 
-Any additional Scintilla commands in this section are future-facing unless explicitly marked otherwise.
+### Live meanings
 
-### Capture
+#### `azq capture`
 
-```
-
-azq capture
-
-```
-
-Starts audio capture and transcription.
+Start interactive audio capture, transcription, and spark extraction.
 
 Pipeline:
 
+```text
+audio -> transcript -> spark record
 ```
 
-audio → transcript → sparks
+Artifacts:
 
-```
-
-Artifacts created:
-
-```
-
+```text
 data/scintilla/audio/
 data/scintilla/transcripts/
 data/scintilla/sparks/
-
 ```
+
+#### `azq sparks`
+
+List saved spark bundles.
+
+#### `azq spark <id>`
+
+Inspect one exact spark bundle.
+
+#### `azq spark search <text>`
+
+Search extracted spark text.
+
+#### `azq spark rm <id>`
+
+Remove one spark bundle.
+
+This remains live today, but it is a **temporary destructive path**.
+The implementation plan intends to replace destructive removal with archive-first behavior later.
+
+### Future-facing direction
+
+Scintilla may later grow capabilities such as:
+
+```text
+azq capture text "..."
+azq spark archive <id>
+azq spark summarize <id>
+```
+
+But Scintilla should remain the **spark layer**, not become a general planning engine.
 
 ---
 
-### Capture Text
+## 2. Respice Finem
 
-Future-facing:
+Shape goals.
 
-```
+### Purpose
 
-azq capture text "note"
+Finis takes sparks and helps the user define ends.
 
-```
+Today, it stores and lists goals.
+In the next implementation stages, it should deepen into an LLM-assisted goal-shaping layer that can inspect sparks, ask narrowing questions, and help shape better goals.
 
-Creates a spark directly from text.
+### Live commands
 
----
-
-### List Sparks
-
-```
-
-azq sparks
-
-```
-
-Shows recent sparks.
-
----
-
-### Inspect Spark
-
-Live now:
-
-```
-
-azq spark <id>
-
-```
-
-Future-facing alias:
-
-```
-
-azq spark show <id>
-
-```
-
----
-
-### Search Sparks
-
-```
-
-azq spark search <text>
-
-```
-
----
-
-### Remove Spark
-
-```
-
-azq spark rm <id>
-
-```
-
----
-
-# 2. Respice Finem
-
-Define goals.
-
-Live now:
-
-```
-
+```text
 azq fine
 azq goals
 azq goal add
 azq goal close <goal_id>
 azq goal archive <goal_id>
-
 ```
 
-Any additional Finis commands in this section are future-facing unless explicitly marked otherwise.
+### Live meanings
 
-### List Goals
+#### `azq fine`
 
-```
+Read sparks and propose candidate goals through the current interactive flow.
 
-azq goals
+#### `azq goals`
 
-```
+List active goals from canonical goal files.
 
----
+#### `azq goal add`
 
-### Review Goals
+Create a goal manually.
 
-Future-facing:
+#### `azq goal close <goal_id>`
 
-```
+Mark a goal completed.
 
-azq goals review
+#### `azq goal archive <goal_id>`
 
-```
+Mark a goal archived.
 
----
+### Canonical artifacts
 
-### Create Goal
-
-Live now:
-
-```
-
-azq goal add
-
-```
-
-Future-facing spelling:
-
-```
-
-azq goal create
-
-```
-
-Creates a goal from selected sparks.
-
-Artifacts:
-
-```
-
+```text
 data/finis/goals/
-
 ```
 
----
+### Future-facing direction
 
-### Show Goal
+Future Finis behavior should stay **inside Finis**.
 
-Future-facing:
+Likely future capabilities include:
 
-```
-
+```text
+azq fine inspect <spark_id>
+azq fine shape <spark_id>
+azq fine questions <spark_id or goal_id>
 azq goal show <goal_id>
-
 ```
+
+These future commands should support behavior such as:
+
+* spark review
+* narrowing questions
+* tractability and usefulness notes
+* refined goal proposals
+* manifesto or intent-note support attached to goal work
+
+They should not create a separate public planning engine.
+They belong to Finis.
 
 ---
 
-### Link Sparks
+## 3. Strue Formam
 
-Future-facing:
+Shape deliverables and maps.
 
-```
+### Purpose
 
-azq goal link-sparks <goal_id> <spark_ids>
+Formam defines what should exist if a goal succeeds.
 
-```
+Today, it builds stub deliverables and goal maps.
+In later stages, it should deepen into an LLM-assisted deliverable-shaping layer that can expand, prioritize, and refine deliverables.
 
----
+### Live commands
 
-### Close Goal
-
-```
-
-azq goal close <goal_id>
-
-```
-
----
-
-# 3. Strue Formam
-
-Build structure.
-
-### Build Form
-
-```
-
+```text
 azq form build <goal_id>
-
-```
-
-Produces deliverables.
-
-Artifacts:
-
-```
-
-data/form/deliverables/
-
-```
-
----
-
-### List Deliverables
-
-```
-
 azq form list
-
-```
-
----
-
-### Show Deliverable
-
-```
-
 azq form show <deliverable_id>
-
-```
-
----
-
-### Build Map
-
-```
-
 azq form map <goal_id>
-
 ```
 
-Creates dependency structure.
+### Live meanings
 
-Artifacts:
+#### `azq form build <goal_id>`
 
-```
+Create the current first-form baseline for a goal:
+a deliverable record and a goal map.
 
+#### `azq form list`
+
+List deliverables.
+
+#### `azq form show <deliverable_id>`
+
+Inspect one deliverable.
+
+#### `azq form map <goal_id>`
+
+Refresh or inspect the goal map for one goal.
+
+### Canonical artifacts
+
+```text
+data/form/deliverables/
 data/form/maps/
-
 ```
+
+### Future-facing direction
+
+Future Formam behavior should stay **inside Formam**.
+
+Likely future capabilities include:
+
+```text
+azq form expand <goal_id or deliverable_id>
+azq form prioritize <goal_id>
+```
+
+These future commands should support behavior such as:
+
+* deliverable expansion
+* first-now versus later prioritization
+* map refinement
+* boundary clarification
+* proposal artifacts that can later be accepted into canonical Formam storage
+
+Formam should remain the layer that shapes deliverables and maps.
+It should not jump directly to executable task decomposition.
 
 ---
 
-# 4. Age Agenda
+## 4. Age Agenda
 
-Drive the work.
+Shape executable work.
 
-The current Stage 3 operator surface is intentionally narrow and file-backed.
-These are the live commands:
+### Purpose
 
-```
+Agenda turns deliverables into executable work.
 
+Today, it creates canonical task stubs and goal-level DAG artifacts.
+In later stages, it should deepen into the LLM-assisted task-and-Codex layer.
+
+### Live commands
+
+```text
 azq agenda build <deliverable_id>
 azq agenda list
 azq agenda show <task_id>
 azq agenda dag <deliverable_id>
-
 ```
 
-They operate on canonical storage under:
+### Live meanings
 
-```
+#### `azq agenda build <deliverable_id>`
 
+Create or refresh canonical task records for one deliverable.
+
+#### `azq agenda list`
+
+List canonical tasks.
+
+#### `azq agenda show <task_id>`
+
+Inspect one canonical task.
+
+#### `azq agenda dag <deliverable_id>`
+
+Refresh and inspect the parent goal DAG reached from one exact deliverable.
+
+### Canonical artifacts
+
+```text
 data/agenda/tasks/
 data/agenda/dags/
 data/agenda/logs/
-
 ```
 
-The `task` and `dag` command families below are long-range aspirations for later stages, not current live commands.
+### Important current constraint
 
-### Show Agenda
+The current live operator surface is the **narrow `azq agenda ...` family**.
 
-Future-facing:
+Older split families such as:
 
+```text
+azq task ...
+azq dag ...
 ```
 
-azq agenda
+are **not** the live baseline and should not be taught as current behavior unless later code adds them explicitly.
 
+### Future-facing direction
+
+Future Agenda behavior should remain **inside Agenda**.
+
+Likely future capabilities include:
+
+```text
+azq agenda expand <deliverable_id>
+azq agenda dedupe <deliverable_id>
+azq agenda dag <deliverable_id>
+azq agenda codex prepare <deliverable_id>
+azq agenda codex run <deliverable_id>
+azq agenda codex report <deliverable_id>
 ```
 
-Overview of current tasks.
+These future commands should support behavior such as:
+
+* commit-sized task decomposition
+* task proposal generation
+* task deduplication
+* deterministic dependency DAG generation
+* Codex preparation
+* Codex execution reporting
+
+Agenda should own the bridge from deliverable to executable work.
+That includes Codex preparation.
+This should not be split into a stray public execution engine.
 
 ---
 
-### List Tasks
+## 5. Custodi Domum
 
-Future-facing:
+Steward the system.
 
-```
+### Purpose
 
-azq task list
+Domum is the stewardship layer.
 
-```
+It is not live yet.
+When implemented, it should archive, review, prune carefully, and later support repository-wide introspection through `status` and `doctor`.
 
----
+### Live commands
 
-### Start Task
+There is **no live Domum command family yet**.
 
-Future-facing:
+### Future-facing direction
 
-```
+Likely future Domum capabilities include:
 
-azq task start <task_id>
-
-```
-
----
-
-### Complete Task
-
-Future-facing:
-
-```
-
-azq task complete <task_id>
-
-```
-
----
-
-### Build DAG
-
-Future-facing:
-
-```
-
-azq dag build <goal_id>
-
-```
-
-Artifacts:
-
-```
-
-data/agenda/dags/
-
-```
-
----
-
-### Show DAG
-
-Future-facing:
-
-```
-
-azq dag show <goal_id>
-
-```
-
----
-
-# 5. Custodi Domum
-
-Maintain the system.
-
-### Archive
-
-```
-
-azq archive
-
-```
-
-Moves completed work into archive.
-
-Artifacts:
-
-```
-
-data/archive/
-
-```
-
----
-
-### Archive Goal
-
-```
-
-azq archive goal <goal_id>
-
-```
-
----
-
-### Archive Task
-
-```
-
-azq archive task <task_id>
-
-```
-
----
-
-### Prune
-
-```
-
+```text
+azq archive ...
 azq prune
-
+azq review
+azq status
+azq doctor
 ```
 
-Removes stale sparks and abandoned records.
+More specific future commands may include:
+
+```text
+azq archive spark <id>
+azq archive goal <goal_id>
+azq archive task <task_id>
+```
+
+### Stewardship constraints
+
+Domum should:
+
+* preserve provenance
+* move the system toward archive-first behavior
+* support visible review
+* eventually power repository-wide health and maturity reporting
+
+Domum should not arrive before archive paths exist.
+`status` and `doctor` should report what is visibly true from disk, not hidden internal state.
 
 ---
 
-### Health Report
+## Global Commands
 
+### Live now
+
+No global commands beyond the root CLI listing are part of the stable live surface today.
+
+### Future-facing
+
+These remain long-range public commands once Domum exists:
+
+```text
+azq status
+azq doctor
+azq review
+azq version
 ```
 
-azq report health
-
-```
+They should be added only when they are backed by real, visible repository evidence.
 
 ---
 
-# Operational Scripts
+## What The Command Model Should Not Do
 
-Some maintenance tasks run through scripts.
+The public command model should **not**:
 
-Examples:
-
-```
-
-python scripts/daily_review.py
-python scripts/archive_cleanup.py
-
-```
-
-CLI wrappers may call these.
+* invent a sixth public engine
+* split future task shaping away from Agenda
+* split future deliverable shaping away from Formam
+* split future goal shaping away from Finis
+* teach `azq task ...` and `azq dag ...` as the live baseline today
+* hide proposal artifacts in opaque in-memory flows
+* encourage destructive deletion as a permanent norm
+* grow a command backlog faster than the repository can support
 
 ---
 
-# Recommended Daily Workflow
+## Current Recommended Workflow
 
-Current live Stage 1 through Stage 3 workflow:
+### Live baseline workflow today
 
-```
-
+```text
+# gather or inspect sparks
 azq capture
 azq sparks
+azq spark <id>
+azq spark search "<text>"
+
+# define a goal
 azq fine
 azq goal add
-azq form build FINIS_001
-azq agenda build DELIV_001
-azq agenda list
-
-```
-
-Long-range workflow once the broader command model exists:
-
-```
-
-# gather
-
-azq capture
-azq sparks
-
-# choose ends
-
-azq goals review
-azq goal create
+azq goals
 
 # build structure
-
 azq form build FINIS_001
+azq form list
+azq form show DELIV_001
+azq form map FINIS_001
 
-# execute work
+# shape current executable work
+azq agenda build DELIV_001
+azq agenda list
+azq agenda show TASK_001
+azq agenda dag DELIV_001
+```
 
+### Future workflow direction
+
+As later stages land, the workflow should deepen without changing the public craft story:
+
+```text
+spark -> Finis shaping -> Formam shaping -> Agenda shaping -> Domum stewardship
+```
+
+That means future LLM-assisted expansion, prioritization, decomposition, dedupe, and Codex preparation should appear as richer behavior **inside the existing engines**, not as a new parallel command garden.
+
+---
+
+## Naming Guidance
+
+Use these rules when adding commands later:
+
+* prefer stage-owned commands over generic orphan verbs
+* prefer one obvious canonical spelling
+* avoid synonym clutter
+* prefer inspectable nouns and visible actions
+* keep singular object inspection simple
+* keep future commands close to current live naming where possible
+
+Good examples:
+
+```text
+azq fine
+azq form build <goal_id>
+azq form expand <goal_id>
+azq agenda build <deliverable_id>
+azq agenda codex prepare <deliverable_id>
+azq archive goal <goal_id>
+```
+
+Bad examples:
+
+```text
 azq task list
-azq task start TASK_001
-azq task complete TASK_001
-
-# maintain system
-
-azq review
-azq archive
-azq prune
-
+azq planning expand
+azq engine codex
+azq work generate
 ```
+
+if those names bypass the craft story or create a second competing mental model.
 
 ---
 
-# Command Backlog
+## Closing
 
-Future commands may include:
+The command model is the path system of the craft.
 
-```
+If the paths are clear, the repository stays teachable.
+If the paths sprawl, the craft sequence decays.
 
-azq artifact list
-azq artifact show
-azq spark summarize
-azq goal research
-azq agenda focus
+So the public command model should remain:
 
-```
+* small
+* honest
+* stage-aligned
+* file-backed
+* future-aware without pretending
+* faithful to the five-engine story
 
-These should only be added if they serve the craft pipeline.
+Finis should shape goals.
+Formam should shape deliverables.
+Agenda should shape executable work.
+Domum should steward what remains.
 
----
-
-# Closing
-
-The command model is the path system of the AZQ garden.
-
-If the paths are clear, users can move naturally from spark to artifact.
-
-If the paths become tangled, the garden becomes unusable.
-
-The CLI should therefore remain:
-
-- small
-- memorable
-- faithful to the craft sequence
+The CLI should make that truth obvious.
