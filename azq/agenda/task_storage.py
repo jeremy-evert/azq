@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from azq.agenda import paths
+from azq.agenda.lineage import apply_task_lineage, resolve_deliverable_lineage
 from azq.agenda.schemas import (
     DEPENDENCIES_HEADING,
     DESCRIPTION_HEADING,
@@ -13,7 +14,6 @@ from azq.agenda.schemas import (
     normalize_task_record,
     task_id_number,
 )
-from azq.formam import storage as formam_storage
 
 
 class CanonicalDeliverableValidationError(ValueError):
@@ -262,25 +262,19 @@ def task_from_markdown(markdown_text: str) -> dict[str, Any]:
 
 def validate_canonical_deliverable(deliverable_id: str) -> dict[str, Any]:
     """Validate an exact canonical parent deliverable through Formam storage."""
-
     canonical_deliverable_id = str(deliverable_id).strip()
-    if not canonical_deliverable_id:
+    try:
+        lineage = resolve_deliverable_lineage(canonical_deliverable_id)
+    except ValueError as exc:
+        code = "missing_deliverable"
+        if not canonical_deliverable_id:
+            code = "missing_deliverable_id"
         raise CanonicalDeliverableValidationError(
             canonical_deliverable_id,
-            "Task parent deliverable_id is required.",
-            code="missing_deliverable_id",
-        )
-
-    deliverable_record = formam_storage.load_deliverable(canonical_deliverable_id)
-    if deliverable_record is None:
-        raise CanonicalDeliverableValidationError(
-            canonical_deliverable_id,
-            "Cannot use task record: canonical parent deliverable "
-            f"{canonical_deliverable_id} does not exist.",
-            code="missing_deliverable",
-        )
-
-    return deliverable_record
+            str(exc),
+            code=code,
+        ) from exc
+    return lineage["deliverable"]
 
 
 def validate_parent_deliverable(deliverable_id: str) -> dict[str, Any]:
@@ -294,8 +288,7 @@ def load_task(task_id: str) -> Optional[dict[str, Any]]:
     if not task_path.is_file():
         return None
     task_record = parse_task_markdown(task_path.read_text(encoding="utf-8"))
-    validate_canonical_deliverable(task_record["deliverable_id"])
-    return task_record
+    return apply_task_lineage(task_record)
 
 
 def load_all_tasks() -> list[dict[str, Any]]:
@@ -303,8 +296,7 @@ def load_all_tasks() -> list[dict[str, Any]]:
     tasks: list[dict[str, Any]] = []
     for task_path in list_task_files():
         task_record = parse_task_markdown(task_path.read_text(encoding="utf-8"))
-        validate_canonical_deliverable(task_record["deliverable_id"])
-        tasks.append(task_record)
+        tasks.append(apply_task_lineage(task_record))
     return tasks
 
 

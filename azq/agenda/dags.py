@@ -4,9 +4,9 @@ from datetime import date
 from typing import Any, Optional
 
 from azq.agenda.dag_storage import load_dag, write_dag
+from azq.agenda.lineage import resolve_deliverable_lineage
 from azq.agenda.task_storage import (
     load_tasks_for_deliverable,
-    validate_parent_deliverable,
 )
 
 DEFAULT_AGENDA_DAG_NOTES = (
@@ -99,8 +99,9 @@ def build_agenda_dag_record(
 def refresh_agenda_dag(deliverable_id: str) -> dict[str, Any]:
     """Validate one exact deliverable and refresh its parent goal DAG artifact."""
 
-    deliverable_record = validate_parent_deliverable(deliverable_id)
-    goal_id = deliverable_record["goal_id"]
+    lineage = resolve_deliverable_lineage(deliverable_id)
+    deliverable_record = lineage["deliverable"]
+    goal_id = lineage["goal_id"]
     tasks = load_tasks_for_deliverable(deliverable_record["deliverable_id"])
     existing_dag = load_dag(goal_id)
     dag_record = build_agenda_dag_record(

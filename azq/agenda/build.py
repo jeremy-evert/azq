@@ -3,9 +3,9 @@
 from datetime import date
 from typing import Any
 
+from azq.agenda.lineage import resolve_deliverable_lineage
 from azq.agenda.task_storage import (
     next_task_id,
-    validate_parent_deliverable,
     write_task,
 )
 
@@ -30,7 +30,6 @@ def build_stub_task_record(
 ) -> dict[str, Any]:
     """Build one deterministic stub task record from validated deliverable data."""
     deliverable_id = str(deliverable_record["deliverable_id"]).strip()
-    goal_id = str(deliverable_record.get("goal_id", "")).strip()
 
     return {
         "task_id": task_id,
@@ -45,13 +44,13 @@ def build_stub_task_record(
         "dependencies": [],
         "execution_notes": "",
         "created": created,
-        "goal_id": goal_id,
     }
 
 
 def build_agenda(deliverable_id: str) -> dict[str, Any]:
     """Create one canonical stub task for an exact parent deliverable."""
-    deliverable_record = validate_parent_deliverable(deliverable_id)
+    lineage = resolve_deliverable_lineage(deliverable_id)
+    deliverable_record = lineage["deliverable"]
     created = str(date.today())
     task_id = next_task_id()
 
