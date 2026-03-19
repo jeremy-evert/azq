@@ -2,7 +2,7 @@
   {
     "task_id": "STAGE3-WAVED-01",
     "title": "Stabilize Agenda task-lineage resolution behind one shared exact-id policy",
-    "goal": "Reduce pre-Stage-4 trace-chain risk by making Agenda resolve task-to-deliverable-to-goal lineage through one explicit shared seam instead of mixing implicit reconstruction with write-only helper fields.",
+    "goal": "Reduce pre-Stage-4 trace-chain risk by making Agenda resolve task-to-deliverable-to-goal lineage through one explicit shared seam instead of mixing implicit reconstruction with transient write-time context.",
     "files_to_create": [
       "azq/agenda/lineage.py"
     ],
@@ -16,21 +16,21 @@
       "STAGE3-WAVEC-02"
     ],
     "context": [
-      "The pre-Stage-4 refactor report identifies the task-layer lineage policy as the highest-risk remaining Stage 3 seam because Stage 4 stewardship and later repository readers will depend on truthful task ancestry.",
+      "The pre-Stage-4 refactor report identifies task-layer lineage policy as the highest-risk remaining Stage 3 seam because Stage 4 stewardship and later repository readers will depend on truthful task ancestry.",
       "The live Agenda baseline already has exact parent-deliverable validation and goal-level DAG artifacts, but task-to-goal lineage is not yet owned by one explicit shared helper.",
       "Wave D should tighten this seam without inventing a broad shared repository abstraction or beginning Domum behavior."
     ],
     "requirements": [
-      "Create one small Agenda lineage module that resolves exact task and deliverable ancestry through the canonical Formam and Agenda storage surfaces.",
-      "Make Agenda build and DAG refresh paths use the shared lineage helper rather than relying on ad hoc goal reconstruction.",
-      "Choose and document one explicit live policy for task lineage that preserves the current Stage 3 baseline: tasks remain directly parented by deliverable_id, and goal lineage is resolved through the shared exact-id seam rather than guessed independently in multiple modules.",
+      "Create one small Agenda lineage module that resolves exact task ancestry from task to deliverable to goal through the canonical Formam and Agenda storage surfaces.",
+      "Make Agenda build and DAG refresh paths use the shared lineage helper rather than reconstructing goal lineage independently in multiple modules.",
+      "Choose and document one explicit live policy for task lineage that preserves the current Stage 3 baseline: tasks remain directly parented by deliverable_id, and goal lineage is resolved through the shared exact-id seam rather than stored as a second canonical parent backlink.",
       "If transient or write-only task fields are no longer needed after the shared lineage seam exists, remove or stop depending on them.",
       "Keep the cleanup limited to lineage truth and validation behavior. Do not add task lifecycle mutation commands, archive behavior, or repository-wide health readers."
     ],
     "acceptance_criteria": [
       "Agenda has one obvious shared helper for resolving task ancestry from task to deliverable to goal.",
       "Agenda build, task reads, and DAG refresh no longer reconstruct goal lineage through separate ad hoc logic paths.",
-      "The Stage 3 task baseline still uses deliverable_id as the direct parent backlink, but goal lineage is now machine-checkable through one explicit seam."
+      "The Stage 3 task baseline still uses deliverable_id as the direct parent backlink, and goal lineage is machine-checkable through one explicit shared seam."
     ],
     "suggested_commit_message": "stabilize agenda lineage resolution for stage 3 wave d"
   },
@@ -74,7 +74,7 @@
   {
     "task_id": "STAGE3-WAVED-03",
     "title": "Align top-level CLI help and high-signal docs to the live Stage 3 surface",
-    "goal": "Remove the operator-facing command and layout drift that would otherwise mislead pre-Stage-4 implementation work, while keeping future-stage ideas clearly separated from live behavior.",
+    "goal": "Remove operator-facing command and layout drift that would otherwise mislead pre-Stage-4 implementation work, while keeping future-stage ideas clearly separated from live behavior.",
     "files_to_create": [],
     "files_to_modify": [
       "azq/cli.py",
@@ -86,7 +86,6 @@
       "AZQ_IMPLEMENTATION_PLAN.md"
     ],
     "depends_on": [
-      "STAGE3-WAVED-01",
       "STAGE3-WAVED-02"
     ],
     "context": [
