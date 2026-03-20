@@ -1,0 +1,93 @@
+[
+  {
+    "task_id": "STAGE1-WAVEC-01",
+    "title": "Add Stage 1 regression test suite",
+    "goal": "Lock the canonical Stage 1 baseline with automated tests covering storage normalization, markdown round-trip, next-id generation, migration idempotence, and the core file-backed goal command flows.",
+    "files_to_create": [
+      "tests/test_stage1_wave_c.py"
+    ],
+    "files_to_modify": [],
+    "depends_on": [],
+    "context": [
+      "Wave C is the final closeout wave for Stage 1 and is intentionally limited to verification, documentation alignment, and runner resilience.",
+      "The Stage 1 checklist explicitly calls for regression tests covering legacy JSON normalization, goal file round-trip, next-id generation, migration idempotence, goal add, goal close, goal archive, and fine writing canonical records with derived_from.",
+      "Wave A and Wave B already established the canonical file-backed Finis model, so Wave C should protect that baseline rather than broadening architecture."
+    ],
+    "requirements": [
+      "Add automated tests for legacy JSON normalization into the canonical goal schema.",
+      "Add automated tests for canonical goal markdown round-trip behavior.",
+      "Add automated tests for next_goal_id() based on existing FINIS_###.md files.",
+      "Add automated tests for migration idempotence so repeated migration does not duplicate goal files.",
+      "Add automated tests for azq goal add, azq goal close, and azq goal archive against file-backed storage.",
+      "Keep the tests focused on storage invariants and CLI-visible behavior."
+    ],
+    "acceptance_criteria": [
+      "The repository has an automated regression suite for the highest-risk Stage 1 storage and command flows.",
+      "The tests prove the canonical file-backed goal model behaves deterministically.",
+      "Stage 1 behavior is locked by tests rather than manual inspection alone."
+    ],
+    "suggested_commit_message": "add stage 1 regression tests for canonical finis storage"
+  },
+  {
+    "task_id": "STAGE1-WAVEC-02",
+    "title": "Align Stage 1 documentation with canonical file-backed storage",
+    "goal": "Make the operator-facing docs teach the live Stage 1 truth by describing data/finis/goals/ as canonical and data/finis/goals.json as legacy migration input only.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "docs/architecture/AZQ_BOOTSTRAP.md",
+      "README.md"
+    ],
+    "depends_on": [
+      "STAGE1-WAVEC-01"
+    ],
+    "context": [
+      "Wave C closeout explicitly requires docs/architecture/AZQ_BOOTSTRAP.md and README.md to stop presenting goals.json as the active truth.",
+      "The Stage 1 checklist says the docs must clarify that file-backed goals are canonical and JSON is migration-only legacy input.",
+      "This closeout wave exists to freeze Stage 1 before Formam begins, so documentation drift must be removed now."
+    ],
+    "requirements": [
+      "Refactor docs/architecture/AZQ_BOOTSTRAP.md so it no longer presents data/finis/goals.json as the active write target.",
+      "Refactor README.md so the project overview reflects the canonical file-backed goal model.",
+      "Remove references that describe data/finis/goals.json as the active system of record.",
+      "Explicitly define data/finis/goals/ as the canonical system of record for Finis goals.",
+      "Align terminology around title versus goal where needed."
+    ],
+    "acceptance_criteria": [
+      "The docs no longer teach the pre-Stage-1 Finis storage model.",
+      "A new operator can read the docs and understand that canonical goals live as one file per goal.",
+      "data/finis/goals.json is described only as legacy migration input, never as active truth."
+    ],
+    "suggested_commit_message": "align stage 1 docs with canonical finis goal storage"
+  },
+  {
+    "task_id": "STAGE1-WAVEC-03",
+    "title": "Add graceful Stage 1 closeout behavior to the runner ritual",
+    "goal": "Make the runner and ritual script treat an empty remaining backlog as successful Stage 1 completion by printing a final report and a clear completion message instead of exiting with an error.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq_codex_stage1_task_runner.py",
+      "run_next_task_in_current_wave.sh"
+    ],
+    "depends_on": [
+      "STAGE1-WAVEC-02"
+    ],
+    "context": [
+      "Wave C closeout requires runner resilience and an explicit Stage 1 completion signal when no tasks remain.",
+      "The current ritual script still surfaces a traceback when choose_next_task() raises ValueError for no remaining tasks.",
+      "The fix should stay narrow and compatible with the existing Stage 1 runner flow rather than introducing a new orchestration model."
+    ],
+    "requirements": [
+      "Add a graceful no-tasks-remaining branch to the Stage 1 task runner.",
+      "When no tasks remain, emit the task status report instead of returning a non-zero exit code.",
+      "Print an explicit Stage 1 Complete message when the backlog is exhausted.",
+      "Update run_next_task_in_current_wave.sh so the ritual still prints the report and completion signal cleanly.",
+      "Keep the change focused on runner resilience and closeout polish only."
+    ],
+    "acceptance_criteria": [
+      "Running the ritual after all Wave C work is complete exits successfully.",
+      "The operator receives a final report and a clear Stage 1 Complete status message.",
+      "No-tasks-remaining is treated as a successful terminal state rather than as an error traceback."
+    ],
+    "suggested_commit_message": "add graceful stage 1 complete exit to codex runner"
+  }
+]

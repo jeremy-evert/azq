@@ -1,0 +1,121 @@
+{
+  "_comment": "Strict JSON does not support real comments. This template uses _comment-style fields to guide the user.",
+  "template_name": "Codex Drafting Framework",
+  "template_purpose": "Use this as a repo-grounded prompt framework for drafting implementation artifacts in AZQ.",
+  "role": {
+    "instruction": "You are drafting a repo-grounded implementation artifact for AZQ."
+  },
+  "first_step": {
+    "instruction": "Inspect the current repository state before writing anything."
+  },
+  "artifact_request": {
+    "_comment": "User input required. Say exactly what file Codex should produce.",
+    "target_filename": "<REQUIRED: exact filename to write>",
+    "_target_filename_comment": "Be concrete. Include the exact filename, exact output type, and whether this is a drop-in replacement or a new file.",
+    "output_type": "<REQUIRED: json | markdown | python | shell | other>",
+    "replacement_mode": "<REQUIRED: new_file | drop_in_replacement>"
+  },
+  "repo_inspection": {
+    "_comment": "User input required. List the files and directories Codex must inspect before drafting.",
+    "instruction": "Inspect the repository before drafting. Match the reality on disk, not an imagined architecture.",
+    "read_first": [
+      "<REQUIRED: target manifest or checks file>",
+      "<REQUIRED: adjacent wave files of the same type>",
+      "<REQUIRED: relevant implementation files>",
+      "<OPTIONAL: referenced report files>"
+    ],
+    "minimum_live_paths": [
+      "<OPTIONAL: path Codex must inspect>",
+      "<OPTIONAL: path Codex must inspect>"
+    ],
+    "_read_first_comment": "Useful instructions include: read the current manifest and checks files first, validate against live filenames and the current module layout, and do not assume the docs are perfectly current."
+  },
+  "artifact_purpose": {
+    "_comment": "User input required. Explain what the artifact is for so Codex has doctrine instead of vibes.",
+    "summary": "<REQUIRED: what this artifact is trying to do>",
+    "intent_markers": [
+      "<OPTIONAL: this is a refactor-prep wave>",
+      "<OPTIONAL: this is a closeout wave>",
+      "<OPTIONAL: this should preserve behavior>",
+      "<OPTIONAL: this should prevent scope creep>"
+    ]
+  },
+  "primary_rule": {
+    "instruction": "Match the reality on disk, not an imagined architecture."
+  },
+  "requirements": {
+    "_comment": "User input required. These are hard constraints.",
+    "required": [
+      "preserve the repo's existing style and vocabulary",
+      "keep the artifact aligned with the current runner and check format",
+      "ground checks in current public behavior where possible",
+      "use hard checks for breakage and human_checks for judgment",
+      "keep the wave and task intent narrow",
+      "do not introduce future-stage behavior",
+      "<ADD MORE REQUIRED CONSTRAINTS HERE>"
+    ],
+    "_required_comment": "Separate hard constraints from preferences. Examples of good hard constraints: valid JSON, match current runner format, include all manifest task IDs, use baseline checks plus task-specific checks."
+  },
+  "preferences": {
+    "_comment": "User input optional. These are preferred behaviors, not hard requirements.",
+    "preferred": [
+      "use behavior checks over grep checks",
+      "keep brittle architecture policing in human_checks",
+      "avoid exact implementation assumptions unless required",
+      "<ADD MORE PREFERENCES HERE>"
+    ]
+  },
+  "constraints": {
+    "_comment": "These are explicit do-not rules. Add more as needed for the specific artifact.",
+    "do_not": [
+      "do not invent missing modules unless the task explicitly requires them",
+      "do not assume docs are current if the code disagrees",
+      "do not silently rewrite adjacent files",
+      "do not overfit hard checks to one exact refactor shape when behavior checks are possible",
+      "do not broaden into future-stage behavior unless explicitly asked",
+      "<ADD MORE DO-NOT RULES HERE>"
+    ],
+    "_do_not_comment": "For Codex, do not is gold."
+  },
+  "validation": {
+    "_comment": "User input optional. Keep these checks aligned with the artifact type.",
+    "before_finishing": [
+      "validate syntax for the target file type",
+      "check task IDs match the manifest when a manifest is involved",
+      "confirm referenced filenames actually exist or are explicitly planned by the task",
+      "note any brittle checks or underspecified assumptions"
+    ]
+  },
+  "mismatch_handling": {
+    "_comment": "Tell Codex to explain reality mismatches plainly.",
+    "instructions": [
+      "if the manifest and the repo disagree, say so",
+      "if a check is underspecified, note it",
+      "if a hard check would be brittle, move it to human_checks and explain why"
+    ]
+  },
+  "report_back": {
+    "_comment": "Tell Codex what to summarize after writing the file.",
+    "summarize": [
+      "what you wrote",
+      "what you grounded it against",
+      "any concerns",
+      "any checks or judgments intentionally left in human_checks"
+    ]
+  },
+  "prompt_fill_in_example": {
+    "_comment": "Optional example showing the kind of concrete input that works well.",
+    "target_filename": "planning/stage_2/wave_d/checks.json",
+    "output_type": "json",
+    "replacement_mode": "new_file",
+    "artifact_purpose": "Draft a Stage 2 Wave D checks recipe for a refactor-prep wave that preserves Stage 2 behavior without introducing Stage 3 behavior."
+  },
+  "good_analog": {
+    "instruction": "Use this existing artifact as the closest model for decomposition and tone.",
+    "filename": "planning/stage_2/wave_b/tasks.json"
+  },
+  "closest_existing_checks_analog": {
+    "filename": "planning/stage_2/wave_b/checks.json",
+    "reason": "Stage 3 Wave B is the Agenda command-layer analogue of Stage 2 Wave B."
+  }
+}

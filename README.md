@@ -107,6 +107,15 @@ data/agenda/dags/GOAL_FINIS_001_DAG.json
 data/agenda/logs/TASK_001_LOG.md
 ```
 
+High-signal support material now lives under:
+
+```text
+docs/architecture/
+planning/
+codex/
+attic/
+```
+
 ---
 
 ## Command Quick Reference
@@ -194,7 +203,7 @@ azq
 
 You should see the current command list beginning with `capture`, `sparks`, and `spark <id>`, and ending with the `agenda ...` commands.
 
-If you want the smallest reliable proof-of-life path, see [`AZQ_BOOTSTRAP.md`](AZQ_BOOTSTRAP.md).
+If you want the smallest reliable proof-of-life path, see [`docs/architecture/AZQ_BOOTSTRAP.md`](docs/architecture/AZQ_BOOTSTRAP.md).
 
 ---
 
@@ -396,12 +405,12 @@ It is trying to deepen the existing craft layers so the engines mean what their 
 If you want the shortest route into the repository:
 
 * start here in `README.md`
-* use `AZQ_BOOTSTRAP.md` to prove the live baseline
-* use `AZQ_COMMAND_MODEL.md` to understand the CLI shape
-* use `AZQ_ENGINE_SPEC.md` to understand what each engine owns
-* use `AZQ_FILESYSTEM_MODEL.md` to understand where artifacts live
-* use `AZQ_IMPLEMENTATION_PLAN.md` to understand what comes next
-* use `AZQ_PHILOSOPHY.md` only when you want the deeper why
+* use `docs/architecture/AZQ_BOOTSTRAP.md` to prove the live baseline
+* use `docs/architecture/AZQ_COMMAND_MODEL.md` to understand the CLI shape
+* use `docs/architecture/AZQ_ENGINE_SPEC.md` to understand what each engine owns
+* use `docs/architecture/AZQ_FILESYSTEM_MODEL.md` to understand where artifacts live
+* use `docs/architecture/AZQ_IMPLEMENTATION_PLAN.md` to understand what comes next
+* use `docs/architecture/AZQ_PHILOSOPHY.md` only when you want the deeper why
 
 ---
 

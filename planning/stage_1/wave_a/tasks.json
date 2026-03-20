@@ -1,0 +1,173 @@
+[
+{
+"task_id": "STAGE1-WAVEA-01",
+"title": "Create Finis storage module scaffolding",
+"goal": "Introduce a single new module that will own Finis path and storage decisions.",
+"files_to_create": [
+"azq/finis/storage.py"
+],
+"files_to_modify": [],
+"depends_on": [],
+"context": [
+"Wave A corresponds to tasks 2-6 in planning/stage_1/overview.md.",
+"The live repository layout is under azq/, not src/azq/.",
+"Stage 1 is about normalizing Finis storage from goals.json to file-backed goal records."
+],
+"requirements": [
+"Create azq/finis/storage.py.",
+"Do not refactor existing Finis command handlers yet.",
+"Keep this commit limited to storage module scaffolding and imports needed for future work."
+],
+"acceptance_criteria": [
+"azq/finis/storage.py exists.",
+"The module can be imported without error.",
+"No existing command behavior changes yet."
+],
+"suggested_commit_message": "add finis storage module scaffolding"
+},
+{
+"task_id": "STAGE1-WAVEA-02",
+"title": "Add canonical Finis path constants and directory helpers",
+"goal": "Centralize path ownership for Finis goal persistence.",
+"files_to_create": [],
+"files_to_modify": [
+"azq/finis/storage.py"
+],
+"depends_on": [
+"STAGE1-WAVEA-01"
+],
+"context": [
+"The canonical Stage 1 storage locations are data/finis/goals/ and data/finis/goals.json.",
+"goals.json is legacy migration input only.",
+"One module should own all Finis path decisions."
+],
+"requirements": [
+"Define constants for the goals directory and legacy goals.json file.",
+"Add a helper to ensure the goals directory exists.",
+"Add a helper to map a goal_id like FINIS_001 to a markdown file path in data/finis/goals/.",
+"Add a helper to list goal files in deterministic order."
+],
+"acceptance_criteria": [
+"All Finis paths are defined in azq/finis/storage.py.",
+"The goals directory can be created on demand.",
+"Goal file lookup and listing are deterministic."
+],
+"suggested_commit_message": "add finis storage path constants and helpers"
+},
+{
+"task_id": "STAGE1-WAVEA-03",
+"title": "Define the canonical normalized goal schema",
+"goal": "Create a normalization function that converts legacy JSON-shaped goal records into the Stage 1 canonical schema.",
+"files_to_create": [],
+"files_to_modify": [
+"azq/finis/storage.py"
+],
+"depends_on": [
+"STAGE1-WAVEA-02"
+],
+"context": [
+"Canonical Stage 1 goal fields are: goal_id, title, status, created, description, derived_from.",
+"Legacy goal records use goal instead of title.",
+"Migration should preserve noisy historical values rather than cleaning them aggressively."
+],
+"requirements": [
+"Add a normalization helper that accepts a legacy goal dict and returns a canonical goal dict.",
+"Map legacy goal -> title.",
+"Provide conservative fallback values for missing created, description, and derived_from fields.",
+"Do not read or write files yet in this task beyond code changes."
+],
+"acceptance_criteria": [
+"One function returns a complete canonical goal record.",
+"The canonical output always includes goal_id, title, status, created, description, and derived_from.",
+"Legacy fields are preserved where possible."
+],
+"suggested_commit_message": "add canonical finis goal normalization"
+},
+{
+"task_id": "STAGE1-WAVEA-04",
+"title": "Implement markdown goal file serialization and parsing",
+"goal": "Make canonical goal records readable and writable as diff-friendly markdown files.",
+"files_to_create": [],
+"files_to_modify": [
+"azq/finis/storage.py"
+],
+"depends_on": [
+"STAGE1-WAVEA-03"
+],
+"context": [
+"Stage 1 requires one goal per file named FINIS_###.md.",
+"The file format should be simple enough for future Formam code to read without transitional glue.",
+"Human readability matters."
+],
+"requirements": [
+"Choose and implement a markdown on-disk format for goal files.",
+"Add serializer and parser helpers in azq/finis/storage.py.",
+"Ensure all canonical fields are preserved round-trip.",
+"Keep the format simple and explicit."
+],
+"acceptance_criteria": [
+"A canonical goal record can be serialized to markdown and parsed back without losing required fields.",
+"The resulting file is human-readable and diff-friendly."
+],
+"suggested_commit_message": "add markdown goal file read write format"
+},
+{
+"task_id": "STAGE1-WAVEA-05",
+"title": "Implement file-backed goal repository reads and id allocation",
+"goal": "Allow file storage alone to support listing, lookup, and next-id generation.",
+"files_to_create": [],
+"files_to_modify": [
+"azq/finis/storage.py"
+],
+"depends_on": [
+"STAGE1-WAVEA-04"
+],
+"context": [
+"Later command refactors will depend on storage.py for all goal reads.",
+"Lookup should be exact-match on goal_id.",
+"ID allocation must remain stable and deterministic."
+],
+"requirements": [
+"Add functions to load all goals from data/finis/goals/.",
+"Add a function to load one goal by exact goal_id.",
+"Add a function to compute the next FINIS_### id from existing goal files.",
+"Keep ordering deterministic."
+],
+"acceptance_criteria": [
+"File storage alone can list goals, load one goal, and generate the next stable goal id.",
+"Exact lookup by goal_id works.",
+"Ordering is deterministic."
+],
+"suggested_commit_message": "add file backed finis goal reads and id allocation"
+},
+{
+"task_id": "STAGE1-WAVEA-06",
+"title": "Add read-only legacy goals.json migration reader",
+"goal": "Support legacy JSON as migration input without letting it remain the active write target.",
+"files_to_create": [],
+"files_to_modify": [
+"azq/finis/storage.py"
+],
+"depends_on": [
+"STAGE1-WAVEA-05"
+],
+"context": [
+"Wave A ends with the storage foundation, not command refactors yet.",
+"goals.json must be readable as legacy input only.",
+"Malformed or missing legacy JSON should fail diagnostically, not mysteriously."
+],
+"requirements": [
+"Add a dedicated read-only loader for data/finis/goals.json.",
+"Keep legacy parsing separate from canonical file-backed reads.",
+"Handle missing goals.json cleanly.",
+"Handle malformed JSON with useful exceptions or error messages."
+],
+"acceptance_criteria": [
+"The codebase can read legacy JSON state without treating it as canonical storage.",
+"Missing or malformed goals.json is diagnosable.",
+"No code in this task writes back to goals.json."
+],
+"suggested_commit_message": "add read only legacy finis json reader"
+}
+]
+

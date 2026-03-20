@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compatibility wrapper for the moved Codex task runner."""
+"""Compatibility shim for the stage-agnostic AZQ Codex task runner."""
 
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
@@ -7,7 +7,7 @@ import sys
 
 
 def _load_runner():
-    target = Path(__file__).resolve().parent / "codex" / "tools" / "azq_codex_task_runner.py"
+    target = Path(__file__).resolve().parent / "azq_codex_task_runner.py"
     spec = spec_from_file_location("azq_codex_task_runner_impl", target)
     if spec is None or spec.loader is None:
         raise ImportError(f"Unable to load runner at {target}")

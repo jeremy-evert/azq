@@ -310,14 +310,14 @@ class Stage2WaveCRegressionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
             new_runner = subprocess.run(
-                [sys.executable, str(repo_root / "azq_codex_task_runner.py"), "report", "--workspace", str(workspace)],
+                [sys.executable, str(repo_root / "codex" / "tools" / "azq_codex_task_runner.py"), "report", "--workspace", str(workspace)],
                 capture_output=True,
                 text=True,
                 cwd=repo_root,
             )
             self.assertEqual(new_runner.returncode, 0, new_runner.stdout + new_runner.stderr)
             self.assertTrue(
-                (workspace / "codex_reports" / "codex_azq_task_status_report.md").is_file()
+                (workspace / "codex" / "reports" / "codex_azq_task_status_report.md").is_file()
             )
 
             compat_runner = subprocess.run(

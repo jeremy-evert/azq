@@ -1,0 +1,100 @@
+[
+  {
+    "task_id": "STAGE2-WAVEC-01",
+    "title": "Add Stage 2 regression test suite for canonical Formam storage and CLI flows",
+    "goal": "Protect the Stage 2 Formam baseline with automated regression coverage over canonical deliverable storage, goal-map storage, parent-goal validation, id allocation, and the active Formam CLI command flow.",
+    "files_to_create": [
+      "tests/test_stage2_wave_c.py"
+    ],
+    "files_to_modify": [],
+    "depends_on": [
+      "STAGE2-WAVEB-05"
+    ],
+    "context": [
+      "Stage 2 Wave A established canonical Formam storage for deliverables and goal maps.",
+      "Stage 2 Wave B wired the active Formam command path through the CLI.",
+      "Wave C should close Stage 2 by turning the live implementation into a stable baseline rather than leaving it as a merely functional prototype."
+    ],
+    "requirements": [
+      "Add automated tests for deliverable normalization into the canonical schema.",
+      "Add automated tests for deliverable markdown round-trip behavior so canonical deliverables can be written and read without loss.",
+      "Add automated tests for deliverable id allocation from existing DELIV_### files.",
+      "Add automated tests for parent-goal validation against canonical Finis goal files.",
+      "Add automated tests for goal-map markdown round-trip behavior.",
+      "Add automated tests for the main Formam CLI command flow: form build, form list, form show, and form map.",
+      "Verify canonical backlinks from deliverables to exactly one parent goal.",
+      "Make the regression suite runnable through the repository's normal test command."
+    ],
+    "acceptance_criteria": [
+      "Stage 2 has a real automated regression suite under tests/.",
+      "The highest-risk Formam storage and CLI paths are covered by automated tests.",
+      "The tests prove the canonical file-backed deliverable and map model behaves deterministically.",
+      "The Stage 2 regression suite passes through the project's standard test command."
+    ],
+    "suggested_commit_message": "STAGE2-WAVEC-01: add stage 2 regression tests for canonical formam storage and cli flows"
+  },
+  {
+    "task_id": "STAGE2-WAVEC-02",
+    "title": "Align Stage 2 documentation with canonical Formam storage",
+    "goal": "Make the operator-facing documentation describe the live Formam system accurately, explicitly naming file-backed deliverables and goal maps as the canonical Stage 2 truth.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "README.md",
+      "docs/architecture/AZQ_BOOTSTRAP.md",
+      "planning/stage_2/overview.md"
+    ],
+    "depends_on": [
+      "STAGE2-WAVEC-01"
+    ],
+    "context": [
+      "Formam is now live through canonical file-backed storage under data/form/deliverables/ and data/form/maps/.",
+      "The docs must stop presenting Formam as only aspirational or partially planned.",
+      "Wave C is the Stage 2 closeout wave, so the docs should clearly reflect the new baseline before later architecture expands beyond this stage."
+    ],
+    "requirements": [
+      "Refactor README.md so the project overview reflects live Formam behavior rather than only planned behavior.",
+      "Refactor docs/architecture/AZQ_BOOTSTRAP.md so bootstrap instructions describe canonical Formam storage correctly.",
+      "Refactor planning/stage_2/overview.md so its language matches the implemented canonical Formam baseline.",
+      "Explicitly define data/form/deliverables/ and data/form/maps/ as the canonical Stage 2 system of record.",
+      "Remove or rewrite wording that implies Formam is still only aspirational or not yet active.",
+      "Keep the language aligned with the repository's existing craft and stage vocabulary."
+    ],
+    "acceptance_criteria": [
+      "The main operator-facing docs describe file-backed deliverables and goal maps as the canonical Formam storage model.",
+      "The docs no longer imply Formam is only a future design target.",
+      "A new operator can read the docs and understand how Formam records are stored and inspected."
+    ],
+    "suggested_commit_message": "STAGE2-WAVEC-02: align stage 2 documentation with canonical formam storage"
+  },
+  {
+    "task_id": "STAGE2-WAVEC-03",
+    "title": "Add graceful Stage 2 closeout behavior to the ritual runner",
+    "goal": "Make the ritual runner treat an exhausted Stage 2 wave as a successful closeout state by printing a final status summary and explicit Stage 2 completion message instead of failing noisily.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq_codex_stage1_task_runner.py",
+      "run_next_task_in_current_wave.sh"
+    ],
+    "depends_on": [
+      "STAGE2-WAVEC-02"
+    ],
+    "context": [
+      "The runner now drives staged work across multiple waves and stages.",
+      "A closeout wave should end with a clean terminal state, not with a no-tasks-remaining exception or a brittle shell-path failure.",
+      "Stage 1 already benefited from graceful closeout behavior, and Stage 2 should receive the same polish."
+    ],
+    "requirements": [
+      "Add a graceful no-tasks-remaining branch for the current Stage 2 wave.",
+      "Make the ritual runner emit the current task status report even when no work remains.",
+      "Make the ritual runner print an explicit completion message for Stage 2 instead of returning a non-zero exit code for the exhausted-wave case.",
+      "Keep the behavior readable and operator-friendly in the terminal.",
+      "Do not broaden this task into unrelated runner redesign."
+    ],
+    "acceptance_criteria": [
+      "Running the ritual with no remaining Stage 2 Wave C tasks exits successfully.",
+      "The runner still prints a summary report when the wave backlog is exhausted.",
+      "The terminal output clearly indicates that Stage 2 is complete."
+    ],
+    "suggested_commit_message": "STAGE2-WAVEC-03: add graceful stage 2 closeout behavior to the ritual runner"
+  }
+]
