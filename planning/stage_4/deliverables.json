@@ -1,0 +1,191 @@
+{
+  "stage": "stage_4",
+  "stage_title": "Deepen Finis as the human-intent layer",
+  "stage_summary": "Stage 4 deepens the live Finis baseline from simple spark-to-goal promotion into a visible goal-shaping layer. The current repo already supports canonical goal files, goal listing, goal add/close/archive flows, and the interactive `azq fine` review loop. What remains is the richer human-intent work named in the rebased implementation plan: proposal artifacts, narrowing questions, usefulness and tractability support, stronger goal review states, and clearer intent packaging for downstream LLM-facing work.",
+  "baseline_guardrails": [
+    "Stage 1 Finis baseline is already implemented in canonical goal storage and must not be re-planned here.",
+    "Stage 2 Formam baseline is already implemented and remains the existing artifact-shaping baseline for downstream work.",
+    "Stage 3 Agenda baseline is already implemented and remains the existing task and DAG baseline for downstream work.",
+    "Post-baseline Stage 4 deliverables must deepen the current Finis layer rather than recreate spark capture, canonical goal storage, or the existing `azq fine` candidate-promotion flow."
+  ],
+  "deliverables": [
+    {
+      "id": "S4_DELIV_001",
+      "title": "Richer Finis goal review surface",
+      "stage": "stage_4",
+      "description": "Extend the live Finis review flow so a human can inspect spark-derived candidate goals with explicit review states, visible provenance boundaries, and clearer judgment before promotion into canonical goals. This should build on the current `azq fine` baseline rather than replacing it.",
+      "why_it_exists": "The repo already has a working `azq fine` path in `azq/finis/fine.py`, but the rebased implementation plan names richer review states and stronger intent clarification as the real next Finis work. Stage 4 must protect human intent from model drift rather than letting proposal text blur into accepted goal text.",
+      "acceptance_criteria": [
+        "A live Finis command surface allows a human to review candidate goals with more than a one-step promote-or-skip path.",
+        "Review state is recorded in visible Finis review artifacts under `data/finis/reviews/` rather than being held only in transient CLI interaction.",
+        "The review surface keeps raw spark material, proposal text, human revision text, and accepted canonical goal text visibly distinct instead of collapsing them into one blob.",
+        "Canonical goal creation still writes normalized goal files under `data/finis/goals/` and does not bypass existing storage helpers.",
+        "Tests cover the richer review flow without re-testing already-complete Stage 1 storage behavior as if it were new work."
+      ],
+      "affected_paths": [
+        "azq/cli.py",
+        "azq/finis/cli.py",
+        "azq/finis/fine.py",
+        "azq/finis/storage.py",
+        "azq/finis/goals.py",
+        "data/finis/reviews/",
+        "data/finis/goals/",
+        "data/scintilla/sparks/",
+        "tests/"
+      ],
+      "dependencies": [
+        "baseline: Stage 1 Finis canonical goal storage",
+        "baseline: Scintilla spark listing and inspection"
+      ],
+      "status": "partial"
+    },
+    {
+      "id": "S4_DELIV_002",
+      "title": "Finis proposal artifact flow",
+      "stage": "stage_4",
+      "description": "Introduce visible proposal artifacts so candidate goal shaping can exist as durable reviewable material before a goal becomes canonical. Proposal artifacts should preserve model-origin suggestions as distinct proposal text, not as silently rewritten goal truth.",
+      "why_it_exists": "The implementation plan names proposal artifacts as a Stage 4 concern, and the current repo has no separate proposal artifact family in Finis. AZQ needs this layer to let models suggest language without overwriting what the human originally meant.",
+      "acceptance_criteria": [
+        "Finis has a canonical proposal artifact format and home under `data/finis/proposals/` that is distinct from canonical goal files.",
+        "A live Finis command can create or refresh a proposal artifact from one or more sparks without immediately creating a canonical goal.",
+        "Proposal artifacts preserve lineage back to exact originating sparks and label proposal text as model-origin, human-origin, or mixed only when the repo has evidence for that label.",
+        "Proposal artifacts remain pre-goal shaping artifacts and do not replace accepted canonical goals under `data/finis/goals/`."
+      ],
+      "affected_paths": [
+        "azq/cli.py",
+        "azq/finis/cli.py",
+        "azq/finis/fine.py",
+        "azq/finis/storage.py",
+        "data/finis/proposals/",
+        "data/finis/goals/",
+        "data/scintilla/sparks/",
+        "tests/"
+      ],
+      "dependencies": [
+        "S4_DELIV_001",
+        "S4_DELIV_006",
+        "baseline: Stage 1 Finis canonical goal storage"
+      ],
+      "status": "missing"
+    },
+    {
+      "id": "S4_DELIV_003",
+      "title": "Finis narrowing-question support",
+      "stage": "stage_4",
+      "description": "Add a Finis surface for generating and preserving narrowing questions that help the human clarify ambiguous or overly broad intent before goal acceptance. Narrowing questions should operate inside the review flow so unanswered ambiguity does not leak into accepted goal text.",
+      "why_it_exists": "The implementation plan explicitly calls out narrowing-question support, and no such review artifact or CLI surface exists in the current repo. This is a direct anti-drift measure: the system should slow down and ask before it lets model suggestions harden into accepted intent.",
+      "acceptance_criteria": [
+        "Finis can record one or more narrowing questions linked to an exact review artifact or proposal artifact rather than only to a loose text blob.",
+        "Narrowing questions are stored in visible Finis artifacts under `data/finis/questions/` rather than only printed as ephemeral terminal text.",
+        "A human can revisit unresolved narrowing questions during later Finis review before canonical goal acceptance.",
+        "Question records preserve provenance between the spark material that triggered the question, the proposal text under review, and any later human revision text.",
+        "Tests or review fixtures demonstrate that narrowing-question artifacts remain tied to exact Finis or spark identifiers."
+      ],
+      "affected_paths": [
+        "azq/finis/cli.py",
+        "azq/finis/fine.py",
+        "azq/finis/storage.py",
+        "data/finis/questions/",
+        "data/finis/reviews/",
+        "data/finis/proposals/",
+        "data/scintilla/sparks/",
+        "tests/"
+      ],
+      "dependencies": [
+        "S4_DELIV_001",
+        "S4_DELIV_002",
+        "S4_DELIV_006"
+      ],
+      "status": "missing"
+    },
+    {
+      "id": "S4_DELIV_004",
+      "title": "Usefulness and tractability notes for goal shaping",
+      "stage": "stage_4",
+      "description": "Add explicit Finis support for recording why a goal is useful, why it is tractable or not, and what caveats remain before it is accepted. These notes should support human judgment inside the review loop rather than appearing as model-colored afterthoughts.",
+      "why_it_exists": "The rebased plan names usefulness and tractability notes as part of the real Stage 4 scope, while the current goal schema and `azq fine` flow do not capture that judgment explicitly.",
+      "acceptance_criteria": [
+        "Finis review artifacts can record usefulness and tractability notes without corrupting the existing canonical goal schema.",
+        "The review surface makes those notes visible before a goal is accepted for downstream work.",
+        "Notes preserve whether the reasoning came from the human reviewer, from model-generated proposal analysis, or from later human revision.",
+        "Accepted canonical goals either preserve a stable summary of those notes or preserve durable linkage back to the review artifact that contains them.",
+        "Tests verify that the notes remain attached to the correct Finis lineage instead of floating as unbound commentary."
+      ],
+      "affected_paths": [
+        "azq/finis/fine.py",
+        "azq/finis/storage.py",
+        "data/finis/reviews/",
+        "data/finis/goals/",
+        "tests/"
+      ],
+      "dependencies": [
+        "S4_DELIV_001",
+        "S4_DELIV_002",
+        "S4_DELIV_006"
+      ],
+      "status": "missing"
+    },
+    {
+      "id": "S4_DELIV_005",
+      "title": "Intent package for downstream model-facing work",
+      "stage": "stage_4",
+      "description": "Create a Finis-owned intent package that acts as the acceptance boundary for downstream model-facing work. The package should preserve accepted human purpose, caveats, and lineage in a stable artifact that downstream stages may consume only after Finis review is complete.",
+      "why_it_exists": "The current repo has canonical goal files but not a dedicated artifact that packages clarified intent for later LLM-facing stages. The implementation plan names better packaging of human intent as the outcome of Stage 4, and AZQ needs a hard boundary between pre-acceptance suggestion churn and accepted intent that later model-facing work may rely on.",
+      "acceptance_criteria": [
+        "Finis can emit or maintain a stable intent package artifact under `data/finis/intent_packages/` linked to an exact canonical goal.",
+        "The intent package is only created or marked ready after the richer review flow has resolved the proposal, question, and judgment surfaces that feed goal acceptance.",
+        "The intent package distinguishes raw spark excerpts, model-generated proposal text, human revision text, and accepted canonical goal text instead of flattening them into one summary.",
+        "Downstream model-facing work can depend on the intent package as the accepted boundary artifact rather than re-reading pre-acceptance proposal text as if it were canonical.",
+        "Tests or fixture-backed review show that the package survives later handoff without losing the originating goal identity or provenance boundaries."
+      ],
+      "affected_paths": [
+        "azq/finis/cli.py",
+        "azq/finis/fine.py",
+        "azq/finis/storage.py",
+        "azq/finis/goals.py",
+        "data/finis/intent_packages/",
+        "data/finis/goals/",
+        "data/finis/reviews/",
+        "data/finis/proposals/",
+        "data/scintilla/sparks/",
+        "tests/"
+      ],
+      "dependencies": [
+        "S4_DELIV_002",
+        "S4_DELIV_003",
+        "S4_DELIV_004",
+        "S4_DELIV_006",
+        "baseline: Stage 1 Finis canonical goal storage"
+      ],
+      "status": "missing"
+    },
+    {
+      "id": "S4_DELIV_006",
+      "title": "Provenance-preserving human and model intent lineage",
+      "stage": "stage_4",
+      "description": "Add a Finis provenance contract that preserves the boundary between raw human spark material, model-generated proposal text, human revision text, and accepted canonical goal text. This contract should make it possible to review how wording changed without letting model suggestions masquerade as original intent.",
+      "why_it_exists": "AZQ is meant to be a wrapper that protects human intent from model drift. The current repo keeps lineage between sparks and goals, but it does not yet have an explicit Stage 4 artifact contract for separating human-origin and model-origin text during deeper intent shaping.",
+      "acceptance_criteria": [
+        "Finis artifacts used in Stage 4 expose fields or sections that distinguish raw spark excerpts, proposal text, human revision text, and accepted canonical goal text.",
+        "The provenance contract preserves exact lineage to canonical spark artifact identifiers and `FINIS_###` goal identifiers where applicable.",
+        "No Stage 4 artifact treats model-generated proposal text as accepted canonical goal text without an explicit human acceptance step recorded in review artifacts.",
+        "Tests or review fixtures demonstrate one end-to-end example where human-origin wording and model-origin suggestions remain visibly distinct across proposal, review, and acceptance artifacts."
+      ],
+      "affected_paths": [
+        "azq/finis/storage.py",
+        "azq/finis/fine.py",
+        "data/finis/proposals/",
+        "data/finis/reviews/",
+        "data/finis/intent_packages/",
+        "data/finis/goals/",
+        "data/scintilla/sparks/",
+        "tests/"
+      ],
+      "dependencies": [
+        "baseline: Stage 1 Finis canonical goal storage",
+        "baseline: Scintilla spark listing and inspection"
+      ],
+      "status": "missing"
+    }
+  ]
+}
