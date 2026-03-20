@@ -1,0 +1,194 @@
+{
+  "stage": "stage_5",
+  "stage_title": "Deepen Formam as the artifact-shaping layer",
+  "stage_summary": "Stage 5 deepens Formam beyond the implemented Stage 2 baseline. The repo already supports canonical deliverable files, goal maps, `azq form build`, `azq form list`, `azq form show`, and `azq form map`, but the generated artifacts remain intentionally sparse and stub-first. The forward work is richer deliverable shaping: proposal artifacts, expansion, refinement, prioritization, stronger maps, provenance-preserving artifact definitions, and clearer downstream handoff without collapsing Formam into Agenda.",
+  "baseline_guardrails": [
+    "Stage 1 Finis baseline is already implemented and remains the canonical source of accepted goals.",
+    "Stage 2 Formam baseline is already implemented in canonical deliverable and map storage and must not be re-planned here.",
+    "Stage 3 Agenda baseline is already implemented and remains the current executable task layer downstream of Formam.",
+    "Post-baseline Stage 5 deliverables must deepen Formam artifact shaping rather than recreate canonical deliverable storage, map storage, or the existing `azq form` command family.",
+    "Stage 5 must preserve Formam's boundary: define what should exist and how it should be shaped, without turning Formam into a task decomposition layer."
+  ],
+  "deliverables": [
+    {
+      "id": "S5_DELIV_001",
+      "title": "Deliverable proposal and expansion flow",
+      "stage": "stage_5",
+      "description": "Add a Formam flow that can expand one accepted goal into a richer set of candidate deliverables than the current single-stub baseline produced by `azq form build`. Proposal artifacts must remain distinct from accepted canonical deliverables so model-suggested artifact shape does not silently become deliverable truth.",
+      "why_it_exists": "The current Stage 2 baseline proves that Formam can create deliverables and maps, but the implementation plan makes richer deliverable shaping the real next Formam concern. AZQ needs a proposal-bearing layer so artifact shape can be explored without collapsing exploratory language into accepted structure.",
+      "acceptance_criteria": [
+        "Formam has a canonical proposal artifact format and home under `data/form/proposals/` that is distinct from accepted deliverable files under `data/form/deliverables/`.",
+        "A live Formam surface can generate or refresh more than one candidate deliverable for a single accepted goal when the goal warrants it.",
+        "Proposal artifacts preserve exact lineage to one parent goal and, when applicable, to the accepted Finis intent package that informed the shaping pass.",
+        "Accepted deliverables remain canonical Formam artifacts and are not replaced by proposal text.",
+        "Tests demonstrate that proposal-driven deliverable expansion remains stable, inspectable, and exact-id addressable."
+      ],
+      "affected_paths": [
+        "azq/cli.py",
+        "azq/formam/cli.py",
+        "azq/formam/build.py",
+        "azq/formam/deliverables.py",
+        "azq/formam/storage.py",
+        "data/form/proposals/",
+        "data/form/deliverables/",
+        "data/form/maps/",
+        "tests/"
+      ],
+      "dependencies": [
+        "baseline: Stage 2 Formam canonical deliverable storage",
+        "baseline: Stage 1 Finis canonical goal storage",
+        "S4_DELIV_005",
+        "S4_DELIV_006"
+      ],
+      "status": "missing"
+    },
+    {
+      "id": "S5_DELIV_002",
+      "title": "Deliverable refinement and review flow",
+      "stage": "stage_5",
+      "description": "Introduce a visible refinement loop so deliverables can be clarified, revised, and re-reviewed before Agenda turns them into executable work. The review flow must preserve the boundary between proposal text, human revision text, and accepted canonical deliverable text.",
+      "why_it_exists": "The current repo can create and inspect deliverables, but there is no deeper review path for improving artifact descriptions or tightening scope after initial creation. Stage 5 should make Formam the place where artifact shape becomes clear enough for later execution without losing who changed what.",
+      "acceptance_criteria": [
+        "Formam has a stable review artifact or command surface for revising deliverable descriptions without breaking deliverable identity.",
+        "Review state is recorded in visible Formam artifacts under `data/form/reviews/` rather than being held only in overwritten deliverable text.",
+        "The review flow keeps proposal text, human revision text, and accepted canonical deliverable text visibly distinct.",
+        "Refined deliverables remain consumable by the existing Agenda baseline without forcing Agenda to re-interpret proposal churn.",
+        "Tests or fixtures show that a refined deliverable can still be shown, listed, and mapped through canonical Formam storage."
+      ],
+      "affected_paths": [
+        "azq/formam/cli.py",
+        "azq/formam/build.py",
+        "azq/formam/deliverables.py",
+        "azq/formam/storage.py",
+        "data/form/reviews/",
+        "data/form/proposals/",
+        "data/form/deliverables/",
+        "tests/"
+      ],
+      "dependencies": [
+        "S5_DELIV_001",
+        "S5_DELIV_006"
+      ],
+      "status": "missing"
+    },
+    {
+      "id": "S5_DELIV_003",
+      "title": "Formam prioritization surface",
+      "stage": "stage_5",
+      "description": "Add a Formam-owned prioritization surface that distinguishes what should be built now, what can wait, and what is not yet worth handing into Agenda. Prioritization must remain artifact-shaping judgment, not a disguised task queue.",
+      "why_it_exists": "The implementation plan explicitly names prioritization and build-now versus later distinctions, and the current deliverable schema does not yet express that planning judgment. Formam should help decide which artifact shapes deserve execution attention before Agenda gets involved.",
+      "acceptance_criteria": [
+        "Formam artifacts can record a visible prioritization or sequencing signal for deliverables tied to one parent goal.",
+        "The prioritization surface remains Formam-owned and does not become a surrogate task queue.",
+        "Agenda build flows can respect the prioritization signal without requiring a rewrite of Stage 3 baseline behavior.",
+        "Prioritization artifacts preserve lineage to the accepted goal and the reviewed deliverable set that was prioritized.",
+        "Tests or repo-visible fixtures show that prioritization is stable on disk and reviewable by operators."
+      ],
+      "affected_paths": [
+        "azq/formam/cli.py",
+        "azq/formam/deliverables.py",
+        "azq/formam/maps.py",
+        "azq/formam/storage.py",
+        "azq/agenda/",
+        "data/form/reviews/",
+        "data/form/deliverables/",
+        "data/form/maps/",
+        "tests/"
+      ],
+      "dependencies": [
+        "S5_DELIV_001",
+        "S5_DELIV_002",
+        "S4_DELIV_005"
+      ],
+      "status": "missing"
+    },
+    {
+      "id": "S5_DELIV_004",
+      "title": "Richer goal-map refinement",
+      "stage": "stage_5",
+      "description": "Deepen goal maps so they hold more useful dependency and relationship structure than the current sparse baseline while staying visibly human-readable. The refined map should explain artifact relationships without drifting into task-level execution detail.",
+      "why_it_exists": "The Stage 2 baseline already has canonical maps and `azq form map`, so there is real groundwork here. The implementation plan names richer map refinement as the next step rather than map introduction.",
+      "acceptance_criteria": [
+        "Goal maps can capture more than a flat list of deliverables and sparse dependency edges when the parent goal has real internal structure.",
+        "Map refresh keeps deterministic output and exact linkage to one parent goal.",
+        "The richer map remains readable on disk and does not require hidden orchestration to interpret.",
+        "Map structure distinguishes artifact relationships from later Agenda task execution order.",
+        "Tests or reviewable fixtures demonstrate map refinement without reintroducing Agenda task-level concerns."
+      ],
+      "affected_paths": [
+        "azq/formam/maps.py",
+        "azq/formam/map_storage.py",
+        "azq/formam/storage.py",
+        "data/form/maps/",
+        "tests/"
+      ],
+      "dependencies": [
+        "baseline: Stage 2 Formam canonical map storage",
+        "S5_DELIV_001"
+      ],
+      "status": "partial"
+    },
+    {
+      "id": "S5_DELIV_005",
+      "title": "Accepted deliverable definition package for downstream handoff",
+      "stage": "stage_5",
+      "description": "Strengthen Formam so downstream Agenda and later model-facing work receive a bounded accepted deliverable definition instead of a thin stub. This definition package should act as the acceptance boundary between Formam shaping and later execution shaping.",
+      "why_it_exists": "The current deliverable schema exists and is real, but the implementation plan says Formam must become a stronger artifact-shaping layer for LLM-assisted collaboration. AZQ needs a stable boundary artifact so downstream work does not re-read proposal churn as if it were accepted deliverable truth.",
+      "acceptance_criteria": [
+        "Formam can emit or maintain a stable accepted deliverable definition artifact under `data/form/definitions/` or equivalent canonical Formam storage linked to an exact deliverable id.",
+        "The definition package is created or marked ready only after proposal and review surfaces have resolved the deliverable into accepted artifact shape.",
+        "The definition package distinguishes goal-derived constraints, model-generated shaping text, human revision text, and accepted canonical deliverable text instead of flattening them into one summary.",
+        "Downstream Agenda code can consume the accepted definition package through stable Formam helpers or artifact fields rather than re-reading pre-acceptance proposal text.",
+        "Tests confirm that the accepted deliverable definition survives list, show, map, and downstream handoff flows."
+      ],
+      "affected_paths": [
+        "azq/formam/schemas.py",
+        "azq/formam/deliverable_storage.py",
+        "azq/formam/storage.py",
+        "azq/agenda/",
+        "data/form/definitions/",
+        "data/form/deliverables/",
+        "data/form/reviews/",
+        "data/form/proposals/",
+        "tests/"
+      ],
+      "dependencies": [
+        "S5_DELIV_002",
+        "S5_DELIV_006",
+        "S4_DELIV_005"
+      ],
+      "status": "partial"
+    },
+    {
+      "id": "S5_DELIV_006",
+      "title": "Provenance-preserving deliverable shaping lineage",
+      "stage": "stage_5",
+      "description": "Add a Formam provenance contract that preserves the boundary between accepted goal intent, model-generated deliverable shaping text, human revision text, accepted canonical deliverable text, and accepted map state. This contract should make it possible to review how artifact shape changed without letting model suggestions masquerade as accepted structure.",
+      "why_it_exists": "AZQ is meant to be a wrapper that protects human intent from model drift. Stage 4 establishes that protection at the goal layer, and Stage 5 must preserve it at the artifact-shaping layer. The current repo has real deliverable and map lineage, but it does not yet have an explicit contract for separating human-origin and model-origin shaping during deeper Formam work.",
+      "acceptance_criteria": [
+        "Formam artifacts used in Stage 5 expose fields or sections that distinguish accepted goal intent, proposal text, human revision text, accepted canonical deliverable text, and accepted map state where applicable.",
+        "The provenance contract preserves exact lineage to `FINIS_###` goal identifiers and canonical deliverable identifiers where applicable.",
+        "No Stage 5 artifact treats model-generated shaping text as accepted canonical deliverable text or accepted map truth without an explicit human acceptance step recorded in Formam review artifacts.",
+        "Tests or review fixtures demonstrate one end-to-end example where goal intent, model-origin shaping suggestions, human revision, and accepted deliverable structure remain visibly distinct across proposal, review, and acceptance artifacts."
+      ],
+      "affected_paths": [
+        "azq/formam/storage.py",
+        "azq/formam/build.py",
+        "azq/formam/deliverable_storage.py",
+        "azq/formam/map_storage.py",
+        "data/form/proposals/",
+        "data/form/reviews/",
+        "data/form/definitions/",
+        "data/form/deliverables/",
+        "data/form/maps/",
+        "tests/"
+      ],
+      "dependencies": [
+        "baseline: Stage 2 Formam canonical deliverable storage",
+        "baseline: Stage 2 Formam canonical map storage",
+        "S4_DELIV_006"
+      ],
+      "status": "missing"
+    }
+  ]
+}
