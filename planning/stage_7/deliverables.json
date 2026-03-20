@@ -1,0 +1,109 @@
+{
+  "stage": "stage_7",
+  "stage_title": "Archive-first stewardship and Domum",
+  "stage_summary": "Stage 7 introduces stewardship work that does not yet exist in the live baseline. The current repo still includes destructive spark deletion in Scintilla and has no Domum package, archive home, or repository maintenance surface. The rebased implementation plan makes safe retirement and visible continuity the next stewardship horizon, starting with archive-first behavior and only then adding broader review and maintenance surfaces.",
+  "baseline_guardrails": [
+    "Stage 1 Finis baseline is already implemented and remains the canonical goal layer.",
+    "Stage 2 Formam baseline is already implemented and remains the canonical deliverable and map layer.",
+    "Stage 3 Agenda baseline is already implemented and remains the canonical task, DAG, and task-log layer.",
+    "Post-baseline Stage 7 deliverables must add archive-first stewardship and Domum without recreating the existing Scintilla, Finis, Formam, or Agenda baselines."
+  ],
+  "deliverables": [
+    {
+      "id": "S7_DELIV_001",
+      "title": "Archive-first spark retirement",
+      "stage": "stage_7",
+      "description": "Replace the current destructive spark deletion path with an archive-first retirement flow that preserves repository memory while still allowing a spark to leave the active working set.",
+      "why_it_exists": "The live CLI includes `azq spark rm <id>` and the gap report calls out destructive deletion as a real mismatch with the intended continuity model.",
+      "acceptance_criteria": [
+        "Scintilla retirement of sparks uses an archive move or archive marker instead of deleting the canonical spark artifact outright.",
+        "The operator can still inspect archived spark lineage after retirement.",
+        "The active spark listing surface distinguishes active and archived sparks clearly enough to avoid silent disappearance.",
+        "Tests verify that retirement preserves exact spark identity and does not orphan related review material."
+      ],
+      "affected_paths": [
+        "azq/scintilla/spark_delete.py",
+        "azq/scintilla/storage.py",
+        "azq/scintilla/cli.py",
+        "data/scintilla/",
+        "data/archive/",
+        "tests/"
+      ],
+      "dependencies": [
+        "baseline: Scintilla spark storage",
+        "baseline: Stage 1 Finis baseline"
+      ],
+      "status": "missing"
+    },
+    {
+      "id": "S7_DELIV_002",
+      "title": "Archive home and movement rules",
+      "stage": "stage_7",
+      "description": "Define the canonical archive home under `data/` and the movement or marking rules that later engines can rely on when artifacts retire from active use.",
+      "why_it_exists": "The implementation plan names an archive home under `data/` as the start of Stage 7, and the current repo has no archive storage contract.",
+      "acceptance_criteria": [
+        "A canonical archive home exists under `data/` with clear ownership rules for archived artifacts.",
+        "Archive movement or marking rules are explicit enough that Scintilla and later engines can retire artifacts without inventing one-off behavior.",
+        "Archived artifacts remain inspectable and retain lineage to their active identifiers.",
+        "Docs or tests describe archive handling as additive stewardship rather than destructive cleanup."
+      ],
+      "affected_paths": [
+        "data/archive/",
+        "docs/architecture/AZQ_FILESYSTEM_MODEL.md",
+        "docs/architecture/AZQ_STATE_MODEL.md",
+        "tests/"
+      ],
+      "dependencies": [
+        "S7_DELIV_001"
+      ],
+      "status": "missing"
+    },
+    {
+      "id": "S7_DELIV_003",
+      "title": "Domum engine baseline",
+      "stage": "stage_7",
+      "description": "Introduce the Domum engine as the stewardship owner for archive review, continuity inspection, and later repository-wide readers.",
+      "why_it_exists": "The implementation plan explicitly names Domum as the new engine for stewardship work, and no `azq/domum/` package exists in the current repo.",
+      "acceptance_criteria": [
+        "A live `azq/domum/` package exists with import-safe module boundaries and a clear stewardship responsibility.",
+        "Domum can read archive or maintenance artifacts from canonical storage without taking over Finis, Formam, or Agenda ownership.",
+        "The CLI exposes a Domum-owned surface or route that is visibly separate from existing engine commands.",
+        "Tests verify that Domum reads visible repository truth rather than hidden runtime state."
+      ],
+      "affected_paths": [
+        "azq/domum/",
+        "azq/cli.py",
+        "data/archive/",
+        "tests/"
+      ],
+      "dependencies": [
+        "S7_DELIV_002"
+      ],
+      "status": "missing"
+    },
+    {
+      "id": "S7_DELIV_004",
+      "title": "Stewardship review and maintenance artifacts",
+      "stage": "stage_7",
+      "description": "Add visible review and maintenance artifacts that help an operator understand what has been archived, what remains active, and what continuity risks exist before repository-wide readers arrive.",
+      "why_it_exists": "The implementation plan calls for visible review and maintenance artifacts during Stage 7, and nothing comparable exists yet in the current repo.",
+      "acceptance_criteria": [
+        "Stewardship review artifacts exist on disk and summarize active-versus-archived state for supported artifact families.",
+        "Maintenance artifacts or reports remain tied to exact repository paths and identifiers.",
+        "The artifacts can be regenerated or refreshed from visible repo state without hidden side channels.",
+        "Tests or fixtures demonstrate at least one reviewable stewardship artifact produced from archive-aware state."
+      ],
+      "affected_paths": [
+        "azq/domum/",
+        "data/archive/",
+        "data/",
+        "tests/"
+      ],
+      "dependencies": [
+        "S7_DELIV_003",
+        "S7_DELIV_001"
+      ],
+      "status": "missing"
+    }
+  ]
+}
