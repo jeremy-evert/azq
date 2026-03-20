@@ -1,0 +1,87 @@
+[
+  {
+    "task_id": "DOCALIGN-WAVEA-01",
+    "title": "Revise AZQ state model against Medulla and live repo truth",
+    "goal": "Repair docs/architecture/AZQ_STATE_MODEL.md so it stops teaching false live state, false canonical storage, and non-live command behavior that could mislead future Opifex work.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "docs/architecture/AZQ_STATE_MODEL.md"
+    ],
+    "depends_on": [],
+    "context": [
+      "This is a doctrine-repair wave grounded in docs/architecture/AZQ_Medulla.md and codex/reports/azq_architecture_repair_task_list.md.",
+      "codex/reports/azq_medulla_alignment_report.md identifies docs/architecture/AZQ_STATE_MODEL.md as the highest-risk architecture document because it teaches stale Finis storage, non-live commands, and transitions the repo does not enforce.",
+      "The live repo truth is the current CLI under azq/cli.py, file-backed Finis storage under azq/finis/storage.py, the Stage 3 Agenda baseline under azq/agenda/build.py, and the Stage 1 through Stage 3 regression tests under tests/."
+    ],
+    "requirements": [
+      "Revise docs/architecture/AZQ_STATE_MODEL.md so it no longer claims data/finis/goals.json is the current canonical Finis store.",
+      "Remove or clearly relabel non-live command behavior such as azq goal create, azq goal pause, azq goal resume, azq archive, azq prune, azq task complete, azq status, and azq doctor so the document does not teach them as current repo truth.",
+      "Re-anchor the document to the live craft baseline and to AZQ_Medulla doctrine, especially around continuity, accepted canonical state, and truthful live command/state boundaries.",
+      "Keep the repair document-only. Do not introduce engine-feature work or new architecture beyond what the repo and reports already support."
+    ],
+    "acceptance_criteria": [
+      "docs/architecture/AZQ_STATE_MODEL.md no longer teaches false live Finis storage or non-live command families as current behavior.",
+      "The revised state model distinguishes live repo truth from future direction clearly enough to support safe future Codex work.",
+      "The document remains subordinate to docs/architecture/AZQ_Medulla.md and matches the live repo more closely than the pre-repair version."
+    ],
+    "suggested_commit_message": "revise azq state model to match medulla and live repo truth"
+  },
+  {
+    "task_id": "DOCALIGN-WAVEA-02",
+    "title": "Tighten the craft charter around continuity, lineage, and accepted state",
+    "goal": "Repair docs/architecture/AZQ_CRAFT_CHARTER.md so its laws and stage guidance strengthen Medulla alignment instead of weakening continuity through loose deletion language.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "docs/architecture/AZQ_CRAFT_CHARTER.md"
+    ],
+    "depends_on": [
+      "DOCALIGN-WAVEA-01"
+    ],
+    "context": [
+      "codex/reports/azq_architecture_repair_task_list.md marks docs/architecture/AZQ_CRAFT_CHARTER.md as the next Priority 1 repair after the state model.",
+      "codex/reports/azq_medulla_alignment_report.md finds the charter structurally sound but weak in marrow where deletion and pruning are treated too casually relative to continuity and archive-first stewardship.",
+      "The live repo still has destructive spark deletion in azq/scintilla/spark_delete.py, so doctrine must not normalize deletion faster than stewardship."
+    ],
+    "requirements": [
+      "Tighten docs/architecture/AZQ_CRAFT_CHARTER.md so its craft laws align with AZQ_Medulla on continuity, lineage, accepted canonical state, and the human-vs-model judgment boundary.",
+      "Rework the deletion/pruning language so it does not undercut archive-first stewardship or destructive-state caution.",
+      "Preserve the existing five-engine craft order and the charter's strong anti-task-fragmentation structure.",
+      "Keep the repair document-only and avoid turning the charter into an engine-feature plan."
+    ],
+    "acceptance_criteria": [
+      "The charter still reads like the AZQ charter, but no longer weakens Medulla continuity or accepted-state doctrine.",
+      "Deletion and pruning language is clearly subordinate to stewardship and continuity rather than presented as a first-class shortcut.",
+      "Future Opifex readers can use the charter without being pushed toward anti-Medulla cleanup behavior."
+    ],
+    "suggested_commit_message": "tighten craft charter for medulla continuity and lineage"
+  },
+  {
+    "task_id": "DOCALIGN-WAVEA-03",
+    "title": "Narrow the planning loop so it stays subordinate to the craft spine",
+    "goal": "Repair docs/architecture/AZQ_PLANNING_LOOP.md so visible reasoning remains useful without drifting into a generic planning doctrine that competes with AZQ's spark-to-action continuity spine.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "docs/architecture/AZQ_PLANNING_LOOP.md"
+    ],
+    "depends_on": [
+      "DOCALIGN-WAVEA-02"
+    ],
+    "context": [
+      "codex/reports/azq_architecture_repair_task_list.md marks docs/architecture/AZQ_PLANNING_LOOP.md as the third Priority 1 repair in this wave.",
+      "codex/reports/azq_medulla_alignment_report.md finds the planning loop spiritually sympathetic but off-center because it can teach a generic visible-planning system instead of the AZQ craft spine.",
+      "The live repo's accepted-state seams are the canonical artifact homes under data/finis/, data/form/, and data/agenda/, and the planning loop should not blur those with proposal artifacts or a parallel planning engine."
+    ],
+    "requirements": [
+      "Narrow docs/architecture/AZQ_PLANNING_LOOP.md so it explicitly states that planning-loop artifacts are subordinate to spark -> goal -> deliverable -> task -> action -> stewardship.",
+      "Make clear that the planning loop is not a separate public engine and must not flatten proposal state into accepted canonical state.",
+      "Preserve the useful visible-reasoning argument, but trim or redirect wording that invites generic planning-tool interpretation.",
+      "Keep the task document-only and avoid inventing new workflow features or artifact families."
+    ],
+    "acceptance_criteria": [
+      "The planning loop remains a live supporting doctrine, but no longer competes with the Medulla-governed craft sequence.",
+      "The document clearly protects the distinction between visible proposals and accepted canonical state.",
+      "A future builder reading the planning loop is less likely to drift into generic planner behavior."
+    ],
+    "suggested_commit_message": "narrow planning loop under medulla craft spine"
+  }
+]
