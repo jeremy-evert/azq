@@ -2,836 +2,1069 @@
 
 ## Purpose
 
-This document translates AZQ doctrine into a staged engineering roadmap.
+AZQ exists to help Jeremy work with LLMs without losing the thread of his own mind.
 
-The repository already implements the first three craft layers in the current repository layout:
+It is a file-backed cognitive wrapper for LLM-assisted work: a system for capturing sparks, shaping goals, defining deliverables, structuring executable tasks, and preserving lineage across repeated interactions with language models.
 
-* `scintilla` exists and writes durable spark artifacts
-* `finis` exists and now uses canonical file-backed goal storage
-* `formam` exists and writes canonical deliverable and goal-map artifacts
-* `agenda` exists and writes canonical task, DAG, and task-log artifacts
-* `domum` remains planned rather than live
+AZQ is not merely a planner, not merely a task manager, and not merely a CLI over some Markdown files.
 
-The goal of this plan is to move from the current Stage 3 baseline to a coherent five-engine system without violating the craft order:
+AZQ exists to do five things well:
+
+1. preserve human intent before an LLM reshapes it
+2. turn fleeting thought into durable artifacts
+3. maintain lineage from spark to execution
+4. create work packages that can be handed to LLMs without losing the original purpose
+5. make LLM-assisted work inspectable, resumable, and reviewable over time
+
+This document defines the implementation plan for AZQ as it exists now.
+
+It is not a speculative roadmap for a repository that has not yet been built.
+It is a rebased implementation plan that starts from the current repository truth, names the implemented baseline, identifies what remains partial, and defines the real forward work that belongs next.
+
+This plan must stay truthful about three different things:
+
+1. the implemented baseline in code
+2. the checked-in artifact snapshot under `data/`
+3. the forward implementation scope that remains after the current baseline
+
+This plan should therefore be read as both:
+
+- a truthful architectural description of the current AZQ baseline
+- a practical source document for later deliverable extraction
+
+---
+
+## Core Mission
+
+AZQ is a human-first wrapper around LLM collaboration.
+
+Its job is not to replace judgment.
+Its job is not to let the model drive the bus into a lake with excellent confidence.
+Its job is to help the human remain oriented.
+
+AZQ should preserve:
+
+- what the human originally meant
+- what was captured
+- what was promoted into a goal
+- what was shaped into a deliverable
+- what became executable work
+- what was handed to an LLM
+- what came back
+- what should happen next
+
+That means every engine in AZQ exists in relation to LLM-assisted work:
+
+- **Scintilla** preserves raw thought before it is diluted or forgotten
+- **Finis** stabilizes intent before an LLM reframes the objective
+- **Formam** defines the artifact boundaries an LLM can actually work on
+- **Agenda** shapes executable work and eventual model handoff
+- later stewardship layers preserve continuity across repeated sessions, revisions, and generated outputs
+
+If AZQ ever forgets this mission, it collapses into a dressed-up task manager.
+That is not the point of the system.
+
+---
+
+## Planning Posture
+
+This implementation plan follows four rules:
+
+### 1. Match the repository on disk
+
+Code, tests, and checked-in planning artifacts are stronger evidence than stale prose.
+
+### 2. Preserve the distinction between baseline and aspiration
+
+Implemented baseline work should not be re-described as though it were still pending.
+Partial areas should be named plainly instead of being inflated into "done."
+
+### 3. Keep the system mission visible
+
+The point of AZQ is not generic planning.
+The point is structured continuity of mind while working with LLMs.
+
+### 4. Decompose only genuine pending work later
+
+Later deliverable extraction should target real incomplete areas, not the already-implemented Stage 1 through Stage 3 baseline.
+
+---
+
+## Current Repository Baseline
+
+The current repository already implements the first four live craft families under `azq/`:
+
+- `scintilla`
+- `finis`
+- `formam`
+- `agenda`
+
+The live CLI surface currently includes:
+
+- `azq capture`
+- `azq sparks`
+- `azq spark <id>`
+- `azq spark search <text>`
+- `azq spark rm <id>`
+- `azq fine`
+- `azq goals`
+- `azq goal add`
+- `azq goal close <id>`
+- `azq goal archive <id>`
+- `azq form build <goal_id>`
+- `azq form list`
+- `azq form show <deliverable_id>`
+- `azq form map <goal_id>`
+- `azq agenda build <deliverable_id>`
+- `azq agenda list`
+- `azq agenda show <task_id>`
+- `azq agenda dag <deliverable_id>`
+
+That means the repository already supports the visible craft path:
 
 ```text
-spark -> goal -> deliverable -> task -> artifact -> archive
+spark -> goal -> deliverable -> task -> dag
 ````
 
-The build order is intentionally strict, but it now reflects the actual planning loop AZQ is meant to support:
+This baseline is supported by:
 
-1. preserve the canonical Finis, Formam, and Agenda baselines
-2. deepen Finis so it can shape sparks into better goals with LLM assistance
-3. deepen Formam so it can shape goals into useful deliverables and maps with LLM assistance
-4. deepen Agenda so it can shape deliverables into commit-sized tasks, dedupe them, build dependency graphs, and prepare Codex execution
-5. implement Domum
-6. add doctor/status
-7. remove destructive delete paths
+* the live code under `azq/`
+* the stage planning tree under `planning/stage_1/`, `planning/stage_2/`, and `planning/stage_3/`
+* the regression suites under `tests/`
+* the current Codex planning and status artifacts under `codex/reports/`
 
-That order keeps doctrine and practice aligned.
+This plan therefore treats Stage 1 through Stage 3 as the implemented baseline architecture, not as pending roadmap work.
 
-AZQ is not meant to be only a filesystem ledger.
-It is meant to be a craft system where the existing engines do real shaping work:
+### Code capability versus checked-in data snapshot
 
-* **Finis** should help define goals
-* **Formam** should help define deliverables and maps
-* **Agenda** should help define tasks and execution structure
-* **Domum** should steward what has been built
+The repository code is Stage 3-capable.
 
-There is no new public craft layer in this plan.
-If internal helper code is borrowed from other projects or scripts, it should be absorbed into the existing engine structure rather than exposed as a sixth public engine.
+The checked-in `data/` tree is narrower than the code capability.
 
----
+Current checked-in data reality:
 
-## Planning Principles
+| Area                | Checked-in state                                          |
+| ------------------- | --------------------------------------------------------- |
+| `data/scintilla/`   | populated with audio, transcripts, and spark JSON         |
+| `data/finis/goals/` | populated with canonical goal files                       |
+| `data/form/`        | directories exist, but no checked-in deliverables or maps |
+| `data/agenda/`      | directories exist, but no checked-in tasks, DAGs, or logs |
 
-All implementation work should obey the following rules:
+This distinction matters.
 
-* preserve durable evidence at every stage
-* prefer additive migration over destructive conversion
-* introduce archive paths before removing anything permanently
-* keep each engine small and filesystem-driven
-* add read commands before aggressive write automation when a stage is new
-* do not allow later-stage objects without a traceable parent
-* keep the CLI aligned with the craft stages and filesystem pipeline
-* treat LLM output as a proposal artifact until it is accepted into canonical craft storage
-* keep confidence checks, retries, and escalation explicit rather than magical
-* keep one canonical planning path rather than multiple overlapping helper scripts
-* make Codex-facing task sets deterministic, inspectable, and diff-friendly
-* prefer one visible source of truth over hidden in-memory orchestration
+The repository can truthfully claim:
 
-These principles are not decoration.
-They are the guardrails that keep the implementation aligned with the charter and state model.
+* a Stage 3-capable code baseline
+* live Scintilla and Finis artifact families in checked-in data
+
+The repository should not overstate:
+
+* a fully populated checked-in Stage 2 artifact snapshot
+* a fully populated checked-in Stage 3 artifact snapshot
+* a fully deepened LLM handoff layer
 
 ---
 
-## Current Baseline
+## AZQ As A Cognitive Wrapper
 
-### Implemented now
+AZQ should be understood as a layered wrapper around LLM-assisted work.
 
-The current repository already supports:
+### Scintilla protects the spark
 
-* `azq capture`
-* `azq sparks`
-* `azq spark <id>`
-* `azq spark search <text>`
-* `azq spark rm <id>`
-* `azq fine`
-* `azq goals`
-* `azq goal add`
-* `azq goal close <id>`
+Scintilla captures thought before it evaporates.
+It stores the raw material of intention in a form that can later be reviewed, promoted, or discarded.
+
+### Finis protects the end
+
+Finis helps answer:
+"What am I actually trying to do?"
+
+That matters because LLMs are very good at producing plausible means before the human has stated the end clearly.
+
+### Formam protects the shape
+
+Formam helps answer:
+"If this goal succeeds, what must exist in the world?"
+
+That matters because LLMs work better when asked to produce bounded artifacts rather than vague ambition soup.
+
+### Agenda protects the handoff
+
+Agenda helps answer:
+"What work package should be executed next, and how should that work be structured so an LLM can help without derailing the mission?"
+
+That is where Codex, or another model, eventually becomes a useful collaborator instead of a glitter cannon.
+
+### Stewardship protects continuity
+
+Future archive, Domum, status, and doctor surfaces should help answer:
+
+* what happened
+* what exists
+* what drifted
+* what needs repair
+* what should be resumed
+* what should be retired
+
+That is how AZQ stops each LLM session from becoming a goldfish bowl.
+
+---
+
+## Implemented Baseline By Stage
+
+## Scintilla Intake Baseline
+
+### What exists now
+
+Scintilla is the live intake layer.
+
+It currently owns:
+
+* audio capture
+* transcript writing
+* spark extraction
+* spark listing
+* exact-id spark inspection
+* spark search
+* destructive spark deletion
+
+Canonical Scintilla storage is:
+
+* `data/scintilla/audio/`
+* `data/scintilla/transcripts/`
+* `data/scintilla/sparks/`
+
+### Why it exists in the larger mission
+
+Scintilla exists to preserve raw thought before LLM collaboration begins in earnest.
+
+It is the "do not lose the signal" layer.
+
+Without it, work starts after memory has already blurred, and the LLM is invited to improvise over missing context.
+
+### What is still limited
+
+Scintilla is live but still partial:
+
+* no text-native capture path exists
+* no archive-first spark retirement exists
+* deletion is still destructive
+* transcription still carries import-time operational weight
+* there is no richer review loop around captured sparks
+
+Scintilla should therefore be treated as **implemented intake baseline, not fully deepened capture stewardship**.
+
+---
+
+## Stage 1: Finis Baseline
+
+### What exists now
+
+The Finis baseline is implemented under `azq/finis/`.
+
+Canonical goal storage exists under:
+
+```text
+data/finis/goals/
+```
+
+Legacy migration input remains present at:
+
+```text
+data/finis/goals.json
+```
+
+### What behavior is supported now
+
+The current Finis baseline supports:
+
+* canonical one-goal-per-file Markdown storage
+* stable `FINIS_###` goal ids
+* deterministic goal lookup and listing
+* manual goal creation
+* goal close and goal archive status updates
+* migration from legacy `goals.json`
+* simple spark-to-goal promotion through `azq fine`
+
+The current `azq fine` flow is real but intentionally light:
+
+* it reads spark JSON
+* it cleans candidate titles
+* it dedupes against existing goals
+* it asks for confirmation
+* it writes accepted canonical goal files
+
+### Why it exists in the larger mission
+
+Finis exists to stabilize human intent before the system asks an LLM to help.
+
+Its role is not merely to store goals.
+Its role is to keep the human from accidentally outsourcing the question of purpose.
+
+Finis should help the human say:
+
+* what matters
+* what success looks like
+* what problem is actually being solved
+* what not to chase
+
+That makes later LLM interaction safer and more useful.
+
+### What storage and forms are canonical now
+
+Canonical Stage 1 storage is:
+
+* goal files named `FINIS_###.md` under `data/finis/goals/`
+
+Canonical goal record fields in practice are:
+
+* `goal_id`
+* `title`
+* `status`
+* `created`
+* `description`
+* `derived_from`
+
+### What supports this baseline
+
+Strong supporting evidence includes:
+
+* `planning/stage_1/overview.md`
+* `planning/stage_1/wave_a/tasks.json`
+* `planning/stage_1/wave_b/tasks.json`
+* `planning/stage_1/wave_c/tasks.json`
+* `tests/test_stage1_wave_c.py`
+* `codex/reports/codex_azq_task_status_report.md`
+
+### What is still limited within Stage 1
+
+The Finis baseline is implemented, but deeper goal shaping does not yet exist:
+
+* no proposal artifacts
+* no narrowing-question flow
+* no tractability notes
+* no usefulness analysis
+* no explicit LLM-facing goal preparation flow
+* no richer review loop that distinguishes "good candidate goal" from "interesting spark"
+
+Stage 1 should therefore be treated as **implemented baseline, partially deepened**.
+
+---
+
+## Stage 2: Formam Baseline
+
+### What exists now
+
+The Formam baseline is implemented under `azq/formam/`.
+
+Canonical Formam storage homes exist under:
+
+```text
+data/form/deliverables/
+data/form/maps/
+```
+
+### What behavior is supported now
+
+The current Formam baseline supports:
+
+* exact validation of canonical Finis parent goals before writes
+* canonical one-deliverable-per-file Markdown storage
+* canonical one-goal-map-per-goal Markdown storage
+* deterministic `DELIV_###` id allocation
 * `azq form build <goal_id>`
 * `azq form list`
 * `azq form show <deliverable_id>`
 * `azq form map <goal_id>`
+
+`azq form build <goal_id>` currently creates:
+
+* one deterministic stub deliverable
+* one goal map artifact for that goal
+
+That is real behavior, not future roadmap language.
+
+### Why it exists in the larger mission
+
+Formam exists to turn intent into shape.
+
+Its role is to identify the artifacts, components, or outputs that must exist if a goal succeeds.
+
+This is where AZQ moves from "what do I want?" to "what should exist so that an LLM can help build it without guessing the structure from fumes."
+
+Formam protects the project from vague-goal syndrome.
+
+It makes later work package generation possible.
+
+### What storage and forms are canonical now
+
+Canonical Stage 2 storage is:
+
+* deliverable files named `DELIV_###.md` under `data/form/deliverables/`
+* goal map files named like `GOAL_<goal_id>_MAP.md` under `data/form/maps/`
+
+Canonical deliverable fields in practice are:
+
+* `deliverable_id`
+* `goal_id`
+* `title`
+* `artifact_description`
+* `dependencies`
+* `status`
+* `created`
+
+Canonical goal-map fields in practice are:
+
+* `goal_id`
+* `deliverable_ids`
+* `dependency_edges`
+* `status`
+* `created`
+* `notes`
+
+### What supports this baseline
+
+Strong supporting evidence includes:
+
+* `planning/stage_2/overview.md`
+* `planning/stage_2/wave_a/tasks.json`
+* `planning/stage_2/wave_b/tasks.json`
+* `planning/stage_2/wave_c/tasks.json`
+* `planning/stage_2/wave_d/tasks.json`
+* `tests/test_stage2_wave_c.py`
+* `codex/reports/codex_azq_task_status_report.md`
+
+### What is still limited within Stage 2
+
+The Formam baseline is implemented, but still intentionally narrow:
+
+* deliverable generation is stub-first
+* goal maps remain sparse
+* there is no proposal/acceptance path for expanded deliverables
+* there is no prioritization layer
+* there is no explicit LLM-assisted deliverable shaping
+* compatibility support for older naming still exists in storage code
+
+Stage 2 should therefore be treated as **implemented baseline, partially deepened**.
+
+---
+
+## Stage 3: Agenda Baseline
+
+### What exists now
+
+The Agenda baseline is implemented under `azq/agenda/`.
+
+Canonical Agenda storage homes exist under:
+
+```text
+data/agenda/tasks/
+data/agenda/dags/
+data/agenda/logs/
+```
+
+### What behavior is supported now
+
+The current Agenda baseline supports:
+
+* exact validation of canonical Formam deliverables before task writes
+* canonical one-task-per-file Markdown storage
+* canonical goal-level DAG JSON artifacts
+* canonical task-log helper storage
+* deterministic `TASK_###` id allocation
+* shared exact task ancestry resolution through deliverable lineage
 * `azq agenda build <deliverable_id>`
 * `azq agenda list`
 * `azq agenda show <task_id>`
 * `azq agenda dag <deliverable_id>`
-* `azq goal archive <id>`
 
-This means AZQ can currently complete the first three live craft layers:
+`azq agenda build <deliverable_id>` currently creates:
+
+* one deterministic stub task for that deliverable
+
+`azq agenda dag <deliverable_id>` currently creates or refreshes:
+
+* one goal-level DAG artifact reached through that deliverable’s parent goal
+
+### Why it exists in the larger mission
+
+Agenda exists to shape executable work for human review and eventual LLM assistance.
+
+It is the layer that should eventually answer:
+
+* what is the next coherent work package
+* what depends on what
+* what is small enough for a sane commit
+* what can be handed to Codex or another model without losing the intent lineage
+
+Agenda is not just a task list.
+It is the execution-handoff layer for LLM-assisted work.
+
+### What storage and forms are canonical now
+
+Canonical Stage 3 storage is:
+
+* task files named `TASK_###.md` under `data/agenda/tasks/`
+* goal-level DAG files named like `GOAL_<goal_id>_DAG.json` under `data/agenda/dags/`
+* task-log files named like `<task_id>_LOG.md` under `data/agenda/logs/`
+
+Canonical task fields in practice are:
+
+* `task_id`
+* `deliverable_id`
+* `title`
+* `status`
+* `task_intent`
+* `description`
+* `dependencies`
+* `execution_notes`
+* `created`
+
+Canonical DAG fields in practice are:
+
+* `graph_id`
+* `goal_id`
+* `deliverable_ids`
+* `task_ids`
+* `dependency_edges`
+* `status`
+* `created`
+* `notes`
+
+### What supports this baseline
+
+Strong supporting evidence includes:
+
+* `planning/stage_3/overview.md`
+* `planning/stage_3/wave_a/tasks.json`
+* `planning/stage_3/wave_b/tasks.json`
+* `planning/stage_3/wave_c/tasks.json`
+* `planning/stage_3/wave_d/tasks.json`
+* `tests/test_stage3_wave_c.py`
+* `tests/test_stage3_wave_d.py`
+* `codex/reports/codex_azq_task_status_report.md`
+
+### What is still limited within Stage 3
+
+The Agenda baseline is implemented, but still materially limited:
+
+* `agenda build` creates stub tasks rather than commit-sized decompositions
+* task dedupe does not exist
+* Codex preparation and execution reporting do not exist
+* task logs exist as storage helpers, but are not part of the live build flow
+* the CLI does not yet expose richer lifecycle mutation commands
+* there is no explicit model-facing packaging layer yet
+
+Stage 3 should therefore be treated as **implemented baseline, partially deepened**.
+
+---
+
+## Current Engine State By Subsystem
+
+## Scintilla
+
+### Current live state
+
+Scintilla is the live spark intake layer.
+
+It currently owns:
+
+* audio capture
+* transcript writing
+* spark extraction
+* spark listing
+* exact-id spark inspection
+* spark search
+* destructive spark deletion
+
+Current structural boundary:
+
+* Scintilla gathers and exposes spark bundles
+* it does not shape goals, deliverables, or tasks
+
+### Current mission fit
+
+Scintilla already does real work for the LLM-wrapper mission because it preserves source thought before it gets blurred by later conversation.
+
+### Current limits
+
+Scintilla is still partial because:
+
+* no text-native capture path exists
+* no archive-first retirement exists
+* deletion is still destructive
+* richer spark triage does not exist
+
+---
+
+## Finis
+
+### Current live state
+
+Finis is the live goal layer.
+
+It currently owns:
+
+* canonical goal storage
+* exact goal lookup and listing
+* manual goal creation
+* goal status updates
+* simple spark-to-goal promotion through `azq fine`
+
+Current structural boundary:
+
+* Finis shapes ends
+* it does not define deliverables or decompose work into tasks
+
+### Current mission fit
+
+Finis is the first serious protection against LLM drift.
+It keeps the project grounded in human intention.
+
+### Current limits
+
+Finis is still partial because:
+
+* shaping is candidate-promotion rather than proposal-rich analysis
+* there are no canonical proposal homes
+* there is no question flow or review flow
+* there is no stronger LLM-facing intent packaging
+
+---
+
+## Formam
+
+### Current live state
+
+Formam is the live structure layer.
+
+It currently owns:
+
+* canonical deliverable storage
+* canonical goal-map storage
+* parent-goal validation
+* build/list/show/map CLI behavior
+
+Current structural boundary:
+
+* Formam defines artifact boundaries and maps
+* it does not own task decomposition or execution packaging
+
+### Current mission fit
+
+Formam is where AZQ becomes legible to an LLM.
+It defines the shape of what should exist instead of throwing a model into a fog bank with a flashlight and a prayer.
+
+### Current limits
+
+Formam is still partial because:
+
+* deliverable generation is stub-first
+* map generation remains conservative
+* no expansion, prioritization, or proposal flows exist
+
+---
+
+## Agenda
+
+### Current live state
+
+Agenda is the live executable-work layer.
+
+It currently owns:
+
+* canonical task storage
+* canonical DAG storage
+* canonical task-log helpers
+* task-to-deliverable-to-goal lineage resolution
+* build/list/show/dag CLI behavior
+
+Current structural boundary:
+
+* Agenda shapes executable work from deliverables
+* it does not yet own artifact publication or repository stewardship
+
+### Current mission fit
+
+Agenda is the layer most directly pointed at Codex and similar tools, even if the full handoff flow is not yet built.
+
+### Current limits
+
+Agenda is still partial because:
+
+* decomposition is stub-first
+* dedupe does not exist
+* Codex preparation does not exist
+* task logs are not integrated into live build behavior
+* execution reporting does not exist
+
+---
+
+## What Is Only Partially Complete
+
+The following areas are real and implemented, but still materially incomplete:
+
+| Area                        | Current truth                                              | Why it remains partial                                                 |
+| --------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Scintilla retirement        | `azq spark rm <id>` is still live                          | archive-first behavior has not replaced destructive deletion           |
+| Scintilla capture           | audio path is live                                         | no text-native capture path or richer review loop                      |
+| Finis shaping               | `azq fine` promotes goals interactively                    | no proposal files, narrowing questions, or deeper analysis             |
+| Formam shaping              | `azq form build` creates stub deliverables and sparse maps | no expansion, prioritization, or proposal acceptance flow              |
+| Agenda shaping              | `azq agenda build` creates stub tasks                      | no task decomposition, dedupe, Codex preparation, or execution reports |
+| Agenda logs                 | task-log storage helpers exist                             | build flow and CLI do not yet make logs part of normal execution       |
+| Repository-wide stewardship | architecture points toward Domum, status, and doctor       | none of those surfaces are live                                        |
+
+These partial areas are the correct future decomposition targets.
+
+---
+
+## Known Repo And Documentation Mismatches
+
+The current repository still contains a few important mismatches.
+
+### 1. The implementation plan was previously stale
+
+Earlier forms of this document described Stage 1 through Stage 3 as future roadmap work.
+That no longer matches the code, planning tree, or tests.
+
+### 2. Some architecture prose still lags live repo truth
+
+The state model still includes command or storage assumptions that are not current live behavior.
+
+Examples include:
+
+* older reliance on `data/finis/goals.json`
+* non-live command examples
+* archive/prune behavior that is not implemented
+
+Where code and tests disagree with older prose, code and tests are stronger evidence.
+
+### 3. `pyproject.toml` lags the real baseline
+
+Repository metadata still describes AZQ as beginning with Scintilla.
+That understates the current Stage 3-capable codebase.
+
+### 4. Code capability exceeds checked-in artifact population
+
+The code can produce Stage 2 and Stage 3 artifacts.
+The checked-in `data/` tree does not currently demonstrate that full artifact population.
+
+### 5. Some checked-in data is imperfect
+
+At least one Finis backlink is inconsistent with current Scintilla artifact presence.
+This is a data-quality issue, not proof that the Stage 1 baseline is absent.
+
+---
+
+## Forward Implementation Scope
+
+The forward implementation scope begins **after** the current Stage 1 through Stage 3 baseline.
+
+It should focus only on genuine pending work.
+It should not reopen completed baseline storage, routing, or stage-introduction work as though those layers were still absent.
+
+The forward scope is:
+
+1. deepen Finis into a stronger human-intent shaping layer
+2. deepen Formam into a stronger artifact-shaping layer for LLM collaboration
+3. deepen Agenda into a task-decomposition, dedupe, and model-handoff layer
+4. replace destructive retirement paths with safer archive-first behavior
+5. implement Domum and later repository-wide stewardship surfaces
+6. add repository-wide readers such as `status` and `doctor`
+
+This order is deliberate.
+
+The current repository already has the baseline craft sequence.
+The next work should deepen the existing engines so they actually serve the LLM-wrapper mission more completely.
+
+### Genuine pending work only
+
+Pending work includes:
+
+* deeper shaping
+* proposal artifacts
+* LLM-facing preparation layers
+* safer archive behavior
+* stewardship and repository readers
+
+Pending work does **not** include:
+
+* re-introducing canonical goal storage
+* re-introducing Formam
+* re-introducing Agenda
+* re-splitting the CLI into engine routers
+
+Those are already baseline reality.
+
+---
+
+## Proposed Next Stages After The Current Baseline
+
+## Stage 4: Deepen Finis As The Human-Intent Layer
+
+### Objective
+
+Turn Finis from simple candidate promotion into a visible goal-shaping layer with proposal artifacts, narrowing questions, and judgment aids.
+
+### Why it matters
+
+This is where AZQ should help the human clarify purpose before the LLM starts offering means.
+
+### Likely scope
+
+* proposal artifacts under `data/finis/`
+* narrowing-question support
+* tractability and usefulness notes
+* richer spark inspection flows
+* explicit review states before a goal becomes canonical
+* better packaging of human intent for later model-facing steps
+
+This stage should deepen existing canonical goals rather than replace them.
+
+---
+
+## Stage 5: Deepen Formam As The Artifact-Shaping Layer
+
+### Objective
+
+Turn Formam from stub deliverable generation into a visible deliverable-shaping layer with refinement, expansion, and prioritization.
+
+### Why it matters
+
+LLMs do better with bounded artifacts than with vague ambition.
+Formam is where the work becomes shapeable.
+
+### Likely scope
+
+* deliverable proposals or expansions
+* prioritization
+* "build now" versus "later" distinctions
+* richer map refinement
+* better artifact descriptions for downstream LLM use
+
+This stage should preserve Formam’s boundary: define what should exist, not executable task lists.
+
+---
+
+## Stage 6: Deepen Agenda As The Model-Handoff Layer
+
+### Objective
+
+Turn Agenda from stub task generation into a visible task-shaping and model-handoff layer.
+
+### Why it matters
+
+This is the place where AZQ should start producing work packages that can safely be handed to Codex or another LLM backend.
+
+### Likely scope
+
+* commit-sized task decomposition
+* task dedupe
+* deterministic dependency refinement
+* Codex preparation subsets
+* execution reports
+* stronger task-log integration
+* possible backend-neutral packaging for multiple LLMs
+
+This stage should stay inside Agenda rather than inventing a separate execution engine too early.
+
+---
+
+## Stage 7: Archive-First Stewardship And Domum
+
+### Objective
+
+Make stewardship real by introducing archive homes, replacing destructive retirement paths where appropriate, and adding the Domum engine.
+
+### Why it matters
+
+AZQ cannot be a continuity system if retirement is still a trap door and repository memory is a loose handful of scraps.
+
+### Likely scope
+
+* archive home under `data/`
+* archive commands and archive markers or moves
+* live `domum` package
+* visible review and maintenance artifacts
+* safer retirement of sparks and later artifacts
+
+This stage should begin with safe archive paths before broader pruning or cleanup policy.
+
+---
+
+## Stage 8: Repository-Wide Readers
+
+### Objective
+
+Add `status` and `doctor` style repository readers once stewardship exists.
+
+### Why it matters
+
+The human should be able to ask the system:
+
+* what state am I in
+* what is missing
+* what is stale
+* what drifted
+* what should I look at next
+
+### Likely scope
+
+* repository maturity classification from visible files
+* repository health warnings from visible contradictions
+* explicit reports instead of hidden orchestration
+* reader surfaces that summarize continuity across LLM-assisted work
+
+These readers should report what is visibly true on disk.
+
+---
+
+## Planning Guidance For Later Deliverable Decomposition
+
+Later deliverables should be extracted from this plan using the following rules.
+
+### 1. Decompose only genuine pending work
+
+Do not re-decompose:
+
+* Stage 1 Finis baseline introduction
+* Stage 2 Formam baseline introduction
+* Stage 3 Agenda baseline introduction
+
+Those are already implemented baseline work.
+
+### 2. Extract deliverables as repo-grounded artifacts or behaviors
+
+Good later deliverables are things like:
+
+* a visible Finis proposal flow
+* a Formam deliverable expansion path
+* an Agenda task dedupe flow
+* a model-handoff packaging flow
+* archive-first spark retirement
+* a Domum archive reader
+* a `status` report grounded in visible repository maturity
+
+Deliverables should point to concrete behaviors, concrete artifact homes, or concrete command surfaces.
+
+### 3. Use partial areas as the real decomposition targets
+
+The correct later targets are:
+
+* deeper Finis shaping
+* deeper Formam shaping
+* deeper Agenda shaping
+* LLM-facing handoff packaging
+* archive-first replacement of destructive paths
+* Domum
+* `status`
+* `doctor`
+
+### 4. Keep code capability and checked-in data separate
+
+If a deliverable is about runtime capability, validate it against code and tests.
+If it is about artifact truth on disk, validate it against checked-in or newly generated artifacts.
+
+### 5. Prefer engine-owned decomposition
+
+Future deliverables should stay within the existing engines:
+
+* Finis-owned goal shaping
+* Formam-owned artifact shaping
+* Agenda-owned task shaping and model handoff
+* Domum-owned stewardship and repository readers
+
+This keeps the architecture coherent and avoids unnecessary engine explosion.
+
+### 6. Preserve the mission in every decomposition pass
+
+Every future deliverable should be checked against one question:
+
+> Does this help the human keep hold of intent, lineage, and continuity while working with LLMs?
+
+If the answer is no, it may still be nice plumbing, but it is not core AZQ work.
+
+---
+
+## Notes On Checked-In Data Versus Code Capability
+
+The repository currently mixes strong code capability with a narrower checked-in artifact snapshot.
+
+That should be interpreted carefully:
+
+* Scintilla and Finis are demonstrated both by code and by committed artifacts
+* Formam and Agenda are demonstrated strongly by code, planning, and tests
+* Formam and Agenda are **not** demonstrated by committed artifact examples in the current `data/` tree
+
+There is one further nuance:
+
+* Agenda task-log storage exists as code capability
+* task-log creation is not yet part of the normal `agenda build` baseline
+
+So the repository can truthfully claim:
+
+* Stage 3-capable code baseline
+* a live chain from spark through DAG in code and tests
+* a real mission-directed architecture for later LLM collaboration
+
+The repository should not overstate:
+
+* a fully populated checked-in Stage 3 artifact snapshot
+* a fully deepened model handoff layer
+* a fully realized stewardship layer
+
+---
+
+## Conclusion
+
+AZQ already has an implemented baseline:
 
 ```text
-capture -> spark -> goal -> deliverable -> map -> task -> dag
+spark -> goal -> deliverable -> task -> dag
 ```
 
-That is enough to reach an actionable Stage 3 baseline, but not enough for the intended five-engine architecture or for the actual LLM-assisted planning workflow Jeremy uses in other places.
+But that chain is not the whole point.
 
-### Structural mismatches to resolve
+The point of AZQ is to help Jeremy work with LLMs without losing orientation, lineage, or purpose.
 
-The main mismatches between doctrine and implementation are:
+The implemented baseline matters because it gives the system real structure.
+The forward work matters because that structure still needs to become a better cognitive wrapper and a better model-handoff system.
 
-* `finis` currently stores and lists goals, but it does not yet deeply shape sparks into refined goals with questioning, narrowing, or tractability judgment
-* `formam` currently builds stub deliverables and maps, but it does not yet expand, prioritize, or refine deliverables with LLM help
-* `agenda` currently builds stub tasks and goal-level DAGs, but it does not yet decompose deliverables into commit-sized tasks, dedupe them, or prepare them cleanly for Codex
-* planning scripts that already perform expansion, decomposition, DAG generation, and dedupe exist outside the AZQ engine structure
-* the implementation plan must absorb that existing functionality into the proper craft engines instead of waiting for archive and health stages to somehow produce it
-* `azq spark rm` still teaches destructive deletion in a system whose state model explicitly prefers archive over prune and rejects silent loss
-* there is no archive layer yet protecting prior artifacts
-* there is no repository-wide health or maturity reader even though the state model defines both
+What remains partial is not the existence of Scintilla, Finis, Formam, or Agenda.
+What remains partial is the deeper shaping behavior, safer stewardship, and stronger LLM-facing continuity that the architecture is meant to support.
 
----
+The correct next planning move is therefore:
 
-## Stage 1: Normalize Finis Storage
+* keep the implemented baseline intact
+* deepen the engines where they are still thin
+* preserve the system’s mission in every later decomposition pass
+* extract future deliverables only from the still-partial post-baseline work
 
-### Objective
+### Closing summary
 
-Move `finis` from transitional JSON storage to first-class goal files so the on-disk structure matches the filesystem and state models.
+This implementation plan is grounded in:
 
-### Why first
+* the live code under `azq/`
+* the stage planning artifacts under `planning/`
+* the regression suites under `tests/`
+* the checked-in artifact homes under `data/`
+* the current Codex gap analysis and rebased-plan work
 
-Finis is already live, but its storage model contradicts the architectural documents. Later engines need stable goal records, stable IDs, explicit status fields, and traceable backlinks. Without that, Formam sits on mud.
+The baseline already complete is:
 
-### Scope
+* live Scintilla intake
+* Stage 1 Finis baseline
+* Stage 2 Formam baseline
+* Stage 3 Agenda baseline
 
-* create `data/finis/goals/`
-* store one goal per file, named `FINIS_###.md`
-* introduce a single goal repository module instead of duplicated JSON helpers
-* keep `goals.json` readable only as a migration source, not as the long-term source of truth
-* normalize goal fields:
+What remains partial is:
 
-  * `goal_id`
-  * `title`
-  * `status`
-  * `created`
-  * `description`
-  * `derived_from`
-* ensure `azq goals`, `azq goal add`, `azq goal close`, `azq goal archive`, and `azq fine` all use the same storage layer
+* deeper Finis shaping
+* deeper Formam shaping
+* deeper Agenda shaping
+* explicit model-handoff packaging
+* archive-first behavior
+* Domum
+* repository-wide `status` and `doctor`
 
-### Recommended file work
-
-* add `azq/finis/storage.py`
-* update the Finis command handlers to use that storage layer
-* create `data/finis/goals/`
-* preserve `data/finis/goals.json` as legacy input until migration is stable
-
-### Migration strategy
-
-1. Read existing `data/finis/goals.json`.
-2. Write each record into `data/finis/goals/FINIS_###.md`.
-3. Preserve original values where possible, even if they are noisy.
-4. Mark `goals.json` as legacy input and stop writing new state to it.
-5. Add either a one-time migration command or automatic migration on first load.
-
-### Exit criteria
-
-* all active CLI goal flows operate from file-based storage
-* goal IDs remain stable
-* no command writes new state to `data/finis/goals.json`
-* goal files are inspectable and diff-friendly
-* Formam can depend on file-based goals without transitional glue
-
----
-
-## Stage 2: Implement Formam
-
-### Objective
-
-Introduce the form-building stage that turns goals into deliverables and dependency maps.
-
-### Why second
-
-The craft doctrine is explicit: form comes before execution. If AZQ creates tasks before deliverables, it collapses into undisciplined activity tracking.
-
-### Scope
-
-* add or extend `azq/formam/`
-* create `data/form/deliverables/`
-* create `data/form/maps/`
-* implement the first Formam commands:
-
-  * `azq form build <goal_id>`
-  * `azq form list`
-  * `azq form show <deliverable_id>`
-  * `azq form map <goal_id>`
-* define a deliverable record format with at least:
-
-  * `deliverable_id`
-  * `goal_id`
-  * `title`
-  * `artifact_description`
-  * `dependencies`
-  * `status`
-* define a map artifact per goal that records deliverable relationships
-
-### Design constraints
-
-* one or more deliverables may descend from a goal
-* every deliverable must point back to exactly one goal initially
-* maps should remain human-readable, even if later exported to JSON
-* Formam should define boundaries of work, not task lists
-
-### Recommended initial implementation
-
-* start with Markdown deliverable files
-* allow manual or assisted generation from a goal file
-* make `azq form build <goal_id>` generate a stub deliverable and a goal map rather than trying to solve full planning on day one
-* make backlinks mandatory from deliverable to goal
-
-### Exit criteria
-
-* a goal can produce at least one deliverable file and one map file
-* deliverables can be listed and inspected from the CLI
-* every deliverable has a valid parent goal
-* no task commands are introduced before deliverables exist
-* the repository can truthfully reach `formed` from visible files
-
----
-
-## Stage 3: Implement Agenda
-
-### Objective
-
-Turn deliverables into executable tasks with visible work logs and dependency order, and treat that file-backed Agenda layer as the current live Stage 3 baseline.
-
-### Why third
-
-Agenda is only useful once Formam has defined what should exist. Tasks must serve deliverables rather than replace them.
-
-### Live baseline
-
-* `azq/agenda/`
-* canonical task storage under `data/agenda/tasks/`
-* canonical DAG storage under `data/agenda/dags/`
-* canonical task-log storage under `data/agenda/logs/`
-* the current Agenda commands:
-
-  * `azq agenda build <deliverable_id>`
-  * `azq agenda list`
-  * `azq agenda show <task_id>`
-  * `azq agenda dag <deliverable_id>`
-* a canonical task record format with at least:
-
-  * `task_id`
-  * `deliverable_id`
-  * `description`
-  * `dependencies`
-  * `status`
-  * `execution_notes`
-  * `created`
-* a canonical goal-level DAG artifact under `data/agenda/dags/GOAL_<goal_id>_DAG.json`
-* a canonical task-log artifact under `data/agenda/logs/<task_id>_LOG.md`
-
-### Design constraints
-
-* every task must descend from a deliverable
-* `data/agenda/tasks/`, `data/agenda/dags/`, and `data/agenda/logs/` are the canonical Stage 3 system of record
-* task dependencies must be inspectable on disk
-* task-log evidence must remain inspectable on disk
-* task completion should not imply artifact publication automatically
-* blocked work must become a first-class visible state, not a vague feeling
-
-### Current command framing
-
-The current operator surface is intentionally narrow:
-
-* `azq agenda build <deliverable_id>` creates or refreshes canonical tasks for one deliverable
-* `azq agenda list` reads canonical tasks from disk
-* `azq agenda show <task_id>` inspects one canonical task from disk
-* `azq agenda dag <deliverable_id>` refreshes and inspects the parent goal DAG reached from one exact deliverable
-
-The older `azq task ...`, `azq dag ...`, `task start`, and `task complete` framing should not be described as the live Stage 3 command surface unless the code exposes those commands later.
-
-### Exit criteria
-
-* a deliverable can produce executable task files
-* canonical DAG artifacts and task-log artifacts exist under `data/agenda/`
-* no task exists without a valid deliverable parent
-* repository state can reach `actionable` from real artifacts
-* the trace chain `task -> deliverable -> goal` is machine-checkable and human-readable
-
----
-
-## Stage 4: Deepen Finis Into An LLM-Assisted Goal-Shaping Layer
-
-### Objective
-
-Extend Finis so it does real goal-shaping work rather than only storing accepted goals.
-
-Finis should be the stage that takes sparks, weighs them, tests their spirit, asks narrowing questions, judges likely usefulness and attainability, and helps the user turn early sparks into better goals.
-
-### Why fourth
-
-This is the first missing layer in the actual working loop.
-The repository already captures sparks and stores goals, but it does not yet provide the assisted shaping behavior that the craft model implies Finis should own.
-
-### Scope
-
-* deepen `azq fine` from simple candidate promotion into guided goal shaping
-* allow Finis to inspect one or more spark bundles and propose:
-
-  * candidate goals
-  * goal summaries
-  * tractability notes
-  * usefulness notes
-  * suggested narrowing questions
-  * optional manifesto or intent drafts tied to a goal
-* keep the accepted canonical goal record under `data/finis/goals/`
-* add proposal artifacts under Finis rather than inventing a new public craft engine
-
-### Recommended internal file work
-
-* add `azq/finis/analysis.py`
-* add `azq/finis/questions.py`
-* add `azq/finis/llm.py`
-* add `azq/finis/proposals.py`
-* extend `azq/finis/cli.py` and `azq/finis/router.py`
-* create proposal homes such as:
-
-  * `data/finis/proposals/`
-  * `data/finis/notes/`
-
-These proposal paths are implementation details of Finis, not a new public craft layer.
-
-### Design constraints
-
-* Finis should not silently overwrite accepted goals with LLM output
-* proposals should remain inspectable and diff-friendly
-* the user should be able to reject, revise, or accept a proposed goal
-* narrowing questions should be visible rather than hidden in a monolithic chat transcript
-* usefulness and attainability should be framed as judgment aids, not false certainty
-* any manifesto or intent draft remains a Finis artifact attached to the goal context rather than a new standalone engine
-
-### Recommended first commands
-
-The exact names may vary, but the live command surface should eventually support behavior equivalent to:
-
-* `azq fine`
-* `azq fine inspect <spark_id>`
-* `azq fine shape <spark_id>`
-* `azq fine questions <spark_id or goal_id>`
-
-The important thing is that the public craft story stays the same: Finis shapes goals.
-
-### Exit criteria
-
-* Finis can read sparks and propose better goals with visible reasoning
-* Finis can ask narrowing questions before the user accepts a goal
-* accepted goals remain canonical Markdown goal records
-* proposal and note artifacts live inside Finis rather than in ad hoc helper folders
-* the move from spark to goal becomes materially more useful than simple storage
-
----
-
-## Stage 5: Deepen Formam Into An LLM-Assisted Deliverable-Shaping Layer
-
-### Objective
-
-Extend Formam so it can take a goal and help shape it into useful deliverables, expanded deliverables, and maps that distinguish what must be built now from what can wait.
-
-### Why fifth
-
-Once Finis can shape better goals, Formam becomes the natural place to shape those goals into artifact boundaries and structured plans.
-This is where the existing deliverable-expansion scripts belong conceptually.
-
-### Scope
-
-* deepen `azq form build <goal_id>` from stub generation into assisted deliverable shaping
-* add deliverable expansion, prioritization, and map refinement
-* absorb the existing deliverable-expansion logic into Formam internals
-* allow Formam to generate:
-
-  * proposed deliverables
-  * expanded deliverable descriptions
-  * priority ordering
-  * first-now versus later distinctions
-  * map refinements and dependency notes
-* keep canonical accepted deliverables and maps under `data/form/`
-
-### Recommended internal file work
-
-* add `azq/formam/expand.py`
-* add `azq/formam/prioritize.py`
-* add `azq/formam/llm.py`
-* add `azq/formam/proposals.py`
-* extend `azq/formam/build.py`, `azq/formam/maps.py`, and router/CLI wiring
-* create proposal homes such as:
-
-  * `data/form/proposals/`
-  * `data/form/expansions/`
-
-These are Formam internals, not a new public engine.
-
-### Design constraints
-
-* Formam should define artifact boundaries, not jump directly to task lists
-* expanded deliverables should remain inspectable proposal artifacts until accepted
-* map generation should stay visible and file-backed
-* Formam should help narrow scope, not endlessly widen it
-* prioritization should support “build now” versus “wait until later”
-* deliverable generation should preserve traceability back to the parent goal
-
-### Recommended first commands
-
-The exact names may vary, but the public behavior should remain inside Formam and support capabilities equivalent to:
-
-* `azq form build <goal_id>`
-* `azq form expand <goal_id or deliverable_id>`
-* `azq form prioritize <goal_id>`
-* `azq form map <goal_id>`
-
-### Exit criteria
-
-* Formam can produce more useful deliverables than a single stub file
-* deliverable expansions and prioritization are visible on disk
-* accepted deliverables remain canonical records under `data/form/deliverables/`
-* goal maps become meaningful planning artifacts rather than placeholders
-* the move from goal to deliverable becomes materially more useful than simple stub generation
-
----
-
-## Stage 6: Deepen Agenda Into An LLM-Assisted Task-And-Codex Layer
-
-### Objective
-
-Extend Agenda so it can take deliverables and shape them into commit-sized tasks, dedupe them, build dependency graphs, and prepare them for Codex execution.
-
-This is where the existing task decomposition, dedupe, DAG, and Codex-preparation scripts belong conceptually.
-
-### Why sixth
-
-Agenda is the natural home for executable work.
-The current Stage 3 baseline proves the file-backed task system.
-The next step is to make Agenda smart enough to generate and prepare the right work rather than only store one stub task.
-
-### Scope
-
-* deepen `azq agenda build <deliverable_id>` from stub-task generation into assisted task shaping
-* absorb task decomposition logic, DAG building logic, and dedupe logic into Agenda internals
-* add Codex preparation and reporting as Agenda-owned execution support
-* allow Agenda to generate:
-
-  * commit-sized task proposals
-  * dependency graphs
-  * execution levels
-  * deduped task sets
-  * Codex-ready task subsets
-  * execution reports
-
-### Recommended internal file work
-
-* add `azq/agenda/decompose.py`
-* add `azq/agenda/dedupe.py`
-* add `azq/agenda/dag_builder.py`
-* add `azq/agenda/codex.py`
-* add `azq/agenda/llm.py`
-* add `azq/agenda/proposals.py`
-* extend `azq/agenda/build.py`, `azq/agenda/dags.py`, and router/CLI wiring
-* create proposal and execution homes such as:
-
-  * `data/agenda/proposals/`
-  * `data/agenda/reports/`
-  * `data/agenda/runs/`
-
-These remain Agenda internals, not a new public engine.
-
-### Design constraints
-
-* Agenda should decompose one deliverable at a time into tasks that fit into roughly half an hour and one commit message
-* generated tasks should remain proposal artifacts until accepted into canonical `data/agenda/tasks/`
-* dedupe should be explicit and reversible
-* DAG generation should remain deterministic from task inputs and outputs
-* Codex preparation should not destroy the full task set
-* execution reports should remain durable and inspectable on disk
-* Agenda should own the bridge from deliverable to executable work rather than relying on scattered side scripts
-
-### Recommended first commands
-
-The exact names may vary, but the public behavior should stay under Agenda and support capabilities equivalent to:
-
-* `azq agenda build <deliverable_id>`
-* `azq agenda expand <deliverable_id>`
-* `azq agenda dedupe <deliverable_id>`
-* `azq agenda dag <deliverable_id>`
-* `azq agenda codex prepare <deliverable_id>`
-* `azq agenda codex run <deliverable_id>`
-* `azq agenda codex report <deliverable_id>`
-
-The important point is that task shaping and Codex preparation remain inside Agenda as part of the public craft flow.
-
-### Exit criteria
-
-* Agenda can produce commit-sized task proposals from a deliverable
-* Agenda can dedupe task proposals and build deterministic DAG artifacts
-* accepted tasks remain canonical records under `data/agenda/tasks/`
-* Codex execution can be prepared from Agenda-owned artifacts without manual copy-paste glue
-* the move from deliverable to executable work becomes materially more useful than single-task stub writing
-
----
-
-## Stage 7: Implement Domum
-
-### Objective
-
-Add stewardship: archive, prune, and review operations that keep AZQ trustworthy as it accumulates craft artifacts.
-
-### Why seventh
-
-Before adding more mutating behavior, the system needs a safe place for finished and stale material to go. Domum protects inspectability and prevents silent loss.
-
-### Scope
-
-* add `azq/domum/`
-* create `data/archive/`
-* create archive subdirectories aligned to the state model:
-
-  * `data/archive/sparks/`
-  * `data/archive/goals/`
-  * `data/archive/deliverables/`
-  * `data/archive/tasks/`
-  * `data/archive/artifacts/`
-* create `data/reports/` if review output becomes first-class
-* implement the first Domum commands:
-
-  * `azq archive ...`
-  * `azq prune`
-  * `azq review`
-
-### Design constraints
-
-* archive should move or copy durable artifacts without losing provenance
-* archive actions should write a reason or manifest
-* prune should be policy-based, not silent deletion
-* review should summarize recent state transitions from visible files
-* archive failure must be non-destructive: active artifacts remain in place if the move is incomplete
-* Domum should steward accepted craft records and accepted supporting artifacts, not confuse proposals with canonical active records
-
-### Recommended initial implementation
-
-* start with spark and goal archiving
-* preserve original IDs and timestamps
-* write a small archive manifest next to archived objects or in a shared log
-* route existing `goal archive` behavior through Domum rather than leaving it embedded in Finis
-
-### Exit criteria
-
-* archived material is recoverable and inspectable
-* `goal archive` and future archive operations route through Domum
-* review output can summarize recent work from filesystem evidence
-* the repository can reach `kept` through explicit stewardship artifacts
-
----
-
-## Stage 8: Add Doctor and Status
-
-### Objective
-
-Add repository-wide read commands that report maturity and health without mutating state.
-
-### Why eighth
-
-`status` and `doctor` should describe the actual system, not a hypothetical one. They are more useful after the major object layers and archive paths exist.
-
-### Scope
-
-* implement `azq status`
-* implement `azq doctor`
-* compute repository maturity:
-
-  * `empty`
-  * `seeded`
-  * `purposed`
-  * `formed`
-  * `actionable`
-  * `realized`
-  * `kept`
-* compute repository health:
-
-  * `healthy`
-  * `warning`
-  * `degraded`
-  * `inconsistent`
-
-### What `status` should report first
-
-* spark count
-* active goal count
-* deliverable count
-* open task count
-* artifact count
-* archive count
-* maturity classification
-
-### What `doctor` should validate first
-
-* required directory presence
-* readable artifact files
-* orphaned goal, deliverable, and task chains
-* malformed IDs
-* missing parent references
-* legacy storage still in use
-* contradictions between visible files and expected state rules
-
-### Exit criteria
-
-* `azq status` reads the repository without side effects
-* `azq doctor` reports concrete issues tied to files
-* maturity and health are derived from on-disk evidence, not hidden state
-* the repository can explain itself without hand-waving
-
----
-
-## Stage 9: Remove Destructive Delete Paths
-
-### Objective
-
-Eliminate silent permanent deletion from the live system.
-
-### Why last
-
-Permanent deletion should only be removed after archive and health mechanisms exist. Otherwise the system loses a capability before a safer replacement is in place.
-
-### Scope
-
-* remove or deprecate `azq spark rm <id>`
-* replace direct unlink behavior in spark deletion logic with archive-oriented behavior
-* audit other destructive transitions added during implementation
-* align CLI language with stewardship:
-
-  * prefer `archive`
-  * avoid `rm`
-  * keep destructive actions explicit and rare
-
-### Recommended migration path
-
-1. Change `spark rm` into a deprecation shim that archives the spark.
-2. Add `azq archive spark <id>` as the canonical command.
-3. Update CLI help and bootstrap docs.
-4. Remove permanent delete behavior after the archive path is stable.
-
-### Exit criteria
-
-* no routine user command permanently deletes primary craft artifacts
-* archival replacement exists for current delete flows
-* the CLI no longer teaches users to destroy evidence
-* doctrine and implementation finally stop contradicting each other
-
----
-
-## Cross-Cutting Work
-
-These tasks should be done alongside the stages above rather than treated as a separate engine:
-
-* add tests for each state transition
-* normalize ID parsing and validation across engines
-* keep CLI help synchronized with the command model
-* add fixtures under `tests/fixtures/` for migration, planning, and health checks
-* document file formats as they stabilize
-* make backlinks mandatory wherever the state model requires them
-* keep one canonical public API per subsystem
-* keep confidence checks, retries, and escalation behavior inspectable
-* ensure proposal artifacts clearly distinguish proposal state from accepted canonical state
-* absorb external helper scripts into existing engine homes instead of preserving overlapping parallel workflows indefinitely
-
-### Priority test coverage
-
-Start with tests for:
-
-* Finis migration from `goals.json` to goal files
-* parent-child integrity across `goal -> deliverable -> task`
-* Finis proposal shaping and narrowing-question behavior
-* Formam deliverable expansion and prioritization behavior
-* Agenda decomposition determinism, dedupe determinism, and DAG determinism
-* archive non-destructiveness
-* `doctor` detection of orphaned and malformed artifacts
-* command runs that fail after partial work and must preserve durable evidence
-
----
-
-## Suggested Milestones
-
-### Milestone 1: Stable Purpose Layer
-
-Deliver:
-
-* normalized Finis storage
-* unified goal repository code
-* migration off `goals.json`
-
-Result:
-
-* AZQ is reliably `purposed`
-
-### Milestone 2: Real Form Layer
-
-Deliver:
-
-* Formam module
-* deliverable files
-* map files
-
-Result:
-
-* AZQ can become `formed` without inventing tasks prematurely
-
-### Milestone 3: Actionable Work Layer
-
-Deliver:
-
-* Agenda module
-* task records
-* DAGs
-* work logs
-
-Result:
-
-* AZQ can become `actionable` from explicit deliverables
-
-### Milestone 4: Intelligent Goal Shaping
-
-Deliver:
-
-* Finis LLM-assisted goal shaping
-* narrowing questions
-* tractability and usefulness notes
-* proposal artifacts attached to Finis
-
-Result:
-
-* AZQ can move from spark to better goals rather than only storing accepted titles
-
-### Milestone 5: Intelligent Deliverable Shaping
-
-Deliver:
-
-* Formam deliverable expansion
-* prioritization
-* useful map refinement
-
-Result:
-
-* AZQ can move from goals to useful deliverables rather than only writing stubs
-
-### Milestone 6: Intelligent Task And Codex Preparation
-
-Deliver:
-
-* Agenda task decomposition
-* task dedupe
-* deterministic DAG generation
-* Codex preparation and reporting
-
-Result:
-
-* AZQ can move from deliverables to executable work without relying on side scripts
-
-### Milestone 7: Stewardship Layer
-
-Deliver:
-
-* Domum module
-* archive paths
-* review flow
-
-Result:
-
-* AZQ can preserve history instead of deleting it
-
-### Milestone 8: Repository Introspection
-
-Deliver:
-
-* `azq status`
-* `azq doctor`
-* health and maturity classification
-
-Result:
-
-* AZQ can explain its own condition from disk
-
-### Milestone 9: Delete-Free Craft Loop
-
-Deliver:
-
-* removal of destructive delete paths
-* archive-first semantics across the CLI
-
-Result:
-
-* doctrine and implementation are aligned
-
----
-
-## Definition of Done
-
-AZQ reaches the intended five-engine baseline when all of the following are true:
-
-* each engine has a code module and a working CLI surface
-* Finis, Formam, and Agenda do real shaping work with visible LLM-assisted proposal artifacts
-* each craft stage writes durable artifacts to its own filesystem home
-* every later-stage object has a traceable earlier-stage parent
-* archive exists before destructive removal disappears
-* `status` and `doctor` can classify the repository from visible evidence
-* the practical command flow matches the doctrinal pipeline
-* the repository can move from `empty` to `kept` without violating the state model
-
-At that point, AZQ is no longer only a partial capture-and-goals prototype.
-It is a coherent five-engine craft system where the engines mean what their names imply.
-
----
-
-## Closing
-
-This plan is not a wishlist.
-It is the build order that keeps AZQ honest.
-
-Implement the stages in order.
-Do not skip form.
-Do not let tasks outrun structure.
-Do not add deletion before stewardship.
-Do not add a new public engine when the existing craft layers should own the work.
-Do not leave the best planning behavior trapped in side scripts when it belongs inside Finis, Formam, and Agenda.
-
-If this order is respected, doctrine and code will converge.
-If it is ignored, AZQ will decay into the kind of system it was designed not to become.
-
-```
-
-This version keeps the public story clean:
-
-- **Finis** becomes the LLM-assisted goal-shaping layer
-- **Formam** becomes the LLM-assisted deliverable-shaping layer
-- **Agenda** becomes the LLM-assisted task-and-Codex layer
-- **Domum** stays stewardship, archive, review, and later status/doctor support
-- **Indago stays offstage** and only contributes internal implementation ideas if needed.
+What should be decomposed later into stage deliverables is the post-baseline work above, not the already-implemented baseline.
