@@ -1,199 +1,145 @@
 {
-  "stage": "stage_6",
-  "stage_title": "Deepen Agenda as the model-handoff layer",
-  "stage_summary": "Stage 6 deepens the implemented Agenda baseline into a real model-handoff layer. The repo already supports canonical task files, DAG files, task-log storage helpers, and the `azq agenda` command family for build, list, show, and dag operations. The forward work is commit-sized task proposals, review and acceptance flow, task dedupe, stronger dependency refinement, backend-neutral handoff packaging, execution reporting, provenance-preserving task lineage, and tighter use of task logs as durable evidence rather than dormant storage capability.",
+  "stage": "stage_8",
+  "stage_title": "Repository-wide readers",
+  "stage_summary": "Stage 8 adds repository-wide readers only after stewardship exists. The current repo has no `status` command, no `doctor` command, and no visible Domum reader surfaces. The rebased implementation plan limits this stage to disk-truth readers: status, doctor, maturity classification, health warnings, continuity reporting, and provenance-aware repository interpretation grounded in visible files rather than orchestration theater. Because Stage 7 stewardship does not exist yet, every Stage 8 deliverable remains future work and depends on archive-aware reading surfaces first.",
   "baseline_guardrails": [
-    "Stage 1 Finis baseline is already implemented and remains the canonical source of accepted goals and lineage.",
-    "Stage 2 Formam baseline is already implemented and remains the canonical source of deliverables, maps, and accepted artifact definitions.",
-    "Stage 3 Agenda baseline is already implemented in canonical task, DAG, and task-log storage and must not be re-planned here.",
-    "Post-baseline Stage 6 deliverables must deepen Agenda task shaping and model handoff rather than recreate `azq agenda build`, canonical task storage, DAG storage, or basic lineage resolution from Stage 3.",
-    "Stage 6 must preserve Agenda's boundary: shape executable work packages and model handoff, without inventing a separate execution engine or collapsing review, proposal, and accepted task truth into one layer."
+    "Stage 1 Finis baseline is already implemented and remains the canonical goal layer.",
+    "Stage 2 Formam baseline is already implemented and remains the canonical deliverable and map layer.",
+    "Stage 3 Agenda baseline is already implemented and remains the canonical task, DAG, and task-log layer.",
+    "Post-baseline Stage 8 deliverables must report on visible repository truth after stewardship exists; they must not recreate the baseline engines or invent orchestration that bypasses on-disk state.",
+    "Stage 8 must preserve reader boundaries: status, doctor, maturity, continuity, and health reporting belong here, while goal shaping, artifact shaping, task shaping, and stewardship mutation remain owned by Finis, Formam, Agenda, and Domum."
   ],
   "deliverables": [
     {
-      "id": "S6_DELIV_001",
-      "title": "Commit-sized task proposal and decomposition flow",
-      "stage": "stage_6",
-      "description": "Replace the current stub-first task generation with a visible Agenda flow that decomposes one accepted deliverable into commit-sized proposed work units suitable for LLM-assisted implementation. Proposed tasks must remain distinct from accepted canonical tasks until a human review boundary is crossed.",
-      "why_it_exists": "The implementation plan makes commit-sized decomposition the first real Stage 6 target, while the current Agenda build path remains intentionally sparse. AZQ needs a proposal-bearing decomposition layer so executable work can be shaped without letting generated task text silently become accepted task truth.",
+      "id": "S8_DELIV_001",
+      "title": "Repository status command",
+      "stage": "stage_8",
+      "description": "Add a repo-wide `status` reader that summarizes the current visible AZQ state from on-disk artifacts across the live engines and stewardship surfaces. Status must report what is visibly true now, not what the architecture hopes is true in spirit.",
+      "why_it_exists": "The implementation plan explicitly names `status` as a Stage 8 reader, and the current CLI surface stops at `agenda` with no repository-wide reporting command. AZQ needs a readable answer to the question: what state am I actually in right now?",
       "acceptance_criteria": [
-        "Agenda has a canonical proposal artifact format and home under `data/agenda/proposals/` that is distinct from accepted canonical task files under `data/agenda/tasks/`.",
-        "A live Agenda surface can generate more than placeholder tasks for one accepted deliverable when the deliverable warrants decomposition.",
-        "Proposed tasks preserve exact lineage to one deliverable and, when applicable, to the accepted Formam definition package that informed decomposition.",
-        "Accepted canonical tasks remain separate artifacts and are not overwritten by proposal text.",
-        "Tests or fixtures demonstrate deterministic proposal generation for stable input artifacts."
+        "The CLI exposes a status reader that reports across Scintilla, Finis, Formam, Agenda, and any live stewardship artifacts.",
+        "The status output is derived from visible files and identifiers on disk rather than hidden process memory.",
+        "The status reader distinguishes implemented code capability from the narrower checked-in artifact snapshot when relevant.",
+        "The status reader distinguishes active canonical artifacts from archived artifacts where stewardship data exists.",
+        "Tests verify at least one end-to-end repository status report against deterministic fixture state."
       ],
       "affected_paths": [
         "azq/cli.py",
-        "azq/agenda/cli.py",
-        "azq/agenda/build.py",
-        "azq/agenda/tasks.py",
-        "azq/agenda/schemas.py",
-        "azq/agenda/storage.py",
-        "data/agenda/proposals/",
-        "data/agenda/tasks/",
+        "azq/domum/",
+        "data/",
         "tests/"
       ],
       "dependencies": [
-        "baseline: Stage 3 Agenda canonical task storage",
-        "S5_DELIV_005",
-        "S5_DELIV_006"
+        "S7_DELIV_003",
+        "S7_DELIV_004",
+        "S7_DELIV_005"
       ],
       "status": "missing"
     },
     {
-      "id": "S6_DELIV_002",
-      "title": "Agenda task review and dedupe behavior",
-      "stage": "stage_6",
-      "description": "Add a visible Agenda review and dedupe pass so repeated builds or closely related deliverables do not flood the task layer with redundant work units, and so proposed task text can be accepted, revised, or rejected before becoming canonical.",
-      "why_it_exists": "The plan explicitly calls out task dedupe, and the current repo has no real dedupe behavior beyond baseline exact-id storage rules. Agenda also needs a review boundary so generated task text does not leap directly from proposal into accepted task state.",
+      "id": "S8_DELIV_002",
+      "title": "Repository doctor command",
+      "stage": "stage_8",
+      "description": "Add a repo-wide `doctor` reader that flags visible contradictions, missing links, stale archive evidence, and broken continuity across canonical AZQ artifacts. Doctor must remain read-only and diagnostic, not a stealth repair script in a lab coat.",
+      "why_it_exists": "The implementation plan names `doctor` as a Stage 8 reader, and there is currently no command that validates cross-engine storage truth in the live repo. AZQ needs a way to say not just what exists, but what is sick, stale, or broken.",
       "acceptance_criteria": [
-        "Agenda can detect and avoid duplicate or near-duplicate proposed task creation within the supported decomposition flow.",
-        "Agenda has a visible review artifact or command surface under `data/agenda/reviews/` that records accept, revise, reject, or merge decisions for proposed tasks.",
-        "Dedupe and review decisions are visible in task artifacts, review artifacts, or build output rather than hidden as silent data loss.",
-        "Canonical task identity remains stable when review or dedupe keeps an existing task instead of creating a new one.",
-        "Tests cover at least one repeated-build or overlapping-input scenario that would otherwise create duplicates."
+        "The CLI exposes a doctor reader that can detect at least missing parent references, stale archive markers, contradictory status surfaces, or malformed canonical identifiers from visible files.",
+        "Doctor findings cite exact artifact paths or identifiers so the operator can inspect the problem on disk.",
+        "Doctor reports remain read-only and do not silently repair repository state.",
+        "Doctor output distinguishes hard inconsistencies from softer warnings when evidence is incomplete or mixed.",
+        "Tests cover at least one broken fixture state and one healthy fixture state."
       ],
       "affected_paths": [
-        "azq/agenda/cli.py",
-        "azq/agenda/build.py",
-        "azq/agenda/tasks.py",
-        "azq/agenda/storage.py",
-        "data/agenda/proposals/",
-        "data/agenda/reviews/",
-        "data/agenda/tasks/",
+        "azq/cli.py",
+        "azq/domum/",
+        "data/",
         "tests/"
       ],
       "dependencies": [
-        "S6_DELIV_001",
-        "S6_DELIV_006"
+        "S7_DELIV_003",
+        "S7_DELIV_004",
+        "S7_DELIV_005",
+        "S8_DELIV_001"
       ],
       "status": "missing"
     },
     {
-      "id": "S6_DELIV_003",
-      "title": "Deterministic dependency refinement and DAG integrity",
-      "stage": "stage_6",
-      "description": "Deepen Agenda dependency refinement so task and DAG edges reflect a clearer execution order than the current sparse baseline while remaining deterministic, inspectable, and tied to accepted task truth rather than proposal churn.",
-      "why_it_exists": "The current repo already has canonical DAG artifacts and dependency fields, so there is baseline groundwork. The implementation plan names deterministic dependency refinement as the deeper next step.",
+      "id": "S8_DELIV_003",
+      "title": "Repository maturity and continuity report",
+      "stage": "stage_8",
+      "description": "Add a reader surface that classifies repository maturity and continuity from visible artifacts, including where code capability exceeds the checked-in data snapshot and where continuity is preserved only partially across active and archived state.",
+      "why_it_exists": "The rebased implementation plan stresses the distinction between code capability and checked-in artifact truth, and Stage 8 is where that should become a visible reader rather than hidden interpretation. AZQ should be able to explain not just what exists, but how coherent the chain of continuity really is.",
       "acceptance_criteria": [
-        "Agenda produces richer dependency edges when a deliverable requires ordered work, while preserving deterministic output for stable accepted task inputs.",
-        "Goal-level DAG artifacts stay canonical and inspectable under `data/agenda/dags/`.",
-        "Dependency refinement remains derived from accepted deliverable and accepted task truth on disk rather than opaque runtime state.",
-        "DAG refresh distinguishes accepted task structure from merely proposed task structure when both exist.",
-        "Tests demonstrate that refined edges remain stable across repeated runs."
+        "A repo-wide reader can state which stages are represented by code capability and which are represented by visible artifacts.",
+        "The report cites concrete evidence such as artifact directories, canonical files, archive manifests, or missing artifact families.",
+        "Continuity reporting remains conservative when evidence is mixed or partial rather than overstating completion.",
+        "The report distinguishes active continuity from archive-preserved continuity when both are present.",
+        "Tests or fixtures demonstrate output for a repo state where code capability and checked-in data differ."
       ],
       "affected_paths": [
-        "azq/agenda/dags.py",
-        "azq/agenda/dag_storage.py",
-        "azq/agenda/lineage.py",
-        "azq/agenda/storage.py",
-        "data/agenda/dags/",
-        "data/agenda/proposals/",
-        "data/agenda/tasks/",
+        "azq/domum/",
+        "data/",
+        "codex/reports/",
         "tests/"
       ],
       "dependencies": [
-        "baseline: Stage 3 Agenda canonical DAG storage",
-        "S6_DELIV_001",
-        "S6_DELIV_002"
-      ],
-      "status": "partial"
-    },
-    {
-      "id": "S6_DELIV_004",
-      "title": "Accepted handoff package for backend-neutral LLM execution",
-      "stage": "stage_6",
-      "description": "Create an Agenda-owned accepted handoff package that can prepare one or more reviewed tasks for Codex or another LLM backend without tying the repo to a single execution engine. The handoff package should act as the acceptance boundary between Agenda shaping and downstream model-facing execution.",
-      "why_it_exists": "The implementation plan calls for Codex preparation subsets and possible backend-neutral packaging, while the current repo stops at local task and DAG artifacts. AZQ needs a stable handoff boundary so downstream models consume accepted work packages instead of re-reading task proposal churn as if it were settled execution truth.",
-      "acceptance_criteria": [
-        "Agenda can emit or maintain a stable handoff package artifact under `data/agenda/handoffs/` linked to exact accepted task identifiers.",
-        "The handoff package is created or marked ready only after task proposal, review, dedupe, and dependency surfaces have resolved into accepted task truth.",
-        "The package includes enough accepted task, dependency, deliverable, and lineage context to support downstream LLM execution without re-deriving basics from scratch.",
-        "The package distinguishes proposed task text, human revision text, accepted canonical task text, and execution-facing handoff text instead of flattening them into one bundle.",
-        "Tests or fixture-backed review confirm that the handoff package points back to exact task and deliverable identifiers and remains backend-neutral."
-      ],
-      "affected_paths": [
-        "azq/agenda/cli.py",
-        "azq/agenda/build.py",
-        "azq/agenda/tasks.py",
-        "azq/agenda/storage.py",
-        "data/agenda/handoffs/",
-        "data/agenda/proposals/",
-        "data/agenda/reviews/",
-        "data/agenda/tasks/",
-        "data/agenda/dags/",
-        "tests/"
-      ],
-      "dependencies": [
-        "S6_DELIV_001",
-        "S6_DELIV_002",
-        "S6_DELIV_003",
-        "S5_DELIV_005",
-        "S5_DELIV_006"
+        "S7_DELIV_003",
+        "S7_DELIV_005",
+        "S8_DELIV_001"
       ],
       "status": "missing"
     },
     {
-      "id": "S6_DELIV_005",
-      "title": "Execution reporting and task-log integration",
-      "stage": "stage_6",
-      "description": "Turn task logs from latent storage capability into a normal Agenda evidence surface, with visible execution reporting tied to accepted task state changes and handoff outcomes.",
-      "why_it_exists": "The current repo already includes `data/agenda/logs/` and log helpers, but the implementation plan and gap report both note that task-log creation is not part of the normal baseline flow. Stage 6 should make logs and reports part of the durable execution evidence chain.",
+      "id": "S8_DELIV_004",
+      "title": "Visible repository health warnings",
+      "stage": "stage_8",
+      "description": "Add a reader surface for warning about visible repo drift such as stale docs versus live code, missing canonical directories, broken archive contracts, or continuity gaps that do not yet rise to full doctor-level inconsistency.",
+      "why_it_exists": "Stage 8 is defined as a disk-truth reporting stage, and the current repo already demonstrates real doc-versus-code tension that later readers should surface plainly. AZQ needs warnings, not just verdicts.",
       "acceptance_criteria": [
-        "Agenda has a live surface that records accepted task execution events into canonical task logs as part of supported operator behavior.",
-        "Execution reports are written under `data/agenda/reports/` or equivalent canonical Agenda reporting storage and summarize what ran, what changed, and what remains without inventing a separate orchestration theater.",
-        "Task logs remain append-oriented durable evidence under `data/agenda/logs/`.",
-        "Execution reporting preserves exact lineage to the handoff package, accepted task ids, and resulting task state changes where applicable.",
-        "Tests demonstrate that execution reporting and task logs stay aligned with canonical task identifiers and status transitions."
+        "Reader output can flag at least one class of doc-versus-repo contradiction or canonical storage inconsistency from visible files.",
+        "Warnings are reviewable and cite the specific file or path evidence that triggered them.",
+        "Warnings remain separate from remediation tasks and do not silently mutate repository state.",
+        "Warnings distinguish advisory drift from harder repository breakage when both may appear in the same repo.",
+        "Tests cover at least one warning-producing fixture and one clean fixture."
       ],
       "affected_paths": [
-        "azq/agenda/log_storage.py",
-        "azq/agenda/tasks.py",
-        "azq/agenda/cli.py",
-        "azq/agenda/storage.py",
-        "data/agenda/logs/",
-        "data/agenda/reports/",
-        "data/agenda/handoffs/",
+        "azq/domum/",
+        "docs/architecture/",
+        "data/",
         "tests/"
       ],
       "dependencies": [
-        "baseline: Stage 3 Agenda task-log storage",
-        "S6_DELIV_002",
-        "S6_DELIV_004"
+        "S7_DELIV_003",
+        "S7_DELIV_005",
+        "S8_DELIV_002"
       ],
-      "status": "partial"
+      "status": "missing"
     },
     {
-      "id": "S6_DELIV_006",
-      "title": "Provenance-preserving task and handoff lineage",
-      "stage": "stage_6",
-      "description": "Add an Agenda provenance contract that preserves the boundary between accepted deliverable definition, model-generated task proposal text, human revision text, accepted canonical task text, dependency structure, and accepted handoff package content. This contract should make it possible to review how executable work changed without letting model suggestions masquerade as accepted execution truth.",
-      "why_it_exists": "AZQ is meant to be a wrapper that protects human intent from model drift. Stage 5 establishes that protection at the artifact-shaping layer, and Stage 6 must preserve it at the executable-work and handoff layer. The current repo has real task and DAG lineage, but it does not yet have an explicit contract for separating human-origin and model-origin shaping during deeper Agenda work.",
+      "id": "S8_DELIV_005",
+      "title": "Provenance-preserving repository reader evidence",
+      "stage": "stage_8",
+      "description": "Add a repository-reader provenance contract that preserves the boundary between active canonical artifacts, archived artifacts, documentation assertions, code-capability interpretation, and reader-generated report text. This contract should make it possible to understand how a reader reached its conclusion without letting summary output masquerade as canonical repository truth.",
+      "why_it_exists": "AZQ is meant to protect human orientation while working with LLMs and complex repo state. Stages 4 through 7 established provenance boundaries for intent, artifact shaping, task shaping, and stewardship; Stage 8 must preserve that discipline at the reader layer so status and doctor output remain evidence-backed interpretation instead of accidental lore.",
       "acceptance_criteria": [
-        "Agenda artifacts used in Stage 6 expose fields or sections that distinguish accepted deliverable definition, proposed task text, human revision text, accepted canonical task text, dependency structure, and accepted handoff package content where applicable.",
-        "The provenance contract preserves exact lineage to `FINIS_###` goal identifiers, canonical deliverable identifiers, and canonical task identifiers where applicable.",
-        "No Stage 6 artifact treats model-generated proposal text as accepted canonical task text, accepted dependency truth, or accepted handoff content without an explicit human acceptance step recorded in Agenda review artifacts.",
-        "Tests or review fixtures demonstrate one end-to-end example where accepted artifact definition, model-origin task suggestions, human revision, accepted task structure, and accepted handoff package remain visibly distinct across proposal, review, acceptance, and execution-preparation artifacts."
+        "Stage 8 reader artifacts or outputs expose enough structure to distinguish active canonical artifact evidence, archived artifact evidence, documentation evidence, and reader-generated interpretation.",
+        "The provenance contract preserves exact linkage to visible paths, canonical identifiers, and archive-aware evidence where applicable.",
+        "No Stage 8 reader output presents documentation claims, code capability assumptions, or prior report summaries as canonical repository truth without citing the underlying visible evidence.",
+        "Reader-generated summaries remain clearly identified as report text rather than canonical artifact state.",
+        "Tests or review fixtures demonstrate one end-to-end example where reader conclusions remain visibly tied to underlying repo evidence across active, archived, and mixed states."
       ],
       "affected_paths": [
-        "azq/agenda/storage.py",
-        "azq/agenda/build.py",
-        "azq/agenda/tasks.py",
-        "azq/agenda/dags.py",
-        "azq/agenda/log_storage.py",
-        "data/agenda/proposals/",
-        "data/agenda/reviews/",
-        "data/agenda/handoffs/",
-        "data/agenda/tasks/",
-        "data/agenda/dags/",
-        "data/agenda/logs/",
+        "azq/domum/",
+        "docs/architecture/",
+        "data/",
+        "codex/reports/",
         "tests/"
       ],
       "dependencies": [
-        "baseline: Stage 3 Agenda canonical task storage",
-        "baseline: Stage 3 Agenda canonical DAG storage",
-        "S5_DELIV_006"
+        "S7_DELIV_005",
+        "S8_DELIV_001",
+        "S8_DELIV_002",
+        "S8_DELIV_003"
       ],
       "status": "missing"
     }
