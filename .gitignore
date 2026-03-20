@@ -1,7 +1,12 @@
-.azq_codex_progress_stage1_wave_*.json
-.azq_codex_runs/
-codex_reports/
+# --------------------------------------------------
+# AZQ local runner state
+# --------------------------------------------------
 
+.azq_codex_progress_*.json
+.azq_codex_runs/
+
+# generated status report
+codex/reports/codex_azq_task_status_report.md
 
 # --------------------------------------------------
 # Python environments
@@ -13,18 +18,29 @@ env/
 ENV/
 
 # --------------------------------------------------
-# Python build artifacts
+# Python build / packaging artifacts
 # --------------------------------------------------
 
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Distribution / packaging
 build/
 dist/
-*.egg-info/
 .eggs/
+*.egg-info/
+pip-wheel-metadata/
+
+# --------------------------------------------------
+# Python tool caches / test outputs
+# --------------------------------------------------
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
 # --------------------------------------------------
 # Editor / OS junk
@@ -43,14 +59,14 @@ Thumbs.db
 *.log
 
 # --------------------------------------------------
-# Runtime data (Scintilla engine outputs)
+# Runtime data: Scintilla outputs
 # --------------------------------------------------
 
 data/scintilla/audio/*
 data/scintilla/transcripts/*
 data/scintilla/sparks/*
 
-# Keep the folders themselves
+# keep the directories themselves
 !data/scintilla/audio/.keep
 !data/scintilla/transcripts/.keep
 !data/scintilla/sparks/.keep
