@@ -1,25 +1,27 @@
 {
   "stage": "stage_7",
   "stage_title": "Archive-first stewardship and Domum",
-  "stage_summary": "Stage 7 introduces stewardship work that does not yet exist in the live baseline. The current repo still includes destructive spark deletion in Scintilla and has no Domum package, archive home, or repository maintenance surface. The rebased implementation plan makes safe retirement and visible continuity the next stewardship horizon, starting with archive-first behavior and only then adding broader review and maintenance surfaces.",
+  "stage_summary": "Stage 7 introduces stewardship work that does not yet exist in the live baseline. The current repo still includes destructive spark deletion in Scintilla and has no Domum package, no canonical archive contract, and no visible stewardship review surface. The rebased implementation plan makes safe retirement and visible continuity the next stewardship horizon, starting with archive-first behavior, then establishing Domum as the steward of archive inspection and maintenance evidence, without collapsing stewardship into hidden cleanup magic or premature Stage 8 repository-wide readers.",
   "baseline_guardrails": [
     "Stage 1 Finis baseline is already implemented and remains the canonical goal layer.",
     "Stage 2 Formam baseline is already implemented and remains the canonical deliverable and map layer.",
     "Stage 3 Agenda baseline is already implemented and remains the canonical task, DAG, and task-log layer.",
-    "Post-baseline Stage 7 deliverables must add archive-first stewardship and Domum without recreating the existing Scintilla, Finis, Formam, or Agenda baselines."
+    "Post-baseline Stage 7 deliverables must add archive-first stewardship and Domum without recreating the existing Scintilla, Finis, Formam, or Agenda baselines.",
+    "Stage 7 must preserve stewardship boundaries: retirement, archive inspection, continuity evidence, and maintenance artifacts belong here, while goal shaping, artifact shaping, and task shaping remain owned by Finis, Formam, and Agenda."
   ],
   "deliverables": [
     {
       "id": "S7_DELIV_001",
       "title": "Archive-first spark retirement",
       "stage": "stage_7",
-      "description": "Replace the current destructive spark deletion path with an archive-first retirement flow that preserves repository memory while still allowing a spark to leave the active working set.",
-      "why_it_exists": "The live CLI includes `azq spark rm <id>` and the gap report calls out destructive deletion as a real mismatch with the intended continuity model.",
+      "description": "Replace the current destructive spark deletion path with an archive-first retirement flow that preserves repository memory while still allowing a spark to leave the active working set. Retirement must preserve continuity to downstream Finis review and later stewardship inspection instead of treating spark removal as silent disappearance.",
+      "why_it_exists": "The live CLI includes `azq spark rm <id>` and the current Stage 7 manifest already identifies destructive deletion as a mismatch with the intended continuity model. AZQ cannot claim stewardship while its earliest evidence can still fall through a trap door.",
       "acceptance_criteria": [
-        "Scintilla retirement of sparks uses an archive move or archive marker instead of deleting the canonical spark artifact outright.",
-        "The operator can still inspect archived spark lineage after retirement.",
+        "Scintilla retirement of sparks uses an archive move, archive copy, or archive marker instead of deleting the canonical spark artifact outright.",
+        "The operator can still inspect archived spark lineage after retirement through stable archive evidence rather than relying on memory or terminal history.",
         "The active spark listing surface distinguishes active and archived sparks clearly enough to avoid silent disappearance.",
-        "Tests verify that retirement preserves exact spark identity and does not orphan related review material."
+        "Retirement preserves continuity to any related Finis review, proposal, or accepted goal artifacts where such lineage exists.",
+        "Tests verify that retirement preserves exact spark identity and does not orphan related stewardship or review material."
       ],
       "affected_paths": [
         "azq/scintilla/spark_delete.py",
@@ -30,6 +32,7 @@
         "tests/"
       ],
       "dependencies": [
+        "S7_DELIV_002",
         "baseline: Scintilla spark storage",
         "baseline: Stage 1 Finis baseline"
       ],
@@ -37,14 +40,15 @@
     },
     {
       "id": "S7_DELIV_002",
-      "title": "Archive home and movement rules",
+      "title": "Archive home, manifests, and movement rules",
       "stage": "stage_7",
-      "description": "Define the canonical archive home under `data/` and the movement or marking rules that later engines can rely on when artifacts retire from active use.",
-      "why_it_exists": "The implementation plan names an archive home under `data/` as the start of Stage 7, and the current repo has no archive storage contract.",
+      "description": "Define the canonical archive home under `data/` and the movement, marking, and manifest rules that later engines can rely on when artifacts retire from active use. Archive handling must preserve inspectability, reversibility of understanding, and exact lineage rather than acting like a trash can with nicer manners.",
+      "why_it_exists": "The implementation plan names an archive home under `data/` as the start of Stage 7, and the current repo has no archive storage contract. Without explicit archive rules, every later retirement path would invent its own folklore.",
       "acceptance_criteria": [
-        "A canonical archive home exists under `data/` with clear ownership rules for archived artifacts.",
+        "A canonical archive home exists under `data/archive/` with clear ownership rules for archived artifacts.",
         "Archive movement or marking rules are explicit enough that Scintilla and later engines can retire artifacts without inventing one-off behavior.",
-        "Archived artifacts remain inspectable and retain lineage to their active identifiers.",
+        "Archive manifests or equivalent stewardship records exist and preserve exact linkage between active identifiers and archived artifact locations or markers.",
+        "Archived artifacts remain inspectable and retain lineage to their active identifiers and parent artifact families where applicable.",
         "Docs or tests describe archive handling as additive stewardship rather than destructive cleanup."
       ],
       "affected_paths": [
@@ -53,21 +57,20 @@
         "docs/architecture/AZQ_STATE_MODEL.md",
         "tests/"
       ],
-      "dependencies": [
-        "S7_DELIV_001"
-      ],
+      "dependencies": [],
       "status": "missing"
     },
     {
       "id": "S7_DELIV_003",
       "title": "Domum engine baseline",
       "stage": "stage_7",
-      "description": "Introduce the Domum engine as the stewardship owner for archive review, continuity inspection, and later repository-wide readers.",
-      "why_it_exists": "The implementation plan explicitly names Domum as the new engine for stewardship work, and no `azq/domum/` package exists in the current repo.",
+      "description": "Introduce the Domum engine as the stewardship owner for archive inspection, continuity review, and maintenance evidence. Domum should read and report on archive-aware repository truth without taking over goal shaping, deliverable shaping, or task shaping from the existing engines.",
+      "why_it_exists": "The implementation plan explicitly names Domum as the new engine for stewardship work, and no `azq/domum/` package exists in the current repo. Stage 7 needs a visible steward, not just a pile of archive folders humming quietly in the corner.",
       "acceptance_criteria": [
         "A live `azq/domum/` package exists with import-safe module boundaries and a clear stewardship responsibility.",
-        "Domum can read archive or maintenance artifacts from canonical storage without taking over Finis, Formam, or Agenda ownership.",
+        "Domum can read archive manifests, archive-aware artifacts, or maintenance records from canonical storage without taking over Finis, Formam, or Agenda ownership.",
         "The CLI exposes a Domum-owned surface or route that is visibly separate from existing engine commands.",
+        "Domum behavior remains read-oriented and stewardship-oriented at baseline rather than mutating unrelated engine state opportunistically.",
         "Tests verify that Domum reads visible repository truth rather than hidden runtime state."
       ],
       "affected_paths": [
@@ -85,23 +88,57 @@
       "id": "S7_DELIV_004",
       "title": "Stewardship review and maintenance artifacts",
       "stage": "stage_7",
-      "description": "Add visible review and maintenance artifacts that help an operator understand what has been archived, what remains active, and what continuity risks exist before repository-wide readers arrive.",
-      "why_it_exists": "The implementation plan calls for visible review and maintenance artifacts during Stage 7, and nothing comparable exists yet in the current repo.",
+      "description": "Add visible review and maintenance artifacts that help an operator understand what has been archived, what remains active, what continuity risks exist, and what stewardship actions have been taken before Stage 8 repository-wide readers arrive.",
+      "why_it_exists": "The implementation plan calls for visible review and maintenance artifacts during Stage 7, and the current repo has nothing comparable yet. Stewardship needs receipts, not incense.",
       "acceptance_criteria": [
         "Stewardship review artifacts exist on disk and summarize active-versus-archived state for supported artifact families.",
-        "Maintenance artifacts or reports remain tied to exact repository paths and identifiers.",
+        "Maintenance artifacts or reports remain tied to exact repository paths and identifiers rather than vague summaries.",
         "The artifacts can be regenerated or refreshed from visible repo state without hidden side channels.",
+        "Review and maintenance artifacts remain distinct from Stage 8 status or doctor readers and do not pretend to be full repository-wide health surfaces yet.",
         "Tests or fixtures demonstrate at least one reviewable stewardship artifact produced from archive-aware state."
       ],
       "affected_paths": [
         "azq/domum/",
         "data/archive/",
-        "data/",
+        "data/domum/reviews/",
+        "data/domum/maintenance/",
         "tests/"
       ],
       "dependencies": [
         "S7_DELIV_003",
         "S7_DELIV_001"
+      ],
+      "status": "missing"
+    },
+    {
+      "id": "S7_DELIV_005",
+      "title": "Provenance-preserving archive and continuity lineage",
+      "stage": "stage_7",
+      "description": "Add a stewardship provenance contract that preserves the boundary between active canonical artifacts, archive manifests or markers, archived artifact state, and stewardship review text. This contract should make it possible to understand what was retired, why it was retired, where it went, and how it still connects to the rest of the craft lineage without letting archived state masquerade as active truth.",
+      "why_it_exists": "AZQ is meant to be a wrapper that protects continuity across time, not just across model prompts. Stages 4 through 6 established provenance boundaries for intent, deliverables, and tasks; Stage 7 must preserve that discipline when artifacts retire from active use.",
+      "acceptance_criteria": [
+        "Archive-aware artifacts used in Stage 7 expose fields or sections that distinguish active canonical state, archive manifest or marker state, archived artifact state, and stewardship review text where applicable.",
+        "The provenance contract preserves exact lineage to canonical spark artifacts, `FINIS_###` goal identifiers, canonical deliverable identifiers, and canonical task identifiers where applicable.",
+        "No Stage 7 artifact treats archived state as active canonical truth without an explicit restoration or re-activation step recorded in stewardship artifacts if such behavior is later added.",
+        "Archive manifests or equivalent stewardship records preserve why an artifact was retired, when it was retired, and what continuity links still matter afterward.",
+        "Tests or review fixtures demonstrate one end-to-end example where active state, retirement action, archived state, and stewardship review remain visibly distinct."
+      ],
+      "affected_paths": [
+        "azq/domum/",
+        "azq/scintilla/storage.py",
+        "data/archive/",
+        "data/domum/reviews/",
+        "data/domum/maintenance/",
+        "data/scintilla/",
+        "data/finis/",
+        "data/form/",
+        "data/agenda/",
+        "tests/"
+      ],
+      "dependencies": [
+        "S7_DELIV_002",
+        "S7_DELIV_003",
+        "S6_DELIV_006"
       ],
       "status": "missing"
     }
