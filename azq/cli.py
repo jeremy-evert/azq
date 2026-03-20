@@ -10,6 +10,7 @@ def print_commands() -> None:
     """Print the live Stage 3 top-level command listing."""
     print("Commands:")
     print("  capture")
+    print('  capture text "..."')
     print("  sparks")
     print("  spark <id>")
     print("  spark rm <id>")

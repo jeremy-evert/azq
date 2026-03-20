@@ -8,6 +8,7 @@ and destructive delete flows.
 """
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -61,6 +62,21 @@ def spark_artifact_paths(spark_id: str) -> dict[str, Path]:
     }
 
 
+def allocate_spark_id() -> str:
+    """Allocate a new spark id without overwriting an existing bundle."""
+    ensure_scintilla_dirs()
+
+    base_id = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    spark_id = base_id
+    suffix = 1
+
+    while any(path.exists() for path in spark_artifact_paths(spark_id).values()):
+        spark_id = f"{base_id}_{suffix:02d}"
+        suffix += 1
+
+    return spark_id
+
+
 def list_spark_files() -> list[Path]:
     """Return canonical spark files in stable filename order."""
     if not SPARKS_DIR.exists():
@@ -100,6 +116,7 @@ __all__ = [
     "transcript_file_path",
     "spark_file_path",
     "spark_artifact_paths",
+    "allocate_spark_id",
     "list_spark_files",
     "load_spark_file",
     "load_spark_artifact",

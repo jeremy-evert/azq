@@ -1,5 +1,11 @@
 """Scintilla command routing for the top-level AZQ CLI."""
 
+from azq.scintilla.storage import (
+    allocate_spark_id,
+    ensure_scintilla_dirs,
+    transcript_file_path,
+)
+
 
 def capture_loop() -> None:
     """Run the interactive Scintilla capture loop."""
@@ -32,6 +38,22 @@ def capture_loop() -> None:
             break
 
 
+def capture_text(text: str) -> str:
+    """Create a transcript-first spark bundle from direct text input."""
+    from azq.scintilla.extract import run as extract_run
+
+    ensure_scintilla_dirs()
+    spark_id = allocate_spark_id()
+    transcript = transcript_file_path(spark_id)
+    transcript.write_text(text.strip(), encoding="utf-8")
+    extract_run(transcript)
+
+    print(f"Transcript saved → {transcript}")
+    print("\nSpark captured.\n")
+
+    return spark_id
+
+
 def dispatch(argv: list[str]) -> bool:
     """Handle Scintilla commands and return True when one was dispatched."""
     if not argv:
@@ -40,6 +62,14 @@ def dispatch(argv: list[str]) -> bool:
     cmd = argv[0]
 
     if cmd == "capture":
+        if len(argv) > 1 and argv[1] == "text":
+            if len(argv) < 3 or not " ".join(argv[2:]).strip():
+                print('Usage: azq capture text "..."')
+                return True
+
+            capture_text(" ".join(argv[2:]))
+            return True
+
         capture_loop()
         return True
 
