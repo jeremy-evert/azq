@@ -1,0 +1,148 @@
+[
+  {
+    "task_id": "STAGE4-WAVEA-01",
+    "title": "Add Finis review path ownership and directory helpers",
+    "goal": "Extend `azq/finis/storage.py` so Wave A has one shared place to own `data/finis/reviews/` path decisions without changing the canonical goal store.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/finis/storage.py"
+    ],
+    "depends_on": [],
+    "context": [
+      "`codex/reports/azq_finis_goal_shaping_gap_report.md` identifies `data/finis/reviews/` as the smallest practical deepening for Stage 4 Wave A.",
+      "`azq/finis/storage.py` already owns canonical goal path decisions and is the natural seam for Finis-owned review storage helpers.",
+      "The current checked-in `data/finis/` tree contains `goals.json` and `goals/`, but no `reviews/` directory yet."
+    ],
+    "requirements": [
+      "Add canonical path constants and directory helpers for `data/finis/reviews/` in `azq/finis/storage.py`.",
+      "Add deterministic review-file lookup and stable review-file listing helpers in `azq/finis/storage.py`.",
+      "Keep `data/finis/goals/` as the canonical goal home and do not change existing goal path helpers in this task.",
+      "Do not introduce `data/finis/proposals/`, `data/finis/questions/`, or `data/finis/intent_packages/` in this task."
+    ],
+    "acceptance_criteria": [
+      "`azq/finis/storage.py` owns one explicit shared path seam for `data/finis/reviews/`.",
+      "Wave A code can create and list review artifact paths deterministically.",
+      "Existing canonical goal path behavior remains intact."
+    ],
+    "suggested_commit_message": "add finis review path helpers for stage 4 wave a"
+  },
+  {
+    "task_id": "STAGE4-WAVEA-02",
+    "title": "Define a minimal Finis review record format and repository helpers",
+    "goal": "Create one small durable review record contract so Finis can preserve review-boundary state before canonical goal acceptance.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/finis/storage.py"
+    ],
+    "depends_on": [
+      "STAGE4-WAVEA-01"
+    ],
+    "context": [
+      "The gap report says the missing Stage 4 seam is the durable distinction between raw spark text, candidate goal text, human revision text, and accepted canonical goal text.",
+      "`azq/finis/fine.py` currently keeps candidate state only in memory and loses it unless a goal is accepted immediately.",
+      "Wave A should add only the first durable review seam, not broader proposal, question, or intent-package artifacts."
+    ],
+    "requirements": [
+      "Add a minimal review-record normalizer and read-write helpers in `azq/finis/storage.py`.",
+      "The review record must preserve at least: a stable review identifier, exact spark source provenance, raw spark text, candidate goal text, optional human revision text, review status, and accepted canonical goal id when present.",
+      "Choose one simple durable on-disk format for review artifacts under `data/finis/reviews/` and make repository reads deterministic.",
+      "Do not change the canonical `FINIS_###.md` goal format in this task."
+    ],
+    "acceptance_criteria": [
+      "A Finis review record can be normalized, written, listed, and loaded through `azq/finis/storage.py`.",
+      "The review format keeps raw spark text and candidate goal text distinct.",
+      "No Stage 1 canonical goal helper is replaced or bypassed."
+    ],
+    "suggested_commit_message": "add finis review record read write helpers"
+  },
+  {
+    "task_id": "STAGE4-WAVEA-03",
+    "title": "Make `azq/finis/fine.py` materialize durable review artifacts for candidate goals",
+    "goal": "Change the live Finis review loop so candidate goals stop existing only as transient terminal state and instead land in visible review artifacts first.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/finis/fine.py",
+      "azq/finis/storage.py"
+    ],
+    "depends_on": [
+      "STAGE4-WAVEA-02"
+    ],
+    "context": [
+      "`azq/finis/fine.py` currently loads sparks, cleans candidate text, and asks `Accept goal? [y/n]` without persisting pre-goal review state.",
+      "The current `load_sparks()` path keeps only `spark` and `source`, so Wave A may need a more exact per-spark review identity than the current in-memory shape provides.",
+      "`planning/stage_4/deliverables.json` marks the richer review surface as the first partial Stage 4 deliverable and requires visible review artifacts under `data/finis/reviews/`."
+    ],
+    "requirements": [
+      "Update `azq/finis/fine.py` so candidate goal generation writes review artifacts under `data/finis/reviews/` before canonical goal acceptance.",
+      "Preserve the current duplicate filtering and used-source filtering behavior unless a small identity adjustment is required to support exact review provenance.",
+      "Make sure each review artifact keeps raw spark text and cleaned candidate goal text visibly separate.",
+      "Keep `azq fine` as the command entrypoint. Do not add a new public Finis command family in this task."
+    ],
+    "acceptance_criteria": [
+      "Running `azq fine` can produce durable Finis review artifacts for candidate goals.",
+      "Candidate goal state no longer exists only in transient CLI memory.",
+      "Wave A still stays inside the existing Finis engine boundary and command posture."
+    ],
+    "suggested_commit_message": "materialize finis review artifacts from fine candidates"
+  },
+  {
+    "task_id": "STAGE4-WAVEA-04",
+    "title": "Promote accepted Finis reviews into canonical goals through the existing storage seam",
+    "goal": "Make acceptance happen from durable review state into canonical goal files so the new review seam preserves continuity without redesigning Finis.",
+    "files_to_create": [],
+    "files_to_modify": [
+      "azq/finis/fine.py",
+      "azq/finis/storage.py"
+    ],
+    "depends_on": [
+      "STAGE4-WAVEA-03"
+    ],
+    "context": [
+      "The gap report's recommended next step is to promote from review artifacts into the existing canonical goal store rather than writing canonical goals directly from transient candidates.",
+      "`azq/finis/storage.py` already owns canonical `FINIS_###.md` goal writes, and Wave A should preserve that Stage 1 storage model.",
+      "`tests/test_stage1_wave_c.py` already locks the current baseline that accepted goals keep `derived_from` backlinks and land in canonical goal files."
+    ],
+    "requirements": [
+      "Update `azq/finis/fine.py` so accepted review records are the source of canonical goal creation rather than transient candidate dicts alone.",
+      "When a goal is accepted, write the canonical goal through existing `azq/finis/storage.py` goal helpers and record the acceptance outcome back into the review artifact.",
+      "Preserve the current canonical goal behavior for `goal_id`, `status`, `created`, empty `description`, and `derived_from` backlinks unless the review seam requires an additional stable backlink to the accepted review record.",
+      "Do not broaden this task into manual goal entry refactors, narrowing questions, or richer review-note fields."
+    ],
+    "acceptance_criteria": [
+      "Accepted Finis review state promotes cleanly into `data/finis/goals/FINIS_###.md` through the existing canonical goal storage helpers.",
+      "The corresponding review artifact records that acceptance happened and which canonical goal was created.",
+      "Wave A preserves the Stage 1 canonical goal storage model while adding a durable pre-goal review boundary."
+    ],
+    "suggested_commit_message": "promote accepted finis reviews into canonical goals"
+  },
+  {
+    "task_id": "STAGE4-WAVEA-05",
+    "title": "Add a narrow Stage 4 regression slice for the Finis review seam",
+    "goal": "Protect the Wave A deepening with compact regression coverage that proves the new review boundary exists while preserving existing canonical goal behavior.",
+    "files_to_create": [
+      "tests/test_stage4_wave_a.py"
+    ],
+    "files_to_modify": [],
+    "depends_on": [
+      "STAGE4-WAVEA-04"
+    ],
+    "context": [
+      "The gap report calls for narrow tests that prove review artifacts exist, preserve provenance boundaries, and still promote into canonical goals through the Stage 1 storage seam.",
+      "`tests/test_stage1_wave_c.py` already covers the earlier baseline where `azq fine` writes a canonical goal with a `derived_from` backlink.",
+      "Wave A should add only enough regression coverage to lock the new durable review seam without re-testing unrelated Finis behavior."
+    ],
+    "requirements": [
+      "Create `tests/test_stage4_wave_a.py` for the new Finis review-seam regression slice.",
+      "Add coverage that `azq fine` writes durable review artifacts under `data/finis/reviews/` and keeps raw spark text, candidate goal text, and review status distinct.",
+      "Add coverage that accepting a reviewed candidate still writes the canonical goal file under `data/finis/goals/` with the expected Stage 1 fields and `derived_from` backlink.",
+      "Add coverage that the accepted review artifact records the canonical goal id it promoted into.",
+      "Keep the suite focused on Wave A review-boundary behavior rather than broader Stage 4 aspirations."
+    ],
+    "acceptance_criteria": [
+      "The repository has one small Stage 4 Wave A regression file under `tests/`.",
+      "Wave A tests prove the new review seam exists and that canonical goal promotion still works through the current Finis storage model.",
+      "The new regression slice is safe to run through the repository's existing unittest discovery flow."
+    ],
+    "suggested_commit_message": "add stage 4 wave a finis review seam regression coverage"
+  }
+]
