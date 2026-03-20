@@ -50,6 +50,49 @@ class Stage3WaveDRegressionTests(unittest.TestCase):
             cli.main()
         return output.getvalue()
 
+    def test_capture_text_creates_transcript_and_spark_json_without_audio(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            with working_directory(repo_root), mock.patch(
+                "azq.scintilla.cli.allocate_spark_id",
+                return_value="2026-03-20_120000",
+            ):
+                output = self.run_cli(
+                    [
+                        "capture",
+                        "text",
+                        "Protect",
+                        "the",
+                        "text-native",
+                        "spark",
+                        "path.",
+                        "Keep",
+                        "it",
+                        "usable.",
+                    ]
+                )
+
+                transcript = Path("data/scintilla/transcripts/2026-03-20_120000.txt")
+                sparks = Path("data/scintilla/sparks/2026-03-20_120000.json")
+                audio = Path("data/scintilla/audio/2026-03-20_120000.wav")
+
+                self.assertIn("Transcript saved → data/scintilla/transcripts/2026-03-20_120000.txt", output)
+                self.assertIn("Sparks: data/scintilla/sparks/2026-03-20_120000.json", output)
+                self.assertTrue(transcript.exists())
+                self.assertTrue(sparks.exists())
+                self.assertFalse(audio.exists())
+                self.assertEqual(
+                    transcript.read_text(encoding="utf-8"),
+                    "Protect the text-native spark path. Keep it usable.",
+                )
+                self.assertEqual(
+                    json.loads(sparks.read_text(encoding="utf-8")),
+                    [
+                        {"spark": "protect the text-native spark path", "confidence": 0.5},
+                        {"spark": "keep it usable", "confidence": 0.5},
+                    ],
+                )
+
     def test_sparks_lists_canonical_spark_files_in_stable_filename_order(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
@@ -73,6 +116,56 @@ class Stage3WaveDRegressionTests(unittest.TestCase):
                 )
                 self.assertIn("  - First visible spark", output)
                 self.assertIn("  - Second visible spark", output)
+
+    def test_capture_text_bundle_is_visible_through_existing_read_surfaces(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            with working_directory(repo_root), mock.patch(
+                "azq.scintilla.cli.allocate_spark_id",
+                return_value="2026-03-20_120000",
+            ):
+                self.run_cli(
+                    [
+                        "capture",
+                        "text",
+                        "Protect",
+                        "shared",
+                        "read",
+                        "surfaces.",
+                        "Keep",
+                        "spark",
+                        "inspection",
+                        "usable.",
+                    ]
+                )
+
+                sparks_output = self.run_cli(["sparks"])
+                view_output = self.run_cli(["spark", "2026-03-20_120000"])
+
+                self.assertIn("2026-03-20_120000", sparks_output)
+                self.assertIn("  - protect shared read surfaces", sparks_output)
+                self.assertIn("  - keep spark inspection usable", sparks_output)
+                self.assertIn("Spark ID: 2026-03-20_120000", view_output)
+                self.assertIn(
+                    "Protect shared read surfaces. Keep spark inspection usable.",
+                    view_output,
+                )
+                self.assertIn("1. protect shared read surfaces", view_output)
+                self.assertIn("2. keep spark inspection usable", view_output)
+                self.assertIn(
+                    "audio: data/scintilla/audio/2026-03-20_120000.wav",
+                    view_output,
+                )
+                self.assertIn(
+                    "transcript: data/scintilla/transcripts/2026-03-20_120000.txt",
+                    view_output,
+                )
+                self.assertIn(
+                    "sparks: data/scintilla/sparks/2026-03-20_120000.json",
+                    view_output,
+                )
+                self.assertIn("Extracted Sparks", view_output)
+                self.assertFalse(Path("data/scintilla/audio/2026-03-20_120000.wav").exists())
 
     def test_spark_exact_id_reads_live_transcript_and_spark_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
