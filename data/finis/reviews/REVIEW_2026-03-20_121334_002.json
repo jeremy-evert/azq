@@ -1,0 +1,9 @@
+{
+  "review_id": "REVIEW_2026-03-20_121334_002",
+  "spark_source": "2026-03-20_121334",
+  "raw_spark_text": "the docs do not all agree, and we need a usable spark ingress path",
+  "candidate_goal_text": "The docs do not all agree, and we need a usable spark ingress path",
+  "human_revision_text": "",
+  "review_status": "accepted",
+  "accepted_goal_id": "FINIS_029"
+}

@@ -1,0 +1,9 @@
+{
+  "review_id": "REVIEW_2026-03-20_121334_001",
+  "spark_source": "2026-03-20_121334",
+  "raw_spark_text": "we need to fix azq to make the alignment match better",
+  "candidate_goal_text": "We need to fix azq to make the alignment match better",
+  "human_revision_text": "",
+  "review_status": "accepted",
+  "accepted_goal_id": "FINIS_028"
+}
