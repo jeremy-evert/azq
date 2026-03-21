@@ -6,7 +6,7 @@ from pathlib import Path
 from . import storage
 
 SPARK_DIR = Path("data/scintilla/sparks")
-TITLE_DEDUPE_THRESHOLD = 0.39
+TITLE_DEDUPE_THRESHOLD = 0.50
 
 
 # ------------------------------------------------
@@ -56,6 +56,9 @@ def clean_goal_text(text):
 
     text = text.strip()
 
+    if not text:
+        return ""
+
     prefixes = [
         "i would like to",
         "i want to",
@@ -70,9 +73,13 @@ def clean_goal_text(text):
     for p in prefixes:
         if lower.startswith(p):
             text = text[len(p) :].strip()
+            lower = text.lower()
 
     # normalize whitespace
     text = " ".join(text.split())
+
+    if not text:
+        return ""
 
     # capitalize nicely
     text = text[0].upper() + text[1:]
@@ -103,7 +110,11 @@ def propose_goals(sparks):
 
     existing_goals = storage.load_all_goals(migrate_legacy=True)
 
-    existing_text = [g["title"].lower() for g in existing_goals]
+    existing_text = [
+        clean_goal_text(g["title"]).lower()
+        for g in existing_goals
+        if clean_goal_text(g["title"])
+    ]
 
     used_sources = get_used_sources(existing_goals)
 
@@ -128,9 +139,8 @@ def propose_goals(sparks):
         duplicate = False
 
         for g in existing_text:
-            # Fine works with short candidate titles, so a lower threshold keeps
-            # obvious title-level duplicates from slipping through canonical
-            # storage as new goal files.
+            # Compare cleaned titles on both sides and keep duplicate filtering
+            # strict enough that clearly distinct work still reaches review.
             if similar(text_lower, g) >= TITLE_DEDUPE_THRESHOLD:
                 duplicate = True
                 break
