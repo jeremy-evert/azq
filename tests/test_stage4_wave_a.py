@@ -32,6 +32,127 @@ class FixedDate:
 
 
 class Stage4WaveARegressionTests(unittest.TestCase):
+    def test_fine_allows_live_false_positive_candidates_to_reach_review(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            with working_directory(repo_root):
+                spark_dir = Path("data/scintilla/sparks")
+                spark_dir.mkdir(parents=True, exist_ok=True)
+                spark_dir.joinpath("2026-03-20_121334.json").write_text(
+                    json.dumps(
+                        [
+                            {
+                                "spark": "we need to fix azq to make the alignment match better"
+                            },
+                            {
+                                "spark": "the docs do not all agree, and we need a usable spark ingress path"
+                            },
+                        ]
+                    ),
+                    encoding="utf-8",
+                )
+                storage.write_goal(
+                    {
+                        "goal_id": "FINIS_010",
+                        "title": "Stabilize the Scintilla and Finis engines of AZQ",
+                        "status": "active",
+                        "created": "2026-03-09",
+                        "description": "",
+                        "derived_from": [],
+                    }
+                )
+                storage.write_goal(
+                    {
+                        "goal_id": "FINIS_020",
+                        "title": "They recommended a 15 line guard rail that prevents corrupted goals",
+                        "status": "active",
+                        "created": "2026-03-09",
+                        "description": "",
+                        "derived_from": ["2026-03-09_090431"],
+                    }
+                )
+                storage.write_goal(
+                    {
+                        "goal_id": "FINIS_022",
+                        "title": "It's small, but it makes the system dramatically more durable",
+                        "status": "active",
+                        "created": "2026-03-09",
+                        "description": "",
+                        "derived_from": ["2026-03-09_090431"],
+                    }
+                )
+                storage.write_goal(
+                    {
+                        "goal_id": "FINIS_025",
+                        "title": "add azq goals --all to show all active, completed, and archived goals.",
+                        "status": "active",
+                        "created": "2026-03-09",
+                        "description": "",
+                        "derived_from": [],
+                    }
+                )
+                output = io.StringIO()
+
+                with mock.patch("builtins.input", side_effect=["n", "n"]), mock.patch(
+                    "sys.argv", ["azq", "fine"]
+                ), contextlib.redirect_stdout(output):
+                    cli.main()
+
+                self.assertEqual(
+                    [path.name for path in storage.list_review_files()],
+                    [
+                        "REVIEW_2026-03-20_121334_001.json",
+                        "REVIEW_2026-03-20_121334_002.json",
+                    ],
+                )
+                self.assertEqual(
+                    storage.load_review("REVIEW_2026-03-20_121334_001")["candidate_goal_text"],
+                    "We need to fix azq to make the alignment match better",
+                )
+                self.assertEqual(
+                    storage.load_review("REVIEW_2026-03-20_121334_002")["candidate_goal_text"],
+                    "The docs do not all agree, and we need a usable spark ingress path",
+                )
+                self.assertIn("Reviews written to data/finis/reviews/", output.getvalue())
+                self.assertNotIn("No candidate goals to review.", output.getvalue())
+
+    def test_fine_still_filters_clearly_duplicate_candidate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            with working_directory(repo_root):
+                spark_dir = Path("data/scintilla/sparks")
+                spark_dir.mkdir(parents=True, exist_ok=True)
+                spark_dir.joinpath("2026-03-20_121334.json").write_text(
+                    json.dumps(
+                        [
+                            {
+                                "spark": "I want to lock Finis review lineage"
+                            }
+                        ]
+                    ),
+                    encoding="utf-8",
+                )
+                storage.write_goal(
+                    {
+                        "goal_id": "FINIS_010",
+                        "title": "Lock Finis review lineage",
+                        "status": "active",
+                        "created": "2026-03-09",
+                        "description": "",
+                        "derived_from": [],
+                    }
+                )
+                output = io.StringIO()
+
+                with mock.patch("builtins.input", side_effect=[]), mock.patch(
+                    "sys.argv", ["azq", "fine"]
+                ), contextlib.redirect_stdout(output):
+                    cli.main()
+
+                self.assertEqual(storage.list_review_files(), [])
+                self.assertIn("No candidate goals to review.", output.getvalue())
+                self.assertEqual(storage.load_goal("FINIS_010")["title"], "Lock Finis review lineage")
+
     def test_fine_writes_review_artifact_with_distinct_review_boundary_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
