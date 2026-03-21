@@ -15,10 +15,13 @@ from typing import Any, Optional
 DATA_DIR = Path("data")
 FINIS_DIR = DATA_DIR / "finis"
 GOALS_DIR = FINIS_DIR / "goals"
+REVIEWS_DIR = FINIS_DIR / "reviews"
 LEGACY_GOALS_FILE = FINIS_DIR / "goals.json"
 GOAL_FILE_PREFIX = "FINIS_"
 GOAL_FILE_SUFFIX = ".md"
 GOAL_FILE_GLOB = f"{GOAL_FILE_PREFIX}*{GOAL_FILE_SUFFIX}"
+REVIEW_FILE_SUFFIX = ".json"
+REVIEW_FILE_GLOB = f"*{REVIEW_FILE_SUFFIX}"
 DESCRIPTION_HEADING = "## Description"
 GOAL_ID_PATTERN = re.compile(rf"^{GOAL_FILE_PREFIX}(\d+)$")
 
@@ -33,6 +36,12 @@ def ensure_goals_dir() -> Path:
     return GOALS_DIR
 
 
+def ensure_reviews_dir() -> Path:
+    """Create the Finis reviews directory when it does not yet exist."""
+    REVIEWS_DIR.mkdir(parents=True, exist_ok=True)
+    return REVIEWS_DIR
+
+
 def list_goal_files() -> list[Path]:
     """Return canonical goal files in stable filename order."""
     if not GOALS_DIR.exists():
@@ -41,9 +50,24 @@ def list_goal_files() -> list[Path]:
     return sorted(path for path in GOALS_DIR.glob(GOAL_FILE_GLOB) if path.is_file())
 
 
+def list_review_files() -> list[Path]:
+    """Return Finis review artifact files in stable filename order."""
+    if not REVIEWS_DIR.exists():
+        return []
+
+    return sorted(
+        path for path in REVIEWS_DIR.glob(REVIEW_FILE_GLOB) if path.is_file()
+    )
+
+
 def goal_file_path(goal_id: str) -> Path:
     """Map an exact goal id to its canonical Markdown file path."""
     return GOALS_DIR / f"{goal_id}{GOAL_FILE_SUFFIX}"
+
+
+def review_file_path(review_id: str) -> Path:
+    """Map an exact review id to its canonical Finis review file path."""
+    return REVIEWS_DIR / f"{str(review_id).strip()}{REVIEW_FILE_SUFFIX}"
 
 
 def _goal_id_number(goal_id: str) -> Optional[int]:
@@ -387,16 +411,22 @@ __all__ = [
     "DATA_DIR",
     "FINIS_DIR",
     "GOALS_DIR",
+    "REVIEWS_DIR",
     "LEGACY_GOALS_FILE",
     "GOAL_FILE_PREFIX",
     "GOAL_FILE_SUFFIX",
     "GOAL_FILE_GLOB",
+    "REVIEW_FILE_SUFFIX",
+    "REVIEW_FILE_GLOB",
     "DESCRIPTION_HEADING",
     "GOAL_ID_PATTERN",
     "LegacyGoalsError",
     "ensure_goals_dir",
+    "ensure_reviews_dir",
     "list_goal_files",
+    "list_review_files",
     "goal_file_path",
+    "review_file_path",
     "normalize_goal_record",
     "parse_legacy_goals_json",
     "load_legacy_goals",
