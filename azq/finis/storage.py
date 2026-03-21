@@ -106,6 +106,24 @@ def normalize_goal_record(legacy_goal: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def normalize_review_record(review_record: dict[str, Any]) -> dict[str, Any]:
+    """Normalize one Finis review record into the Wave A review schema.
+
+    Wave A keeps the review contract intentionally small so review state can be
+    made durable without redesigning canonical goal storage.
+    """
+
+    return {
+        "review_id": str(review_record.get("review_id", "")).strip(),
+        "spark_source": str(review_record.get("spark_source", "")).strip(),
+        "raw_spark_text": str(review_record.get("raw_spark_text", "")),
+        "candidate_goal_text": str(review_record.get("candidate_goal_text", "")),
+        "human_revision_text": str(review_record.get("human_revision_text", "")),
+        "review_status": str(review_record.get("review_status", "pending")).strip() or "pending",
+        "accepted_goal_id": str(review_record.get("accepted_goal_id", "")).strip(),
+    }
+
+
 def parse_legacy_goals_json(
     raw_text: str, *, source: Path = LEGACY_GOALS_FILE
 ) -> list[dict[str, Any]]:
@@ -177,6 +195,11 @@ def serialize_goal_markdown(goal_record: dict[str, Any]) -> str:
 
     lines.append("")
     return "\n".join(lines)
+
+
+def serialize_review_record(review_record: dict[str, Any]) -> str:
+    """Serialize one normalized Finis review record into JSON text."""
+    return json.dumps(normalize_review_record(review_record), indent=2)
 
 
 def serialize_goal_record(goal_record: dict[str, Any]) -> str:
@@ -269,6 +292,22 @@ def parse_goal_markdown(markdown_text: str) -> dict[str, Any]:
     )
 
 
+def parse_review_record(review_text: str) -> dict[str, Any]:
+    """Parse one Finis review artifact into the normalized Wave A schema."""
+    try:
+        parsed = json.loads(review_text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            "Finis review artifact is malformed JSON: "
+            f"{exc.msg} (line {exc.lineno}, column {exc.colno})."
+        ) from exc
+
+    if not isinstance(parsed, dict):
+        raise ValueError("Finis review artifact must contain a top-level object.")
+
+    return normalize_review_record(parsed)
+
+
 def parse_goal_record(markdown_text: str) -> dict[str, Any]:
     """Backward-compatible alias for canonical goal Markdown parsing."""
     return parse_goal_markdown(markdown_text)
@@ -287,6 +326,14 @@ def load_goal(goal_id: str) -> Optional[dict[str, Any]]:
     return parse_goal_markdown(goal_path.read_text(encoding="utf-8"))
 
 
+def load_review(review_id: str) -> Optional[dict[str, Any]]:
+    """Load one Finis review record by exact review id."""
+    review_path = review_file_path(review_id)
+    if not review_path.is_file():
+        return None
+    return parse_review_record(review_path.read_text(encoding="utf-8"))
+
+
 def load_all_goals(*, migrate_legacy: bool = False) -> list[dict[str, Any]]:
     """Load all canonical goal files in deterministic order.
 
@@ -301,6 +348,14 @@ def load_all_goals(*, migrate_legacy: bool = False) -> list[dict[str, Any]]:
     for goal_path in list_goal_files():
         goals.append(parse_goal_markdown(goal_path.read_text(encoding="utf-8")))
     return goals
+
+
+def load_all_reviews() -> list[dict[str, Any]]:
+    """Load all Finis review records in deterministic file order."""
+    reviews: list[dict[str, Any]] = []
+    for review_path in list_review_files():
+        reviews.append(parse_review_record(review_path.read_text(encoding="utf-8")))
+    return reviews
 
 
 def next_goal_id() -> str:
@@ -328,6 +383,19 @@ def write_goal(goal_record: dict[str, Any]) -> Path:
     ensure_goals_dir()
     goal_path.write_text(serialize_goal_markdown(record), encoding="utf-8")
     return goal_path
+
+
+def write_review(review_record: dict[str, Any]) -> Path:
+    """Write one normalized Finis review record to its exact JSON file."""
+    record = normalize_review_record(review_record)
+    review_id = record["review_id"]
+    if not review_id:
+        raise ValueError("Cannot write Finis review artifact without a review_id.")
+
+    review_path = review_file_path(review_id)
+    ensure_reviews_dir()
+    review_path.write_text(serialize_review_record(record), encoding="utf-8")
+    return review_path
 
 
 def migrate_legacy_goals() -> dict[str, int]:
@@ -428,18 +496,24 @@ __all__ = [
     "goal_file_path",
     "review_file_path",
     "normalize_goal_record",
+    "normalize_review_record",
     "parse_legacy_goals_json",
     "load_legacy_goals",
     "serialize_goal_record",
     "serialize_goal_markdown",
+    "serialize_review_record",
     "goal_to_markdown",
     "parse_goal_record",
     "parse_goal_markdown",
+    "parse_review_record",
     "goal_from_markdown",
     "load_goal",
+    "load_review",
     "load_all_goals",
+    "load_all_reviews",
     "next_goal_id",
     "write_goal",
+    "write_review",
     "migrate_legacy_goals",
     "ensure_canonical_goals_migrated",
 ]
