@@ -1,7 +1,7 @@
-import json
 import difflib
-from pathlib import Path
+import json
 from datetime import date
+from pathlib import Path
 
 from . import storage
 
@@ -23,12 +23,15 @@ def load_sparks():
         with open(file) as f:
             data = json.load(f)
 
-        for s in data:
+        for spark_index, s in enumerate(data, start=1):
 
-            sparks.append({
-                "spark": s["spark"],
-                "source": file.stem
-            })
+            sparks.append(
+                {
+                    "spark": s["spark"],
+                    "source": file.stem,
+                    "spark_index": spark_index,
+                }
+            )
 
     return sparks
 
@@ -59,14 +62,14 @@ def clean_goal_text(text):
         "my goal is to",
         "one of the goals that i have is",
         "one goal is to",
-        "the goal is to"
+        "the goal is to",
     ]
 
     lower = text.lower()
 
     for p in prefixes:
         if lower.startswith(p):
-            text = text[len(p):].strip()
+            text = text[len(p) :].strip()
 
     # normalize whitespace
     text = " ".join(text.split())
@@ -100,10 +103,7 @@ def propose_goals(sparks):
 
     existing_goals = storage.load_all_goals(migrate_legacy=True)
 
-    existing_text = [
-        g["title"].lower()
-        for g in existing_goals
-    ]
+    existing_text = [g["title"].lower() for g in existing_goals]
 
     used_sources = get_used_sources(existing_goals)
 
@@ -117,14 +117,13 @@ def propose_goals(sparks):
         if source in used_sources:
             continue
 
-        text = s["spark"].strip()
+        raw_text = s["spark"].strip()
 
-        if len(text) < 10:
+        if len(raw_text) < 10:
             continue
 
-        text = clean_goal_text(text)
-
-        text_lower = text.lower()
+        candidate_text = clean_goal_text(raw_text)
+        text_lower = candidate_text.lower()
 
         duplicate = False
 
@@ -139,39 +138,93 @@ def propose_goals(sparks):
         if duplicate:
             continue
 
-        candidates.append({
-            "title": text,
-            "source": source
-        })
+        candidates.append(
+            {
+                "review_id": f"REVIEW_{source}_{s['spark_index']:03d}",
+                "source": source,
+                "raw_spark_text": raw_text,
+                "candidate_goal_text": candidate_text,
+            }
+        )
 
     return candidates
+
+
+# ------------------------------------------------
+# Materialize review artifacts
+# ------------------------------------------------
+
+def write_candidate_reviews(candidates):
+    """Persist one durable Finis review artifact per candidate goal."""
+
+    written = []
+
+    for candidate in candidates:
+        review_record = {
+            "review_id": candidate["review_id"],
+            "spark_source": candidate["source"],
+            "raw_spark_text": candidate["raw_spark_text"],
+            "candidate_goal_text": candidate["candidate_goal_text"],
+            "human_revision_text": "",
+            "review_status": "pending",
+            "accepted_goal_id": "",
+        }
+        storage.write_review(review_record)
+        written.append(review_record)
+
+    return written
 
 
 # ------------------------------------------------
 # Confirm goals interactively
 # ------------------------------------------------
 
-def confirm_goals(candidates):
+def confirm_goals(review_records):
 
     confirmed = []
 
-    if not candidates:
+    if not review_records:
         return confirmed
 
     print("\nCandidate Goals\n")
 
-    for i, c in enumerate(candidates):
+    for i, review_record in enumerate(review_records):
 
-        print(f"{i+1}. {c['title']}")
+        print(f"{i+1}. {review_record['candidate_goal_text']}")
 
         ans = input("Accept goal? [y/n] ")
 
         if ans.lower().startswith("y"):
-            confirmed.append(c)
+            confirmed.append(review_record)
 
         print()
 
     return confirmed
+
+
+# ------------------------------------------------
+# Promote accepted reviews
+# ------------------------------------------------
+
+def promote_accepted_reviews(accepted_reviews):
+    """Promote accepted review state into canonical goals and update reviews."""
+
+    for review_record in accepted_reviews:
+        goal_id = storage.next_goal_id()
+        goal_record = {
+            "goal_id": goal_id,
+            "title": review_record["candidate_goal_text"],
+            "status": "active",
+            "created": str(date.today()),
+            "description": "",
+            "derived_from": [review_record["spark_source"]],
+        }
+        storage.write_goal(goal_record)
+
+        accepted_review_record = dict(review_record)
+        accepted_review_record["review_status"] = "accepted"
+        accepted_review_record["accepted_goal_id"] = goal_id
+        storage.write_review(accepted_review_record)
 
 
 # ------------------------------------------------
@@ -188,22 +241,19 @@ def run_fine():
 
     candidates = propose_goals(sparks)
 
-    confirmed = confirm_goals(candidates)
+    if not candidates:
+        print("No candidate goals to review.")
+        return
 
-    if not confirmed:
+    review_records = write_candidate_reviews(candidates)
+    print("\nReviews written to data/finis/reviews/")
+
+    accepted_reviews = confirm_goals(review_records)
+
+    if not accepted_reviews:
         print("No goals confirmed.")
         return
 
-    for c in confirmed:
-        goal_id = storage.next_goal_id()
-        goal_record = {
-            "goal_id": goal_id,
-            "title": c["title"],
-            "status": "active",
-            "created": str(date.today()),
-            "description": "",
-            "derived_from": [c["source"]]
-        }
-        storage.write_goal(goal_record)
+    promote_accepted_reviews(accepted_reviews)
 
     print("\nGoals written to data/finis/goals/")
