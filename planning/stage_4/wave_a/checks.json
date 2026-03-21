@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "name": "AZQ Stage 4 Wave A Checks",
+  "purpose": "Define task-specific automated checks for Stage 4 Wave A so the Codex runner can evaluate the first bounded Finis review-seam deepening without hardcoding one exact implementation shape into the runner.",
+  "defaults": {
+    "retry_cap": 3,
+    "baseline_checks": [
+      {
+        "name": "compileall",
+        "type": "shell",
+        "command": "python -m compileall azq",
+        "required": true,
+        "description": "Verify the azq package still compiles after the Stage 4 Wave A change."
+      },
+      {
+        "name": "stage1_to_stage3_regression_suite",
+        "type": "shell",
+        "command": "python -m unittest discover -s tests -v",
+        "required": true,
+        "description": "Verify the existing Stage 1 through Stage 3 regression suite still passes while Stage 4 Wave A is being added."
+      },
+      {
+        "name": "finis_imports",
+        "type": "shell",
+        "command": "python - <<'PY'\nimport azq.finis.cli\nimport azq.finis.fine\nimport azq.finis.goals\nimport azq.finis.goal_manager\nimport azq.finis.storage\nPY",
+        "required": true,
+        "description": "Verify the current public Finis modules still import cleanly."
+      }
+    ]
+  },
+  "tasks": {
+    "STAGE4-WAVEA-01": {
+      "description": "Add Finis review path ownership and directory helpers without changing canonical goal storage behavior.",
+      "checks": [
+        {
+          "name": "review_path_helpers_exist",
+          "type": "python",
+          "required": true,
+          "description": "Verify azq.finis.storage owns the new Finis review path seam and deterministic review path helpers.",
+          "code": "import azq.finis.storage as storage\nfor name in [\"REVIEWS_DIR\", \"REVIEW_FILE_SUFFIX\", \"REVIEW_FILE_GLOB\", \"ensure_reviews_dir\", \"list_review_files\", \"review_file_path\"]:\n    assert hasattr(storage, name), f\"missing review helper: {name}\"\nassert str(storage.review_file_path(\"REVIEW_001\")).endswith(\"data/finis/reviews/REVIEW_001.json\")"
+        }
+      ],
+      "human_checks": [
+        "Review path ownership should now live in azq/finis/storage.py rather than being rebuilt elsewhere.",
+        "The patch should not change existing canonical goal path behavior under data/finis/goals/.",
+        "Do not introduce proposals, questions, or intent-package directories in this task."
+      ]
+    },
+    "STAGE4-WAVEA-02": {
+      "description": "Define a minimal Finis review record format and repository helpers.",
+      "checks": [
+        {
+          "name": "review_record_round_trip",
+          "type": "python",
+          "required": true,
+          "description": "Verify the Finis review schema can normalize, serialize, and parse one review record while preserving distinct review-boundary fields.",
+          "code": "import azq.finis.storage as storage\nrecord = {\n    \"review_id\": \"REVIEW_001\",\n    \"spark_source\": \"2026-03-20_121334\",\n    \"raw_spark_text\": \"raw spark text\",\n    \"candidate_goal_text\": \"Candidate goal text\",\n    \"human_revision_text\": \"\",\n    \"review_status\": \"pending\",\n    \"accepted_goal_id\": \"\"\n}\nnormalized = storage.normalize_review_record(record)\ntext = storage.serialize_review_record(normalized)\nparsed = storage.parse_review_record(text)\nfor field in [\"review_id\", \"spark_source\", \"raw_spark_text\", \"candidate_goal_text\", \"human_revision_text\", \"review_status\", \"accepted_goal_id\"]:\n    assert parsed[field] == normalized[field], field"
+        },
+        {
+          "name": "review_repository_helpers_work",
+          "type": "python",
+          "required": true,
+          "description": "Verify the Finis review repository helpers can write, load, and list review artifacts in deterministic file order.",
+          "code": "import os\nimport tempfile\nfrom pathlib import Path\nimport azq.finis.storage as storage\nold = Path.cwd()\nwith tempfile.TemporaryDirectory() as tmp:\n    os.chdir(tmp)\n    first = storage.write_review({\n        \"review_id\": \"REVIEW_001\",\n        \"spark_source\": \"spark-1\",\n        \"raw_spark_text\": \"raw one\",\n        \"candidate_goal_text\": \"candidate one\"\n    })\n    second = storage.write_review({\n        \"review_id\": \"REVIEW_002\",\n        \"spark_source\": \"spark-2\",\n        \"raw_spark_text\": \"raw two\",\n        \"candidate_goal_text\": \"candidate two\"\n    })\n    assert first.is_file()\n    assert second.is_file()\n    assert storage.load_review(\"REVIEW_001\")[\"raw_spark_text\"] == \"raw one\"\n    all_reviews = storage.load_all_reviews()\n    assert [item[\"review_id\"] for item in all_reviews] == [\"REVIEW_001\", \"REVIEW_002\"]\n    os.chdir(old)"
+        }
+      ],
+      "human_checks": [
+        "The review record format should stay minimal and Wave A scoped, not a disguised proposal or notes schema.",
+        "Raw spark text, candidate goal text, optional human revision text, review status, and accepted canonical goal id should remain visibly distinct fields.",
+        "The canonical FINIS markdown goal format must remain unchanged in this task."
+      ]
+    },
+    "STAGE4-WAVEA-03": {
+      "description": "Make azq fine materialize durable review artifacts for candidate goals before canonical acceptance.",
+      "checks": [
+        {
+          "name": "fine_writes_review_artifacts",
+          "type": "python",
+          "required": true,
+          "description": "Verify the live azq fine flow can materialize durable Finis review artifacts instead of keeping candidate state only in transient CLI memory.",
+          "code": "import contextlib\nimport io\nimport json\nimport tempfile\nfrom pathlib import Path\nfrom unittest import mock\nimport azq.cli as cli\nfrom azq.finis import storage\nclass FixedDate:\n    @classmethod\n    def today(cls):\n        class _D:\n            def __str__(self):\n                return \"2026-03-20\"\n        return _D()\nwith tempfile.TemporaryDirectory() as tmp:\n    repo_root = Path(tmp)\n    cwd = Path.cwd()\n    try:\n        import os\n        os.chdir(repo_root)\n        spark_dir = Path(\"data/scintilla/sparks\")\n        spark_dir.mkdir(parents=True, exist_ok=True)\n        spark_dir.joinpath(\"2026-03-20_121334.json\").write_text(json.dumps([{\"spark\": \"I want to stabilize Finis review boundaries\"}]), encoding=\"utf-8\")\n        output = io.StringIO()\n        with mock.patch(\"builtins.input\", side_effect=[\"n\"]), mock.patch(\"sys.argv\", [\"azq\", \"fine\"]), contextlib.redirect_stdout(output):\n            cli.main()\n        review_files = storage.list_review_files()\n        assert review_files, \"no review artifacts were written\"\n        record = storage.load_all_reviews()[0]\n        for field in [\"spark_source\", \"raw_spark_text\", \"candidate_goal_text\", \"review_status\"]:\n            assert field in record, field\n    finally:\n        os.chdir(cwd)"
+        }
+      ],
+      "human_checks": [
+        "azq fine should stay the entrypoint. Do not create a new public Finis command family for this task.",
+        "The review artifact should preserve a visible boundary between raw spark text and cleaned candidate goal text.",
+        "This task is about durable review state, not yet about promotion or richer question or notes workflows."
+      ]
+    },
+    "STAGE4-WAVEA-04": {
+      "description": "Promote accepted Finis review state into canonical goals through the existing storage seam.",
+      "checks": [
+        {
+          "name": "accepted_review_promotes_into_canonical_goal",
+          "type": "python",
+          "required": true,
+          "description": "Verify accepted review state can promote into canonical goal files while preserving Stage 1 goal fields and recording acceptance back into the review artifact.",
+          "code": "import contextlib\nimport io\nimport json\nimport tempfile\nfrom pathlib import Path\nfrom unittest import mock\nimport azq.cli as cli\nfrom azq.finis import storage\nclass FixedDate:\n    @classmethod\n    def today(cls):\n        class _D:\n            def __str__(self):\n                return \"2026-03-20\"\n        return _D()\nwith tempfile.TemporaryDirectory() as tmp:\n    repo_root = Path(tmp)\n    cwd = Path.cwd()\n    try:\n        import os\n        os.chdir(repo_root)\n        spark_dir = Path(\"data/scintilla/sparks\")\n        spark_dir.mkdir(parents=True, exist_ok=True)\n        spark_dir.joinpath(\"2026-03-20_121334.json\").write_text(json.dumps([{\"spark\": \"I want to lock Finis review lineage\"}]), encoding=\"utf-8\")\n        output = io.StringIO()\n        with mock.patch(\"azq.finis.fine.date\", FixedDate), mock.patch(\"builtins.input\", side_effect=[\"y\"]), mock.patch(\"sys.argv\", [\"azq\", \"fine\"]), contextlib.redirect_stdout(output):\n            cli.main()\n        goal = storage.load_goal(\"FINIS_001\")\n        assert goal is not None\n        assert goal[\"status\"] == \"active\"\n        assert goal[\"created\"] == \"2026-03-20\"\n        assert goal[\"description\"] == \"\"\n        assert goal[\"derived_from\"] == [\"2026-03-20_121334\"]\n        reviews = storage.load_all_reviews()\n        assert reviews, \"missing review artifact after acceptance\"\n        assert any(item.get(\"accepted_goal_id\") == \"FINIS_001\" for item in reviews), reviews\n    finally:\n        os.chdir(cwd)"
+        }
+      ],
+      "human_checks": [
+        "Promotion should still go through azq.finis.storage goal helpers rather than inventing a second canonical goal write path.",
+        "The new review seam should add continuity, not change the existing Stage 1 goal schema or goal markdown format.",
+        "Do not broaden this task into manual goal-add refactors or later Stage 4 note surfaces."
+      ]
+    },
+    "STAGE4-WAVEA-05": {
+      "description": "Add a narrow Stage 4 regression slice for the Finis review seam.",
+      "checks": [
+        {
+          "name": "stage4_wave_a_test_file_exists",
+          "type": "shell",
+          "command": "test -f tests/test_stage4_wave_a.py",
+          "required": true,
+          "description": "Verify the Stage 4 Wave A regression test file exists."
+        },
+        {
+          "name": "stage4_wave_a_test_file_covers_review_seam",
+          "type": "shell",
+          "command": "python - <<'PY'\nfrom pathlib import Path\ntext = Path(\"tests/test_stage4_wave_a.py\").read_text(encoding=\"utf-8\").lower()\nassert (\"temporarydirectory\" in text) or (\"tempfile\" in text), \"missing temporary test workspace anchor\"\nchecks = {\n    \"review_artifacts\": [\"reviews\", \"write_review\", \"load_all_reviews\"],\n    \"raw_and_candidate_boundary\": [\"raw_spark_text\", \"candidate_goal_text\", \"review_status\"],\n    \"canonical_goal_promotion\": [\"finis_001\", \"derived_from\", \"accepted_goal_id\"]\n}\nfor name, snippets in checks.items():\n    for snippet in snippets:\n        assert snippet in text, f\"{name}: missing {snippet}\"\nPY",
+          "required": true,
+          "description": "Verify the new Stage 4 regression slice covers the review seam, provenance boundary, and canonical goal promotion anchors."
+        },
+        {
+          "name": "stage4_wave_a_discovery_run",
+          "type": "shell",
+          "command": "python -m unittest discover -s tests -v",
+          "required": true,
+          "description": "Verify the repository unittest discovery run succeeds with the new Stage 4 Wave A regression slice present."
+        }
+      ],
+      "human_checks": [
+        "The new tests should prove the review seam exists and that Stage 1 canonical goal behavior is preserved, not merely assert that helper names exist.",
+        "Keep the regression slice narrow and Wave A scoped. Do not sprawl into later Stage 4 concerns such as questions, usefulness notes, or intent packages.",
+        "The Stage 1 baseline test for canonical goal creation through azq fine should remain meaningful rather than being silently invalidated."
+      ]
+    }
+  }
+}
